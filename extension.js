@@ -113,7 +113,7 @@ function activate(ctx) {
     try {
       if (!cfg().get('statusBar')) { if (status.text !== '$(device-camera-video) Agent Standup') { status.text = '$(device-camera-video) Agent Standup'; status.backgroundColor = undefined; status.tooltip = tt('Open the live Agent Standup call'); } return; }   // counts off: the plain button stays
       if (!vscode.window.state.focused) return;
-      const key = projKey(), rows = require('./server.js').boardRows().filter((r) => !key || r.proj === key), now = Date.now();
+      const key = projKey(), rows = require('./server.js').boardRows().filter((r) => !key || r.proj === key || r.dir === key), now = Date.now();
       const act = rows.filter((r) => r.state !== 'idle' || now - r.mtime < 15 * 60e3), cnt = (st) => act.filter((r) => r.state === st).length;
       const blocked = cnt('blocked'), working = cnt('working') + cnt('waiting'), turn = cnt('turn');
       const parts = []; if (blocked) parts.push('$(warning) ' + tt('{0} needs you', blocked)); if (working) parts.push('$(sync~spin) ' + tt('{0} working', working)); if (!blocked && !working && turn) parts.push('$(check) ' + tt('your turn'));

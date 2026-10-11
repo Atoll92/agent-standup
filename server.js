@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const codex = require('./codex.js');     // Codex sessions, read as the same call (see codex.js)
 const kokoro = require('./kokoro.js');   // natural voices, installed on demand (see kokoro.js)
 const zlib = require('zlib');
 const { execFileSync } = require('child_process');
@@ -102,8 +103,8 @@ function listSessions() {
 }
 function listSessions0() {
   const rows = [];
-  if (!fs.existsSync(ROOT)) return rows;
-  for (const proj of fs.readdirSync(ROOT)) {
+  for (const r of codex.sessions()) rows.push({ proj: codex.PROJ, id: r.id, mtime: r.mtime, size: r.size, agents: 0, cx: r });
+  for (const proj of fs.existsSync(ROOT) ? fs.readdirSync(ROOT) : []) {
     const dir = path.join(ROOT, proj);
     let files;
     try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.jsonl')); } catch { continue; }
@@ -115,7 +116,9 @@ function listSessions0() {
   }
   rows.sort((a, b) => b.mtime - a.mtime);
   const top = rows.slice(0, 60);
-  for (const r of top) {   // titles come from the cached tail read (custom title, then AI title, then first prompt): no whole-file reads
+  for (const r of top) {
+    if (r.cx) { const c = r.cx; delete r.cx; r.title = codex.title(c); r.project = codex.projectLabel(c.cwd); r.source = 'codex'; continue; }
+    // titles come from the cached tail read (custom title, then AI title, then first prompt): no whole-file reads
     let t = null; try { const f = path.join(ROOT, r.proj, r.id + '.jsonl'); t = parseTail(f, fs.statSync(f)).title; } catch {}
     r.title = t || r.id; r.project = r.proj.replace(/^-Users-[^-]+-/, '').replace(/-/g, '/');
   }
@@ -125,7 +128,7 @@ function listSessions0() {
 function stamp(proj, id) {
   const base = path.join(ROOT, proj); let n = 0;
   const add = (f) => { try { const s = fs.statSync(f); n += s.mtimeMs + s.size; } catch {} };
-  add(path.join(base, id + '.jsonl'));
+  add(proj === codex.PROJ ? codex.fileOf(id) || '' : path.join(base, id + '.jsonl'));
   const subs = subFiles(proj, id);   // the transcripts and the folders they are in (a folder changes when a file appears in it, e.g. an agent's meta file), not every file around them
   for (const x of subs) add(x.file); for (const x of subs.journals) add(x.file); for (const d of subs.dirs) n += mtimeOf(d);
   return n;
@@ -210,13 +213,14 @@ function boardRows() {
 }
 function boardRows0() {
   const now = Date.now(), rows = [];
-  if (!fs.existsSync(ROOT)) return rows;
-  for (const proj of fs.readdirSync(ROOT)) {
+  for (const r of codex.sessions()) if (now - r.mtime < 12 * 3600e3) rows.push({ proj: codex.PROJ, id: r.id, st: { mtimeMs: r.mtime, size: r.size }, cx: r });
+  for (const proj of fs.existsSync(ROOT) ? fs.readdirSync(ROOT) : []) {
     const dir = path.join(ROOT, proj); let files; try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.jsonl')); } catch { continue; }
     for (const f of files) { try { const st = fs.statSync(path.join(dir, f)); if (now - st.mtimeMs < 12 * 3600e3) rows.push({ proj, id: f.slice(0, -6), st }); } catch {} }
   }
   rows.sort((a, b) => b.st.mtimeMs - a.st.mtimeMs);
-  return rows.slice(0, 40).map(({ proj, id, st }) => {
+  return rows.slice(0, 40).map(({ proj, id, st, cx }) => {
+    if (cx) return codex.boardRow(cx, now);
     const file = path.join(ROOT, proj, id + '.jsonl'); let p; try { p = parseTail(file, st); } catch { p = { pending: [] }; }
     const age = now - st.mtimeMs, lp = (p.pending || [])[(p.pending || []).length - 1]; let state = 'idle', tool = '', ageMs = age;
     if (age < 30 * 60e3) {
@@ -237,17 +241,18 @@ function writePrefs(v) { fs.mkdirSync(path.dirname(PREFS), { recursive: true });
 // Most recently active session (optionally limited to one project dir) — drives the live feed.
 const STICK_MS = 90000;   // a session written to in the last 90 s keeps the call, so another session writing elsewhere does not steal it mid-line
 function sessionMtime(proj, id) {
+  if (proj === codex.PROJ) { const r = codex.row(id); return r ? r.mtime : 0; }
   let m = mtimeOf(path.join(ROOT, proj, id + '.jsonl')); if (!m) return 0; const subs = subFiles(proj, id);
   for (const x of subs) m = Math.max(m, mtimeOf(x.file)); for (const d of subs.dirs) m = Math.max(m, mtimeOf(d)); return m;   // the folders too: a new file in them is activity, as when every file around the transcripts was looked at
 }
 function currentSession(projFilter, idFilter, stick) {
   const safe = (x) => typeof x === 'string' && /^[\w.\-]+$/.test(x) && x !== '..';
-  if (stick && safe(stick.id) && safe(stick.proj) && (!projFilter || stick.proj === projFilter || stick.proj.startsWith(projFilter + '-')) && Date.now() - sessionMtime(stick.proj, stick.id) < STICK_MS) return { proj: stick.proj, id: stick.id, mtime: sessionMtime(stick.proj, stick.id) };
-  if (idFilter && projFilter && projFilter !== '..' && idFilter !== '..' && /^[\w.\-]+$/.test(idFilter) && /^[\w.\-]+$/.test(projFilter) && fs.existsSync(path.join(ROOT, projFilter, idFilter + '.jsonl'))) return { proj: projFilter, id: idFilter, mtime: Date.now() };   // pinned from the board
+  if (stick && safe(stick.id) && safe(stick.proj) && (!projFilter || stick.proj === projFilter || stick.proj.startsWith(projFilter + '-') || (stick.proj === codex.PROJ && codex.inProject(stick.id, projFilter))) && Date.now() - sessionMtime(stick.proj, stick.id) < STICK_MS) return { proj: stick.proj, id: stick.id, mtime: sessionMtime(stick.proj, stick.id) };
+  if (idFilter && projFilter && projFilter !== '..' && idFilter !== '..' && /^[\w.\-]+$/.test(idFilter) && /^[\w.\-]+$/.test(projFilter) && (projFilter === codex.PROJ ? !!codex.fileOf(idFilter) : fs.existsSync(path.join(ROOT, projFilter, idFilter + '.jsonl')))) return { proj: projFilter, id: idFilter, mtime: Date.now() };   // pinned from the board
   let best = null;
-  if (!fs.existsSync(ROOT)) return {};
   const consider = (proj, id, m) => { if (!best || m > best.mtime) best = { proj, id, mtime: m }; };
-  for (const proj of fs.readdirSync(ROOT)) {
+  for (const r of codex.sessions()) if (!projFilter || codex.inProject(r.id, projFilter)) consider(codex.PROJ, r.id, r.mtime);   // a Codex session counts for a project when it was started in that folder
+  for (const proj of fs.existsSync(ROOT) ? fs.readdirSync(ROOT) : []) {
     if (projFilter && proj !== projFilter && !proj.startsWith(projFilter + '-')) continue;   // the folder itself, or a folder inside it
     const dir = path.join(ROOT, proj); let files;
     try { files = fs.readdirSync(dir); } catch { continue; }
@@ -267,7 +272,7 @@ let fileGen = 0;   // each time a transcript is read from its start it gets a ne
 const sameBytes = (file, st) => {   // are the last bytes we read still where we read them? If not, the file was rewritten and not appended to
   let fd; try { fd = fs.openSync(file, 'r'); const b = Buffer.alloc(st.fp.length); fs.readSync(fd, b, 0, b.length, st.offset - b.length); return b.equals(st.fp); } catch { return false; } finally { if (fd != null) fs.closeSync(fd); }
 };
-function readNew(file, agent, journal) {
+function readNew(file, agent, journal, record = parseRecord) {
   let size, mtime; try { const s = fs.statSync(file); size = s.size; mtime = s.mtimeMs; } catch { fileStates.delete(file); return null; }
   let st = fileStates.get(file);
   if (st && size >= st.offset && mtime !== st.mtime && st.fp.length && !sameBytes(file, st)) st = null;   // rewritten in place and not shorter: checked only when the file was written to, with one small read
@@ -284,7 +289,7 @@ function readNew(file, agent, journal) {
       if (!line) continue;
       let r; try { r = JSON.parse(line); } catch { continue; }
       if (!r || typeof r !== 'object') continue;
-      try { parseRecord(st, r); } catch {}   // one odd record must not take the whole timeline down
+      try { record(st, r); } catch {}   // one odd record must not take the whole timeline down
     }
   }
   return st;
@@ -341,16 +346,17 @@ function parseRecord(st, r) {
     }
   }
 }
+const codexRecord = codex.parser({ toolLabel, clip, resultMax: RESULT_MAX });
 const metaCache = new Map();   // meta file path → { mtime, value }
 function readMeta(f) {
   try { const mt = fs.statSync(f).mtimeMs, c = metaCache.get(f); if (c && c.mtime === mt) return c.value; const v = JSON.parse(fs.readFileSync(f, 'utf8')); if (metaCache.size > 3000) metaCache.clear(); metaCache.set(f, { mtime: mt, value: v }); return v; } catch { return {}; }
 }
 
 function buildTimeline(proj, id, files = []) {
-  const base = path.join(ROOT, proj), mainFile = path.join(base, id + '.jsonl');
+  const cx = proj === codex.PROJ, base = path.join(ROOT, proj), mainFile = cx ? codex.fileOf(id) || '' : path.join(base, id + '.jsonl');   // a Codex session is one file somewhere else, in another format (codexRecord); from here on it is a session like any other, without sub-agents
   if (!fs.existsSync(mainFile)) throw new Error('session not found');
-  const agents = { main: { id: 'main', role: 'Lead', type: 'main' } };
-  const states = [readNew(mainFile, 'main')], subs = subFiles(proj, id), runs = {}; files.push(mainFile);   // runs: workflow run → { agents (file name → agent id), by (who launched it), toolId, done }
+  const agents = { main: { id: 'main', role: 'Lead', type: 'main', ...(cx ? { name: 'Codex' } : {}) } };
+  const states = [readNew(mainFile, 'main', false, cx ? codexRecord : parseRecord)], subs = subFiles(proj, id), runs = {}; files.push(mainFile);   // runs: workflow run → { agents (file name → agent id), by (who launched it), toolId, done }
   for (const x of subs) {
     const aid = x.aid, m = readMeta(x.file.replace(/\.jsonl$/, '.meta.json'));
     agents[aid] = { id: aid, role: m.description || m.workflowPhase || m.agentType || 'Agent', type: m.agentType || 'agent', toolUseId: m.toolUseId };
@@ -647,7 +653,7 @@ function start(port = PORT) {
     if (url.pathname === '/api/session') {
       const proj = url.searchParams.get('proj') || '', sid = url.searchParams.get('id') || '', SAFE = /^[\w.\-]+$/;
       if (!SAFE.test(proj) || !SAFE.test(sid) || proj === '..' || sid === '..' || proj.length > 200 || sid.length > 200) { res.writeHead(400); return res.end('bad request'); }
-      if (proj !== '_demo' && !fs.existsSync(path.join(ROOT, proj, sid + '.jsonl'))) return json({ error: 'session not found' }, 404);
+      if (proj !== '_demo' && !(proj === codex.PROJ ? codex.fileOf(sid) : fs.existsSync(path.join(ROOT, proj, sid + '.jsonl')))) return json({ error: 'session not found' }, 404);
       const entry = proj === '_demo' ? demoEntry() : timelineEntry(proj, sid), tl = entry.tl;   // built-in fictional session
       const after = url.searchParams.get('after'), ep = url.searchParams.get('ep');
       if (after == null) {   // the whole timeline: serialize once per version, send gzip-compressed when the browser allows it (12 MB → ~1.5 MB)

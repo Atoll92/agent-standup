@@ -9,7 +9,7 @@ const pkg = require('../package.json');
 const argv = process.argv.slice(2), flags = {}, rest = [];
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], val = () => argv[++i];
-  if (a === '--port') flags.port = val(); else if (a === '--projects') flags.projects = val(); else if (a === '--characters') flags.characters = val(); else if (a === '--config-dir') flags.config = val();
+  if (a === '--port') flags.port = val(); else if (a === '--projects') flags.projects = val(); else if (a === '--codex') flags.codex = val(); else if (a === '--characters') flags.characters = val(); else if (a === '--config-dir') flags.config = val();
   else if (a === '--open') flags.open = true; else if (a === '--here') flags.here = true; else if (a === '--json') flags.json = true; else if (a === '--titles') flags.titles = true;
   else if (a === '-h' || a === '--help') flags.help = true; else if (a === '-v' || a === '--version') flags.version = true; else rest.push(a);
 }
@@ -25,6 +25,7 @@ Options
   --port N          port of the local server (default 4747)
   --open            open the page in your browser
   --projects DIR    where the session files are (default ~/.claude/projects, or $CLAUDE_CONFIG_DIR/projects)
+  --codex DIR       where Codex keeps its files (default ~/.codex, or $CODEX_HOME); "off" to leave Codex sessions out
   --characters DIR  folder with your own pixel-art characters (default ~/.agent-standup/characters)
   --here            status: only sessions of the current folder (matched on its real path, as Claude Code names it)
   --json            status: machine-readable output (add --titles to include session titles)
@@ -32,6 +33,7 @@ Options
 if (flags.help || cmd === 'help') { process.stdout.write(HELP); process.exit(0); }
 if (flags.version || cmd === 'version') { console.log(pkg.version); process.exit(0); }
 if (flags.projects) process.env.AGENT_STANDUP_PROJECTS = path.resolve(flags.projects);
+if (flags.codex !== undefined) process.env.AGENT_STANDUP_CODEX = /^(0|off|no|false)?$/i.test(String(flags.codex)) ? 'off' : path.resolve(String(flags.codex));
 if (flags.config) process.env.CLAUDE_CONFIG_DIR = path.resolve(flags.config);
 if (flags.characters) process.env.AGENT_STANDUP_CHARACTERS = path.resolve(flags.characters);
 if (flags.port !== undefined) {   // a real port number or nothing: no silent fallback to another port
@@ -42,7 +44,7 @@ const server = require('../server.js');
 const projKey = (dir) => String(dir || '').replace(/[^a-zA-Z0-9]/g, '-');   // Claude Code's project folder naming
 
 function snapshot(dir) {
-  const now = Date.now(), all = server.boardRows(), rows = dir ? all.filter((r) => r.proj === projKey(dir)) : all;
+  const now = Date.now(), all = server.boardRows(), rows = dir ? all.filter((r) => r.proj === projKey(dir) || r.dir === projKey(dir)) : all;   // dir: the folder a Codex session was started in, named the same way
   const act = rows.filter((r) => r.state !== 'idle' || now - r.mtime < 15 * 60e3), n = (st) => act.filter((r) => r.state === st).length;
   return { rows: act, needsYou: n('blocked'), working: n('working') + n('waiting'), yourTurn: n('turn'), idle: rows.length - act.length };
 }

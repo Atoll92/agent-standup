@@ -37,6 +37,17 @@ _A fictional team fixing a slow login page — the built-in demo (⚙ → Source
 - **Office music** — optional live web radio (FIP and its themed stations) that fades down smoothly while an agent talks and fades back up when the room goes quiet.
 - Office ambience, optional (off by default) and fully synthesised: keyboards that type when agents run commands, clicks when they read, a coffee machine, a phone buzzing, a far-away door… (⚙ → Office ambience). Plus small reactions and jokes between agents ("episode mode").
 
+## Codex sessions too
+
+Sessions of OpenAI’s Codex (the desktop app and the `codex` command) appear next to your Claude Code sessions: in the session list (project “Codex”), on the board, and in the live call when one of them is the most recent. Nothing to set up: the app reads the files Codex already writes in `~/.codex/sessions` (or `$CODEX_HOME`), and never writes there.
+
+- **What is shown:** what you typed, what the agent says, each command with its real output and whether it failed, files it created or changed, web searches, MCP calls, the questions it asks you, its reasoning summaries as inner thoughts, token counts, and the end of each turn. The lead is called Codex.
+- **Not yet:** Codex sub-agents (a Codex session is the lead and you), and pictures. The short reviews Codex runs on its own before a command are not shown as sessions.
+- **In VS Code** the call follows the Codex sessions started in the folder you have open, like it does for Claude Code.
+- **Turn it off or point it elsewhere:** `AGENT_STANDUP_CODEX=off`, or `AGENT_STANDUP_CODEX=/path/to/codex-home` (command line: `--codex off` or `--codex DIR`). With `--projects DIR`, Codex sessions are only read if you also pass `--codex`.
+
+Unofficial here as well: not affiliated with or endorsed by OpenAI. “Codex” is a trademark of OpenAI.
+
 ## What you see for each agent
 
 **On its tile**
