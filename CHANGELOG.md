@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Fix: your own sub-agent characters (`~/.agent-standup/characters`) were picked per agent without looking at the others, so two sub-agents often got the same picture while other pictures went unused. A new sub-agent now gets a picture no other agent on the call holds; pictures repeat only once every one is taken. The pick stays stable, so a replay gives each agent the same picture again, and Reload reassigns everyone the same way.
+
 ## 1.24.1
 - Fix: the settings menu (⚙) was taller than a small window since 1.24.0 and its last entries could not be reached. It now stops at the bottom of the window and scrolls.
 - **A little more talk between agents**: whoever receives a report sometimes says thanks ("Got it, thanks.", "Noted. I'll take it from here.", about one report in four), and an agent that has been thinking for a long time says so ("Hmm, let me think.", "Hang on, I want to get this right."): after 20 seconds without a word in a live call, once per silence, and in a replay before a line that really took 40 seconds or more to come, about every other time. Eight variations of each, never the same twice in a row, in English and French. Part of ⚙ → Little lines & animations.

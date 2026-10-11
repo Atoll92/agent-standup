@@ -91,7 +91,7 @@ Pick one in ⚙ → Language: **English, Français, 繁體中文, 简体中文, 
 
 ## Your own characters
 Replace the drawn characters with your own pixel art. Drop PNG (or GIF/WebP) files, 300 KB at most each, into `~/.agent-standup/characters` (⚙ → Characters shows the folder, and in VS Code *Open folder* opens it; the `agentStandup.charactersPath` setting changes it):
-- `lead.png` (or `claude.png`) is the lead, `you.png` is you, any other image becomes a sub-agent (one per agent, repeated if you have fewer images than agents);
+- `lead.png` (or `claude.png`) is the lead, `you.png` is you, any other image becomes a sub-agent (one per agent: two sub-agents only share an image once every image is taken);
 - `name-talk.png` next to `name.png` is an optional open-mouth frame that shows while the character speaks;
 - 32×32 or 64×64 px, transparent background, facing front, feet at the bottom looks best. The art is shown crisp (no smoothing) on top of the usual scene and desk, and every status, hand and badge still works.
 Press **Reload** in the menu to see changes. A starter pack is in [examples/characters](examples/characters).
