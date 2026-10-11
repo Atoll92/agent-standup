@@ -2,9 +2,9 @@
 
 # Agent Standup
 
-**See who is waiting on whom, and who is blocked — across all your Claude Code sessions — at zero token cost.** Agent Standup turns the session files Claude Code already writes into a live team call (and a board of every session): it only reads local files and never calls Claude unless you turn on French translation or the jokes.
+**See who is waiting on whom, and who is blocked — across all your Claude Code and Codex sessions — at zero token cost.** Agent Standup turns the session files Claude Code and Codex already write into a live team call (and a board of every session): it only reads local files and never calls Claude unless you turn on French translation or the jokes.
 
-**Your Claude Code session as a live team call.** The lead gives orders, sub-agents join the call, work at their desks, share their screen and report back — with voices, expressions and a view of the real work as it happens.
+**Your Claude Code or Codex session as a live team call.** The lead gives orders, sub-agents join the call, work at their desks, share their screen and report back — with voices, expressions and a view of the real work as it happens.
 
 **Runs as a VS Code extension, a terminal command, or a desktop app.** Try it in 30 seconds, no install and no editor (Node 18+): `npx @double_geste/agent-standup --open`, then ⚙ → Source → Demo.
 
@@ -16,7 +16,7 @@ _A fictional team fixing a slow login page — the built-in demo (⚙ → Source
 
 [![Buy me a coffee](https://img.shields.io/badge/-Buy%20the%20(replaced)%20dev%20a%20coffee-ffdd00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/bored_dev_and_his_robots)
 
-> Unofficial community project, not affiliated with or endorsed by Anthropic. "Claude" is a trademark of Anthropic.
+> Unofficial community project, not affiliated with or endorsed by Anthropic or OpenAI. "Claude" is a trademark of Anthropic; "Codex" is a trademark of OpenAI.
 
 ## What you get
 
@@ -44,9 +44,7 @@ Sessions of OpenAI’s Codex (the desktop app and the `codex` command) appear ne
 - **What is shown:** what you typed, what the agent says, each command with its real output and whether it failed, files it created or changed, web searches, MCP calls, the questions it asks you, its reasoning summaries as inner thoughts, token counts, and the end of each turn. The lead is called Codex.
 - **Not yet:** Codex sub-agents (a Codex session is the lead and you), and pictures. The short reviews Codex runs on its own before a command are not shown as sessions.
 - **In VS Code** the call follows the Codex sessions started in the folder you have open, like it does for Claude Code.
-- **Turn it off or point it elsewhere:** `AGENT_STANDUP_CODEX=off`, or `AGENT_STANDUP_CODEX=/path/to/codex-home` (command line: `--codex off` or `--codex DIR`). With `--projects DIR`, Codex sessions are only read if you also pass `--codex`.
-
-Unofficial here as well: not affiliated with or endorsed by OpenAI. “Codex” is a trademark of OpenAI.
+- **Turn it off or point it elsewhere:** in VS Code, the setting `agentStandup.codex`; anywhere else `AGENT_STANDUP_CODEX=off`, or `AGENT_STANDUP_CODEX=/path/to/codex-home` (command line: `--codex off` or `--codex DIR`). With `--projects DIR`, Codex sessions are only read if you also pass `--codex`.
 
 ## What you see for each agent
 
@@ -187,6 +185,7 @@ The first click on **Join** is required by browsers to allow sound.
 | `agentStandup.statusBar` | `true` | Live counts in the VS Code status bar (needs you / working / your turn) for this workspace |
 | `agentStandup.shareUsage` | `false` | Opt-in, anonymous: at most one empty request per day to a 1-pixel file on GitHub, to count active installs (ignored when VS Code telemetry is off) |
 | `agentStandup.charactersPath` | _(empty)_ | Folder with your own character images (default `~/.agent-standup/characters`) |
+| `agentStandup.codex` | `true` | Also show Codex sessions (read from `~/.codex/sessions`, or `$CODEX_HOME`). Turn off to show Claude Code sessions only |
 | `agentStandup.claudePath` | _(auto)_ | Full path to the Claude Code executable if it isn't found automatically (needed only for French translation) |
 | `agentStandup.autoOpen` | `false` | Open the call when VS Code starts |
 | `agentStandup.onlyThisWorkspace` | `true` | Follow only sessions started in the open folder (falls back to the newest session if there is none) |
@@ -290,9 +289,9 @@ Agent Standup is free and MIT licensed. I'm also available for work around AI ag
 Press **?** in the app for the full list. Highlights: **Space** pause, **M** mute, **T** tree view, **J / K** next agent that needs you, **Cmd/Ctrl+K** go to a session, and in replay **← / →** step, **N** next highlight.
 
 ## Security and what it reads
-- **It reads local files and sends nothing by default.** Agent Standup reads the session files Claude Code already writes (`~/.claude/projects`, or `CLAUDE_CONFIG_DIR`) and draws them in a page. It never writes to your sessions; the only time it starts Claude Code is the optional translation helper described below.
+- **It reads local files and sends nothing by default.** Agent Standup reads the session files Claude Code already writes (`~/.claude/projects`, or `CLAUDE_CONFIG_DIR`) and the ones Codex writes (`~/.codex/sessions`, or `CODEX_HOME`; this can be turned off) and draws them in a page. It never writes to your sessions; the only time it starts Claude Code is the optional translation helper described below.
 - **Local only.** The server listens on `127.0.0.1` (never on the network), refuses requests whose Host or Origin is not local, and refuses cross-site requests on every endpoint that does something (translation, jokes, sound, settings).
-- **The only things that call out** are optional and off by default: French translation and jokes (your own Claude login, the small Haiku model, with all tools disabled), the FIP radio stream, and the usage counter (one empty request a day to a 1-pixel file, only if you turn it on).
+- **The only things that call out** are optional and off by default: French translation and jokes (your own Claude login, the small Haiku model, with all tools disabled; when one of them is on, the lines of a Codex session are sent the same way, to Anthropic), the FIP radio stream, and the usage counter (one empty request a day to a 1-pixel file, only if you turn it on).
 - **No dependencies**: the code is plain Node.js and one HTML file, so there is nothing hidden in `node_modules`. The optional Kokoro voices install a third-party package only when you click Install.
 - **Many sessions at once?** The **Sessions** view shows every session across your projects on one board (working, waiting, needs you, done); click one to open its call. **Live** follows one session at a time, the most recent or the project you pick.
 - Found a problem? Please open an issue.

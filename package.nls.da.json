@@ -1,5 +1,5 @@
 {
-  "extension.description": "Se din Claude Code-session som et levende, animeret teammøde: lederen giver ordrer, underagenter deltager, deler deres skærm og rapporterer tilbage — med stemmer, et træ over underagenter, tidslinje, resumé og videoeksport.",
+  "extension.description": "Se din Claude Code- eller Codex-session som et levende, animeret teammøde: lederen giver ordrer, underagenter deltager, deler deres skærm og rapporterer tilbage — med stemmer, et træ over underagenter, tidslinje, resumé og videoeksport.",
   "command.open.title": "Agent Standup: Åbn live-opkald",
   "command.openInBrowser.title": "Agent Standup: Åbn i browser (stemme + lyd)",
   "command.focus.title": "Agent Standup: Vis sidepanel",
@@ -10,6 +10,7 @@
   "config.onlyThisWorkspace.description": "Følg kun Claude Code-sessioner, der er startet i den aktuelle arbejdsmappe.",
   "config.statusBar.description": "Vis live-tal i statuslinjen (agenter der arbejder, har brug for dig, din tur) for dette arbejdsområde; elementet bliver rødt, når en agent måske venter på dig.",
   "config.shareUsage.description": "Hjælp projektet med at tælle aktive installationer: én gang om dagen sendes én tom forespørgsel til en 1-pixel-fil på GitHub (ingen identifikator, intet indhold; GitHub ser din IP som ved enhver download). Fra som standard; ignoreres, hvis VS Code-telemetri er slået fra.",
+  "config.codex.description": "Vis også Codex-sessioner (læses fra ~/.codex/sessions eller $CODEX_HOME). Slå fra for kun at vise Claude Code-sessioner.",
   "config.claudePath.description": "Fuld sti til Claude Code-programmet, hvis det ikke findes automatisk (bruges til fransk oversættelse).",
   "config.charactersPath.description": "Mappe med dine egne figurbilleder (PNG, GIF eller WebP, op til 300 KB hver). Tom bruger ~/.agent-standup/characters. lead.png er lederen, you.png er dig, alle andre billeder er underagenter, navn-talk.png er en valgfri ramme med åben mund."
 }

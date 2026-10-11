@@ -1,5 +1,5 @@
 {
-  "extension.description": "Suivez votre session Claude Code comme un appel d’équipe animé en direct : le chef donne ses ordres, les sous-agents rejoignent l’appel, partagent leur écran et rendent compte — avec des voix, un arbre des sous-agents, une frise, un récap et l’export vidéo.",
+  "extension.description": "Suivez votre session Claude Code ou Codex comme un appel d’équipe animé en direct : le chef donne ses ordres, les sous-agents rejoignent l’appel, partagent leur écran et rendent compte — avec des voix, un arbre des sous-agents, une frise, un récap et l’export vidéo.",
   "command.open.title": "Agent Standup : ouvrir l’appel en direct",
   "command.openInBrowser.title": "Agent Standup : ouvrir dans le navigateur (voix + son)",
   "command.focus.title": "Agent Standup : afficher la barre latérale",
@@ -10,6 +10,7 @@
   "config.onlyThisWorkspace.description": "Ne suivre que les sessions Claude Code lancées dans le dossier de travail actuel.",
   "config.statusBar.description": "Afficher des compteurs en direct dans la barre d’état (agents au travail, besoin de vous, à vous) pour cet espace de travail ; l’élément devient rouge quand un agent attend peut-être votre feu vert.",
   "config.shareUsage.description": "Aider le projet à compter les installations actives : une fois par jour, envoyer une requête vide vers un fichier d’un pixel sur GitHub (aucun identifiant, aucun contenu ; GitHub voit votre adresse IP comme pour tout téléchargement). Désactivé par défaut ; ignoré si la télémétrie de VS Code est désactivée.",
+  "config.codex.description": "Afficher aussi les sessions Codex (lues dans ~/.codex/sessions, ou $CODEX_HOME). Désactivez pour n’afficher que les sessions Claude Code.",
   "config.claudePath.description": "Chemin complet de l’exécutable Claude Code, s’il n’est pas trouvé automatiquement (utilisé pour la traduction en français).",
   "config.charactersPath.description": "Dossier contenant vos propres images de personnages (PNG, GIF ou WebP, 300 Ko maximum chacune). Vide : ~/.agent-standup/characters. lead.png est le chef, you.png est vous, toute autre image est un sous-agent, nom-talk.png est une image facultative bouche ouverte."
 }

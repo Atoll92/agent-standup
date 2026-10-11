@@ -1,5 +1,5 @@
 {
-  "extension.description": "Claude Code のセッションを、ライブのアニメーション付きチーム通話として眺められます。メインエージェントが指示を出し、サブエージェントが参加して画面を共有し、報告します。音声、サブエージェントのツリー、タイムライン、まとめ、動画書き出しにも対応。",
+  "extension.description": "Claude Code や Codex のセッションを、ライブのアニメーション付きチーム通話として眺められます。メインエージェントが指示を出し、サブエージェントが参加して画面を共有し、報告します。音声、サブエージェントのツリー、タイムライン、まとめ、動画書き出しにも対応。",
   "command.open.title": "Agent Standup: ライブ通話を開く",
   "command.openInBrowser.title": "Agent Standup: ブラウザで開く（音声・サウンド対応）",
   "command.focus.title": "Agent Standup: サイドバーを表示",
@@ -10,6 +10,7 @@
   "config.onlyThisWorkspace.description": "現在のワークスペースフォルダで開始された Claude Code セッションのみを追いかけます。",
   "config.statusBar.description": "このワークスペースの状況（作業中のエージェント、呼び出し中、あなたの番）をステータスバーにライブ表示します。エージェントが待っていそうなときは項目が赤くなります。",
   "config.shareUsage.description": "アクティブなインストール数の集計にご協力ください。1日1回、GitHub 上の1ピクセルのファイルに空のリクエストを1件送ります（識別子・内容なし。通常のダウンロードと同様、GitHub には IP アドレスが見えます）。既定ではオフ。VS Code のテレメトリがオフの場合は無視されます。",
+  "config.codex.description": "Codex のセッションも表示します（~/.codex/sessions または $CODEX_HOME から読み込み）。オフにすると Claude Code のセッションのみを表示します。",
   "config.claudePath.description": "Claude Code 実行ファイルのフルパス（自動で見つからない場合）。フランス語への翻訳に使用します。",
   "config.charactersPath.description": "自作キャラクター画像（PNG、GIF、WebP、各300 KBまで）のフォルダ。空の場合は ~/.agent-standup/characters を使います。lead.png がメインエージェント、you.png があなた、それ以外の画像はサブエージェントになります。name-talk.png は口を開けた状態のフレーム（任意）です。"
 }

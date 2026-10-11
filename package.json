@@ -81,6 +81,11 @@
           "default": false,
           "description": "%config.shareUsage.description%"
         },
+        "agentStandup.codex": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.codex.description%"
+        },
         "agentStandup.claudePath": {
           "type": "string",
           "default": "",
@@ -117,6 +122,8 @@
     "standup",
     "claude",
     "claude code",
+    "codex",
+    "openai codex",
     "agents",
     "subagents",
     "visualization",

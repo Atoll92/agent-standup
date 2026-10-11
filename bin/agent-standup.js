@@ -14,7 +14,7 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === '-h' || a === '--help') flags.help = true; else if (a === '-v' || a === '--version') flags.version = true; else rest.push(a);
 }
 const cmd = rest[0] || 'serve';
-const HELP = `Agent Standup ${pkg.version} — your Claude Code agents as a live video call
+const HELP = `Agent Standup ${pkg.version} — your Claude Code and Codex agents as a live video call
 
 Usage
   agent-standup [serve] [--port 4747] [--open]   start the local server (http://localhost:4747)

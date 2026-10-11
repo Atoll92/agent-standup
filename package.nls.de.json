@@ -1,5 +1,5 @@
 {
-  "extension.description": "Verfolge deine Claude Code-Sitzung als lebendigen, animierten Team-Videoanruf: Der Hauptagent gibt Aufträge, Subagenten treten bei, teilen ihren Bildschirm und berichten zurück — mit Stimmen, Subagenten-Baum, Zeitleiste, Zusammenfassung und Videoexport.",
+  "extension.description": "Verfolge deine Claude Code- oder Codex-Sitzung als lebendigen, animierten Team-Videoanruf: Der Hauptagent gibt Aufträge, Subagenten treten bei, teilen ihren Bildschirm und berichten zurück — mit Stimmen, Subagenten-Baum, Zeitleiste, Zusammenfassung und Videoexport.",
   "command.open.title": "Agent Standup: Live-Videoanruf öffnen",
   "command.openInBrowser.title": "Agent Standup: Im Browser öffnen (Stimme + Ton)",
   "command.focus.title": "Agent Standup: Seitenleiste anzeigen",
@@ -10,6 +10,7 @@
   "config.onlyThisWorkspace.description": "Nur Claude Code-Sitzungen verfolgen, die im aktuellen Arbeitsbereichsordner gestartet wurden.",
   "config.statusBar.description": "Live-Zähler in der Statusleiste anzeigen (Agenten arbeiten, brauchen dich, du bist dran) für diesen Arbeitsbereich; das Element wird rot, wenn ein Agent auf dich warten könnte.",
   "config.shareUsage.description": "Hilf dem Projekt, aktive Installationen zu zählen: Einmal täglich wird eine leere Anfrage an eine 1-Pixel-Datei auf GitHub gesendet (keine Kennung, kein Inhalt; GitHub sieht deine IP wie bei jedem Download). Standardmäßig aus; wird ignoriert, wenn die VS Code-Telemetrie aus ist.",
+  "config.codex.description": "Auch Codex-Sitzungen anzeigen (gelesen aus ~/.codex/sessions oder $CODEX_HOME). Ausschalten, um nur Claude Code-Sitzungen anzuzeigen.",
   "config.claudePath.description": "Vollständiger Pfad zur Claude Code-Programmdatei, falls sie nicht automatisch gefunden wird (für die französische Übersetzung verwendet).",
   "config.charactersPath.description": "Ordner mit deinen eigenen Figurenbildern (PNG, GIF oder WebP, je bis 300 KB). Leer verwendet ~/.agent-standup/characters. lead.png ist der Hauptagent, you.png bist du, jedes andere Bild ist ein Subagent, name-talk.png ist ein optionales Bild mit offenem Mund."
 }

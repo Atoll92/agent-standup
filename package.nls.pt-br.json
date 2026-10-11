@@ -1,5 +1,5 @@
 {
-  "extension.description": "Acompanhe sua sessão do Claude Code como uma chamada de vídeo animada ao vivo: o agente principal dá ordens, os subagentes entram, compartilham a tela e reportam — com vozes, árvore de subagentes, linha do tempo, resumo e exportação de vídeo.",
+  "extension.description": "Acompanhe sua sessão do Claude Code ou do Codex como uma chamada de vídeo animada ao vivo: o agente principal dá ordens, os subagentes entram, compartilham a tela e reportam — com vozes, árvore de subagentes, linha do tempo, resumo e exportação de vídeo.",
   "command.open.title": "Agent Standup: Abrir chamada ao vivo",
   "command.openInBrowser.title": "Agent Standup: Abrir no navegador (voz + som)",
   "command.focus.title": "Agent Standup: Mostrar barra lateral",
@@ -10,6 +10,7 @@
   "config.onlyThisWorkspace.description": "Acompanhar apenas as sessões do Claude Code iniciadas na pasta do espaço de trabalho atual.",
   "config.statusBar.description": "Mostrar contagens ao vivo na barra de status (agentes trabalhando, precisam de você, sua vez) para este espaço de trabalho; o item fica vermelho quando um agente pode estar esperando por você.",
   "config.shareUsage.description": "Ajude o projeto a contar instalações ativas: uma vez por dia, envia uma requisição vazia a um arquivo de 1 pixel no GitHub (sem identificador, sem conteúdo; o GitHub vê seu IP como em qualquer download). Desativado por padrão; ignorado se a telemetria do VS Code estiver desativada.",
+  "config.codex.description": "Mostrar também as sessões do Codex (lidas de ~/.codex/sessions ou $CODEX_HOME). Desative para mostrar apenas as sessões do Claude Code.",
   "config.claudePath.description": "Caminho completo do executável do Claude Code, se não for encontrado automaticamente (usado para a tradução).",
   "config.charactersPath.description": "Pasta com suas próprias imagens de personagens (PNG, GIF ou WebP, até 300 KB cada). Vazio usa ~/.agent-standup/characters. lead.png é o agente principal, you.png é você, qualquer outra imagem é um subagente, name-talk.png é um quadro opcional de boca aberta."
 }
