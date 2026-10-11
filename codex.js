@@ -44,21 +44,21 @@ function firstLine(file, max = 1024 * 1024) {
   let fd; try {
     fd = fs.openSync(file, 'r'); const parts = []; let pos = 0;
     while (pos < max) { const buf = Buffer.alloc(64 * 1024), n = fs.readSync(fd, buf, 0, buf.length, pos); if (!n) break; const nl = buf.subarray(0, n).indexOf(10); if (nl >= 0) { parts.push(buf.subarray(0, nl)); return { text: Buffer.concat(parts).toString('utf8'), whole: true }; } parts.push(buf.subarray(0, n)); pos += n; }
-    return { text: Buffer.concat(parts).toString('utf8'), whole: false };
+    return { text: Buffer.concat(parts).toString('utf8'), whole: false, capped: pos >= max };
   } catch { return { text: '', whole: false }; } finally { if (fd != null) fs.closeSync(fd); }
 }
 function head(file) {
   const hit = headCache.get(file); if (hit) return hit;
-  const { text, whole } = firstLine(file); let out = { ok: false, cwd: '', dir: '', child: false };
+  const { text, whole, capped } = firstLine(file); let out = { ok: false, cwd: '', dir: '', child: false };
   if (!text) return out;   // not written yet: looked at again next time
   let p = null; try { const r = JSON.parse(text); if (r && r.type === 'session_meta' && r.payload && typeof r.payload === 'object') p = r.payload; } catch {}
   if (p) out = { ok: true, cwd: typeof p.cwd === 'string' ? p.cwd : '', child: !!p.parent_thread_id || !!(p.source && typeof p.source === 'object' && p.source.subagent) };
-  else if (!whole && /^\{"timestamp":"[^"]*","(?:ordinal":\d+,")?type":"session_meta"/.test(text)) {   // a first line longer than what was read: the two facts, without the rest
+  else if (capped && /^\{"timestamp":"[^"]*","(?:ordinal":\d+,")?type":"session_meta"/.test(text)) {   // a first line longer than what was read: the two facts, without the rest
     const cwd = text.match(/"cwd":"((?:[^"\\]|\\.)*)"/); let c = ''; try { c = cwd ? JSON.parse('"' + cwd[1] + '"') : ''; } catch {}
     out = { ok: true, cwd: c, child: /"parent_thread_id":"[^"]+"/.test(text) || /"source":\{"subagent"/.test(text) };
   }
   out.dir = dirKey(out.cwd);
-  if (whole || out.ok) { if (headCache.size > 5000) headCache.clear(); headCache.set(file, out); }
+  if (whole || capped) { if (headCache.size > 5000) headCache.clear(); headCache.set(file, out); }   // a first line still being written is read again next time
   return out;
 }
 // The threads a person started, newest first. A thread started by another thread (Codex's review of a command before it runs, a sub-agent) is not a session of its own.
@@ -78,7 +78,11 @@ function threadNames() {
   const map = new Map(); try { for (const l of fs.readFileSync(f, 'utf8').split('\n')) { if (!l) continue; try { const j = JSON.parse(l); if (j && j.id && typeof j.thread_name === 'string' && j.thread_name.trim()) map.set(String(j.id).toLowerCase(), j.thread_name.trim()); } catch {} } } catch {}
   names = { sig, map }; return map;
 }
-const typed = (t) => String(t == null ? '' : t).replace(/<\/?send_user_message_question_reply>/g, '').trim();   // an answer to a question the agent asked comes wrapped
+function typed(t) {   // what the person typed, without what Codex wraps around it: the tags of an answer to a question, and the list of attached files ("# Files mentioned by the user:" … "## My request:")
+  let s = String(t == null ? '' : t).replace(/<\/?send_user_message_question_reply>/g, ''); const i = s.indexOf('# Files mentioned by the user:');
+  if (i >= 0) { const rest = s.slice(i), m = /\n## My request[^\n]*:[ \t]*\n?/.exec(rest); s = s.slice(0, i) + (m ? '\n' + rest.slice(m.index + m[0].length) : ''); }
+  return s.trim();
+}
 const partsText = (c) => (typeof c === 'string' ? c : Array.isArray(c) ? c.map((x) => (x && typeof x.text === 'string' ? x.text : '')).filter(Boolean).join('\n') : '');
 const promptCache = new Map();   // file → the first prompt ('' = looked for in the first megabyte and not there)
 function firstPrompt(r) {
@@ -149,9 +153,10 @@ function parser({ toolLabel, clip, resultMax = {} }) {
           const cid = i ? id + ':' + i : id, kind = c && c.type, d = diffSides(c && c.unified_diff);
           if (kind === 'add') call(cid, 'Write', { file_path: file, content: c.content != null ? String(c.content) : d.add }, at);
           else call(cid, 'Edit', { file_path: file, old_string: kind === 'delete' && c.content != null ? String(c.content) : d.del, new_string: d.add }, at);
+          result(cid, '', it.status === 'failed');   // the line is written once the change is made: without an answer the call would look like it is still waiting (for an approval, on a file change)
         });
         else if (it.type === 'McpToolCall') { call(id, 'mcp__' + (it.server || 'mcp') + '__' + (it.tool || 'tool'), it.arguments && typeof it.arguments === 'object' ? it.arguments : {}, at); result(id, partsText(it.result && it.result.content), it.status === 'failed' || !!(it.result && it.result.isError)); }
-        else if (it.type === 'ImageView') call(id, 'Read', { file_path: it.path }, at);
+        else if (it.type === 'ImageView') { call(id, 'Read', { file_path: it.path }, at); result(id, ''); }
         else if (it.type === 'Extension' && /^web\./.test(it.kind || '')) {
           const a = it.action && typeof it.action === 'object' ? it.action : {}, q = it.query || a.query || (Array.isArray(a.queries) && a.queries[0]) || '';
           if (a.url) call(id, 'WebFetch', { url: a.url }, at); else call(id, 'WebSearch', { query: q }, at);
@@ -165,7 +170,7 @@ function parser({ toolLabel, clip, resultMax = {} }) {
         const info = p.info && typeof p.info === 'object' ? p.info : null, u = info && info.last_token_usage, tot = info && info.total_token_usage ? info.total_token_usage.total_tokens : null;
         if (!u || (tot != null && tot === cx.tot)) return; cx.tot = tot;
         const cached = u.cached_input_tokens || 0, w = u.cache_write_input_tokens || 0;
-        st.msgUsage.set('t' + cx.n++, { ts, u: { i: Math.max(0, (u.input_tokens || 0) - cached - w), o: u.output_tokens || 0, r: cached, w }, model: cx.model || 'codex' });
+        st.msgUsage.set('t' + cx.n++, { ts, u: { i: Math.max(0, (u.input_tokens || 0) - cached - w), o: u.output_tokens || 0, r: cached, w }, model: cx.model || 'codex', ...(info.model_context_window > 0 ? { cw: info.model_context_window } : {}) });   // cw: the size of the context window, which Codex states
         return;
       }
       if (p.type === 'task_complete' || p.type === 'turn_complete' || p.type === 'turn_aborted') endTurn();
@@ -184,17 +189,18 @@ function parser({ toolLabel, clip, resultMax = {} }) {
       if (/^request_user_input/.test(n)) { call(id, 'AskUserQuestion', { questions: (Array.isArray(a.questions) ? a.questions : []).map((q) => ({ question: (q && (q.question || q.title)) || '', options: (q && Array.isArray(q.options) && q.options) || [] })) }); return; }   // the agent asks the person something: in both generations
       if (cx.items) return;
       if (/^(shell|shell_command|exec_command|local_shell|unified_exec|container\.exec)$/.test(n)) call(id, 'Bash', { command: shellText(a.command != null ? a.command : a.cmd) });
-      else if (n === 'apply_patch') { const fl = patchFiles(a.input != null ? a.input : a.patch); if (!fl.length) call(id, 'Edit', { file_path: '', old_string: '', new_string: clip(a.input || a.patch || '', 500) }); fl.forEach((f, i) => { const cid = i ? id + ':' + i : id; if (f.type === 'add') call(cid, 'Write', { file_path: f.file, content: f.add }); else call(cid, 'Edit', { file_path: f.file, old_string: f.del, new_string: f.add }); }); }
+      else if (n === 'apply_patch') { const fl = patchFiles(a.input != null ? a.input : a.patch); if (!fl.length) call(id, 'Edit', { file_path: '', old_string: '', new_string: clip(a.input || a.patch || '', 500) }); if (fl.length > 1) (cx.more = cx.more || {})[id] = fl.length; fl.forEach((f, i) => { const cid = i ? id + ':' + i : id; if (f.type === 'add') call(cid, 'Write', { file_path: f.file, content: f.add }); else call(cid, 'Edit', { file_path: f.file, old_string: f.del, new_string: f.add }); }); }
       else if (n === 'update_plan') call(id, 'TodoWrite', { todos: (Array.isArray(a.plan) ? a.plan : []).map((x) => ({ content: (x && x.step) || '', status: (x && x.status) || 'pending' })) });
       else if (n === 'view_image') call(id, 'Read', { file_path: a.path });
       else if (n) call(id, p.namespace ? String(p.namespace).replace(/::$/, '') + '__' + n : n, a);
       return;
     }
     if ((p.type === 'function_call_output' || p.type === 'custom_tool_call_output' || p.type === 'local_shell_call_output') && id) {
+      if (cx.items && st.toolName[id] !== 'AskUserQuestion') return;   // in the current format the item already carried the output (an MCP call has the same id in both: it would be answered twice, the second time without its failure)
       let out = p.output, err = false;
       if (typeof out === 'string' && out[0] === '{') { try { const j = JSON.parse(out); if (j && typeof j === 'object' && ('output' in j || 'metadata' in j)) { err = !!(j.metadata && typeof j.metadata.exit_code === 'number' && j.metadata.exit_code !== 0); out = j.output != null ? j.output : ''; } } catch {} }
       else if (out && typeof out === 'object' && !Array.isArray(out)) { err = out.success === false; out = out.content != null ? out.content : ''; }
-      result(id, partsText(out), err);
+      result(id, partsText(out), err); for (let i = 1; i < ((cx.more || {})[id] || 0); i++) result(id + ':' + i, '', err);
       return;
     }
     if (p.type === 'web_search_call' && !cx.items && id) call(id, 'WebSearch', { query: (p.action && p.action.query) || '' });

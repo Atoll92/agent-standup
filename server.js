@@ -103,7 +103,7 @@ function listSessions() {
 }
 function listSessions0() {
   const rows = [];
-  for (const r of codex.sessions()) rows.push({ proj: codex.PROJ, id: r.id, mtime: r.mtime, size: r.size, agents: 0, cx: r });
+  for (const r of codex.sessions(30)) rows.push({ proj: codex.PROJ, id: r.id, mtime: r.mtime, size: r.size, agents: 0, cx: r });
   for (const proj of fs.existsSync(ROOT) ? fs.readdirSync(ROOT) : []) {
     const dir = path.join(ROOT, proj);
     let files;
@@ -115,7 +115,7 @@ function listSessions0() {
     }
   }
   rows.sort((a, b) => b.mtime - a.mtime);
-  const top = rows.slice(0, 60);
+  const top = rows.filter((r) => !r.cx).slice(0, 60).concat(rows.filter((r) => r.cx)).sort((a, b) => b.mtime - a.mtime);   // the 60 most recent Claude Code sessions as always, and up to 30 Codex ones beside them: neither pushes the other out
   for (const r of top) {
     if (r.cx) { const c = r.cx; delete r.cx; r.title = codex.title(c); r.project = codex.projectLabel(c.cwd); r.source = 'codex'; continue; }
     // titles come from the cached tail read (custom title, then AI title, then first prompt): no whole-file reads
@@ -219,7 +219,7 @@ function boardRows0() {
     for (const f of files) { try { const st = fs.statSync(path.join(dir, f)); if (now - st.mtimeMs < 12 * 3600e3) rows.push({ proj, id: f.slice(0, -6), st }); } catch {} }
   }
   rows.sort((a, b) => b.st.mtimeMs - a.st.mtimeMs);
-  return rows.slice(0, 40).map(({ proj, id, st, cx }) => {
+  return rows.filter((r) => !r.cx).slice(0, 40).concat(rows.filter((r) => r.cx).slice(0, 20)).sort((a, b) => b.st.mtimeMs - a.st.mtimeMs).map(({ proj, id, st, cx }) => {
     if (cx) return codex.boardRow(cx, now);
     const file = path.join(ROOT, proj, id + '.jsonl'); let p; try { p = parseTail(file, st); } catch { p = { pending: [] }; }
     const age = now - st.mtimeMs, lp = (p.pending || [])[(p.pending || []).length - 1]; let state = 'idle', tool = '', ageMs = age;
@@ -389,7 +389,7 @@ function buildTimeline(proj, id, files = []) {
       else events.push(e);
     });
     if (run && run.done.has(st.agent) && st.lastTs) finish(st.agent, st.lastTs, parent[st.agent] || 'main');   // the journal has no times: the agent finished when it last wrote
-    for (const [mid, mu] of st.msgUsage) events.push({ ts: mu.ts, agent: st.agent, kind: 'usage', u: mu.u, model: mu.model, k: 'u/' + st.agent + '/' + mid });
+    for (const [mid, mu] of st.msgUsage) events.push({ ts: mu.ts, agent: st.agent, kind: 'usage', u: mu.u, model: mu.model, ...(mu.cw ? { cw: mu.cw } : {}), k: 'u/' + st.agent + '/' + mid });
   }
   for (const e of events) if (e.kind === 'report' && e.to === null) e.to = parent[e.agent] || 'main';
 
