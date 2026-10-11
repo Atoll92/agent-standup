@@ -11,11 +11,19 @@ function wav(samples, rate) {   // Float32 in [-1, 1] → 16-bit mono WAV
   for (let i = 0; i < n; i++) { const s = Math.max(-1, Math.min(1, samples[i])); buf.writeInt16LE(Math.round(s < 0 ? s * 32768 : s * 32767), 44 + i * 2); }
   return buf;
 }
+const FILE = { q8: 'model_quantized', q4: 'model_q4', fp32: 'model', fp16: 'model_fp16', q4f16: 'model_q4f16' };   // the file transformers.js keeps for each dtype, under models/<MODEL>/onnx/
 async function main() {
-  const dir = process.env.AGENT_STANDUP_KOKORO_DIR, dtype = process.env.AGENT_STANDUP_KOKORO_DTYPE || 'q4f16';
+  const dir = process.env.AGENT_STANDUP_KOKORO_DIR, dtype = process.env.AGENT_STANDUP_KOKORO_DTYPE || 'q4';
   const req = createRequire(path.join(dir, 'node_modules', 'x.js'));   // resolve from the install folder, not from the extension
   const tf = req('@huggingface/transformers'); tf.env.cacheDir = path.join(dir, 'models');
-  const { KokoroTTS } = req('kokoro-js'); const tts = await KokoroTTS.from_pretrained(MODEL, { dtype, device: 'cpu' });
+  const { KokoroTTS } = req('kokoro-js'), load = () => KokoroTTS.from_pretrained(MODEL, { dtype, device: 'cpu' });
+  let tts; try { tts = await load(); } catch (e) {
+    // transformers.js writes the model straight to its final name and never checks it again: a download cut short (the worker killed while the model
+    // was being fetched, e.g. by a reload of the window) leaves a file that fails to load every time after. Drop this model's files and fetch them once more.
+    const onnx = path.join(dir, 'models', ...MODEL.split('/'), 'onnx'), name = FILE[dtype] || 'model'; let dropped = 0;
+    for (const ext of ['.onnx', '.onnx_data']) { try { fs.unlinkSync(path.join(onnx, name + ext)); dropped++; } catch {} }
+    if (!dropped) throw e; console.error('kokoro: the ' + dtype + ' model could not be loaded (' + String((e && e.message) || e).slice(0, 80) + '); fetching it again'); tts = await load();
+  }
   send({ ready: true });
   for await (const line of readline.createInterface({ input: process.stdin })) {
     let m; try { m = JSON.parse(line); } catch { continue; }
