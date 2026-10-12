@@ -8,7 +8,7 @@
 //   5. mergeToolBeats  sorts them by time and groups consecutive tool calls
 // The agents that launch agents (Claude Code's Agent tool and workflows) are part of this model; a source with a single agent, as Codex, just has none.
 
-const { Say, Report, ToolCall, ToolBeat, Order, Finish, Usage, Signal, AgentCall, AgentDone, WorkflowRun } = require('./models');
+const { Timeline, Say, Report, ToolCall, ToolBeat, Order, Finish, Usage, Signal, AgentCall, AgentDone, WorkflowRun } = require('./models');
 
 // An old transcript without a completion record counts as finished once it has been silent this long.
 const QUIET_MS = 4 * 60 * 1000;
@@ -146,8 +146,7 @@ function mergeToolBeats(events) {
 
 // `sourceOf(proj)` gives the source a session belongs to.
 function createTimeline({ sourceOf }) {
-  // The timeline of a session: { id, proj, agents, events, durationMs, recentUntil }. Every file read is added to `files`,
-  // so the caller can tell when any of them changes.
+  // The Timeline of a session. Every file read is added to `files`, so the caller can tell when any of them changes.
   function buildTimeline(proj, id, files = []) {
     const session = sourceOf(proj).readSession(proj, id, files);
     const launches = linkLaunches(session);
@@ -159,14 +158,14 @@ function createTimeline({ sourceOf }) {
     const first = merged.find((event) => !event.bookkeeping);
     const start = first ? first.timestamp : 0;
     const end = merged.length ? merged[merged.length - 1].timestamp : 0;
-    return {
-      id,
-      proj,
+    return new Timeline({
+      sessionId: id,
+      project: proj,
       agents: Object.values(session.agents),
       events: merged.map((event) => event.relativeTo(start)),
       durationMs: end - start,
       recentUntil,
-    };
+    });
   }
   return { buildTimeline };
 }

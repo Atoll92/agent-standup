@@ -86,15 +86,15 @@ test('the board tells working, waiting, blocked, turn and idle from the tail of 
 test('the live feed gives only what is new, under the same memory', async () => {
   const { core, dir } = newCore(), file = path.join(dir('-feed'), 's.jsonl');
   write(file, [rec.user('start', ago(30)), rec.say('One.', ago(29))]);
-  const first = core.timelineEntry('-feed', 's'), seen = first.tl.seq;
-  assert.equal(core.feedSince(first, 0).length, first.tl.events.length, 'a reader that has nothing gets everything');
+  const first = core.timelineEntry('-feed', 's'), seen = first.timeline.sequence;
+  assert.equal(core.feedSince(first, 0).length, first.timeline.events.length, 'a reader that has nothing gets everything');
   assert.equal(core.feedSince(first, seen).length, 0, 'a reader that is up to date gets nothing');
 
   await sleep(300);   // a session is not rebuilt more than every 250 ms
   append(file, [rec.say('Two.', ago(1))]);
   const next = core.timelineEntry('-feed', 's');
-  assert.equal(next.tl.ep, first.tl.ep, 'same memory: the reader keeps what it has');
-  assert.ok(next.tl.seq > seen);
+  assert.equal(next.timeline.feedId, first.timeline.feedId, 'same memory: the reader keeps what it has');
+  assert.ok(next.timeline.sequence > seen);
   assert.deepEqual(core.feedSince(next, seen).map((e) => e.text), ['Two.']);
 });
 

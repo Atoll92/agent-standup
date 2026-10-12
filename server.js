@@ -12,7 +12,7 @@ const { execFileSync } = require('child_process');
 
 const { blocks, resultImages } = require('./core/transcript');
 const { createCore, configFromEnv } = require('./core');
-const { serializeEvent, serializeAgent, serializeTimeline } = require('./core/serializers/web');
+const { serializeEvent, serializeAgent, serializeTimeline, serializeFeed } = require('./core/serializers/web');
 const { demoTimeline } = require('./core/demo');   // the core's models, in the names the page reads
 const core = createCore(configFromEnv());   // sessions → timeline, board and live feed (no web in there); read from the environment once, here
 const { root: ROOT, timelineEntry, feedSince, listSessions, boardRows, currentSession } = core;
@@ -48,7 +48,7 @@ function toolImage(file, toolId, n) {   // looks for the tool's result line in t
   return found;
 }
 
-const demoEntry = () => ({ tl: demoTimeline() });   // the built-in fictional session, as models like any other
+const demoEntry = () => ({ timeline: demoTimeline() });   // the built-in fictional session, as models like any other
 
 // Settings live in a file, not only in the page's localStorage: the port changes between VS Code windows and reloads, and localStorage is per origin (port included).
 const PREFS = process.env.AGENT_STANDUP_PREFS || (process.platform === 'win32' ? path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'agent-standup', 'prefs.json') : path.join(os.homedir(), '.config', 'agent-standup', 'prefs.json'));
@@ -304,20 +304,19 @@ function start(port = PORT) {
       const proj = url.searchParams.get('proj') || '', sid = url.searchParams.get('id') || '', SAFE = /^[\w.\-]+$/;
       if (!SAFE.test(proj) || !SAFE.test(sid) || proj === '..' || sid === '..' || proj.length > 200 || sid.length > 200) { res.writeHead(400); return res.end('bad request'); }
       if (proj !== '_demo' && !core.exists(proj, sid)) return json({ error: 'session not found' }, 404);
-      const entry = proj === '_demo' ? demoEntry() : timelineEntry(proj, sid), tl = entry.tl;   // built-in fictional session
-      const wire = (events) => events.map(serializeEvent);
+      const entry = proj === '_demo' ? demoEntry() : timelineEntry(proj, sid), timeline = entry.timeline;   // built-in fictional session
       const after = url.searchParams.get('after'), ep = url.searchParams.get('ep');
       if (after == null) {   // the whole timeline: serialize once per version, send gzip-compressed when the browser allows it (12 MB → ~1.5 MB)
         const gz = /\bgzip\b/.test(req.headers['accept-encoding'] || '');
-        if (!entry.json) entry.json = JSON.stringify(serializeTimeline(tl));
+        if (!entry.json) entry.json = JSON.stringify(serializeTimeline(timeline));
         if (gz && !entry.gz) entry.gz = zlib.gzipSync(entry.json, { level: 5 });
         res.writeHead(200, { 'content-type': 'application/json', ...(gz ? { 'content-encoding': 'gzip' } : {}), vary: 'accept-encoding' });
         return res.end(gz ? entry.gz : entry.json);
       }
-      if (ep == null) return json({ id: tl.id, agents: tl.agents.map(serializeAgent), total: tl.events.length, events: wire(tl.events.slice(+after)) });   // a page loaded before 1.25.7 still asks by position
-      const a = +after; if (ep !== tl.ep || !(a >= 0 && a <= tl.seq)) return json({ resync: true });   // not the feed this page was following (restart, session dropped from memory, transcript rewritten): it loads the session again
-      if (a === tl.seq) { if (!entry.idle) entry.idle = JSON.stringify({ id: tl.id, agents: tl.agents.map(serializeAgent), ep: tl.ep, seq: tl.seq, events: [] }); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(entry.idle); }   // nothing new, which is the answer to nearly every poll: written once
-      return json({ id: tl.id, agents: tl.agents.map(serializeAgent), ep: tl.ep, seq: tl.seq, events: wire(feedSince(entry, a)) });   // new events and changed ones alike, whole, under the key they always had
+      if (ep == null) return json({ id: timeline.sessionId, agents: timeline.agents.map(serializeAgent), total: timeline.events.length, events: timeline.events.slice(+after).map(serializeEvent) });   // a page loaded before 1.25.7 still asks by position
+      const a = +after; if (ep !== timeline.feedId || !(a >= 0 && a <= timeline.sequence)) return json({ resync: true });   // not the feed this page was following (restart, session dropped from memory, transcript rewritten): it loads the session again
+      if (a === timeline.sequence) { if (!entry.idle) entry.idle = JSON.stringify(serializeFeed(timeline, [])); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(entry.idle); }   // nothing new, which is the answer to nearly every poll: written once
+      return json(serializeFeed(timeline, feedSince(entry, a)));   // new events and changed ones alike, whole, under the key they always had
     }
     const pk = url.pathname.match(/^\/packs\/([a-z]+)\/(.*)$/);
     if (url.pathname.startsWith('/characters/') || (pk && packDir(pk[1]))) {   // only plain image files of the characters folder (or of a built-in pack), by exact name

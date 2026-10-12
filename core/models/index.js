@@ -1,6 +1,6 @@
 // The core's models of what happens in a session.
 //
-// AGENTS (agent.js): who is in the call.
+// AGENTS (agent.js): who is in the call. TIMELINE (timeline.js): a session as a call, its agents and its events.
 //
 // EVENTS (events/, extending Event) are what a display shows:
 //   from the transcript   Say ('say'), ToolCall ('tool'), Results ('results'), UserMessage ('user'), Compact ('compact')
@@ -9,6 +9,7 @@
 //   AgentCall ('agentcall'), AgentDone ('agentdone'), WorkflowRun ('wfrun'), WorkflowDone ('wfdone')
 const { UnknownEventKind } = require('../errors');
 const { Agent } = require('./agent');
+const { Timeline } = require('./timeline');
 const { Event } = require('./event');
 const { Signal } = require('./signal');
 const { Say } = require('./events/say');
@@ -40,7 +41,7 @@ function eventClassFor(kind) {
 }
 
 module.exports = {
-  Agent,
+  Agent, Timeline,
   Event, Say, Report, ToolCall, ToolBeat, Results, UserMessage, Order, Finish, Usage, Compact,
   Signal, AgentCall, AgentDone, WorkflowRun, WorkflowDone,
   EVENT_CLASSES, SIGNAL_CLASSES, eventClassFor,

@@ -1,8 +1,8 @@
 // test/serializers.test.js: the format the page reads (core/serializers/web.js). It must not change: public/index.html reads these names.
 const test = require('node:test'), assert = require('node:assert');
 const { Say, Report, ToolBeat, ToolCall, Results, UserMessage, Order, Finish, Usage, Compact, AgentCall, AgentDone, WorkflowRun, WorkflowDone } = require('../core/models');
-const { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline } = require('../core/serializers/web');
-const { Event, Agent } = require('../core/models');
+const { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline, serializeFeed } = require('../core/serializers/web');
+const { Event, Agent, Timeline } = require('../core/models');
 const { UnknownEventKind } = require('../core/errors');
 const { demoTimeline } = require('../core/demo');
 
@@ -48,9 +48,14 @@ test('what a transcript says before the timeline is built never reaches a displa
   }
 });
 
-test('a timeline keeps what it is and has its agents and events serialized', () => {
-  const timeline = { id: 's', proj: '-p', agents: [Agent.lead()], events: [new Say({ timestamp: 5, agentId: 'main', text: 'hi', key: 'main:0' }).relativeTo(5)], durationMs: 0, recentUntil: 0, ep: 'e', seq: 1 };
-  assert.deepEqual(serializeTimeline(timeline), { ...timeline, agents: [{ id: 'main', role: 'Lead', type: 'main' }], events: [{ ts: 5, agent: 'main', kind: 'say', text: 'hi', k: 'main:0', t: 0 }] });
+test('a timeline in the names the page reads, with its live feed, and read back the same', () => {
+  const timeline = new Timeline({ sessionId: 's', project: '-p', agents: [Agent.lead()], events: [new Say({ timestamp: 5, agentId: 'main', text: 'hi', key: 'main:0' }).relativeTo(5)], durationMs: 0, recentUntil: 0, feedId: 'e', sequence: 1 });
+  const wire = { id: 's', proj: '-p', agents: [{ id: 'main', role: 'Lead', type: 'main' }], events: [{ ts: 5, agent: 'main', kind: 'say', text: 'hi', k: 'main:0', t: 0 }], durationMs: 0, recentUntil: 0, ep: 'e', seq: 1 };
+  assert.deepEqual(serializeTimeline(timeline), wire);
+  const back = deserializeTimeline(wire);
+  assert.ok(back instanceof Timeline && back.lead instanceof Agent);
+  assert.deepEqual(serializeTimeline(back), wire);
+  assert.deepEqual(serializeFeed(timeline, timeline.events), { id: 's', agents: wire.agents, ep: 'e', seq: 1, events: wire.events }, 'what a page following the session live gets');
 });
 
 test('reading back what the page receives gives the same event, of the same class', () => {
@@ -84,7 +89,8 @@ test('the demo is models like a real session, and the page receives it as it was
   const written = require('../demo.js')();
   const demo = demoTimeline();
   assert.ok(demo.events.every((event) => event instanceof Event), 'models');
-  assert.deepEqual([demo.ep, demo.seq, demo.events[0].key, demo.events.length], ['demo', 1, 'd:0', written.events.length]);
+  assert.ok(demo instanceof Timeline);
+  assert.deepEqual([demo.feedId, demo.sequence, demo.events[0].key, demo.events.length], ['demo', 1, 'd:0', written.events.length]);
   const french = demo.events.find((event) => event.kind === 'say');
   assert.ok(french.translations.fr, 'its lines keep their French');
   // as the page receives it: what demo.js wrote, each line with its key

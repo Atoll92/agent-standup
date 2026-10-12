@@ -4,7 +4,7 @@
 // Every event:  ts (timestamp), agent (agentId), kind, k (key), t (elapsed, in a timeline), th (thought, when there is one),
 //               end: 1 (it closed the turn), fr (its text in French, when it is known in advance: the demo)
 // And by kind, below: how each kind is written (`write`) and read back (`read`). Reading what was written gives the same event.
-const { Agent, eventClassFor } = require('../models');
+const { Agent, Timeline, eventClassFor } = require('../models');
 const { UnknownEventKind } = require('../errors');
 
 const KINDS = {
@@ -117,8 +117,25 @@ const deserializeAgent = (wire) => new Agent({
   translations: wire.roleFr ? { fr: wire.roleFr } : undefined,
 });
 
-// A timeline as the page reads it: the same object, with its agents and its events serialized.
-const serializeTimeline = (timeline) => ({ ...timeline, agents: timeline.agents.map(serializeAgent), events: timeline.events.map(serializeEvent) });
-const deserializeTimeline = (wire) => ({ ...wire, agents: wire.agents.map(deserializeAgent), events: wire.events.map(deserializeEvent) });
+// A timeline as the page reads it: id (sessionId), proj (project), ep (feedId) and seq (sequence) of the live feed.
+function serializeTimeline(timeline) {
+  return {
+    id: timeline.sessionId,
+    proj: timeline.project,
+    agents: timeline.agents.map(serializeAgent),
+    events: timeline.events.map(serializeEvent),
+    durationMs: timeline.durationMs,
+    ...(timeline.recentUntil !== undefined ? { recentUntil: timeline.recentUntil } : {}),
+    ...(timeline.feedId !== undefined ? { ep: timeline.feedId } : {}),
+    ...(timeline.sequence !== undefined ? { seq: timeline.sequence } : {}),
+  };
+}
+const deserializeTimeline = (wire) => new Timeline({
+  sessionId: wire.id, project: wire.proj, agents: wire.agents.map(deserializeAgent), events: wire.events.map(deserializeEvent),
+  durationMs: wire.durationMs, recentUntil: wire.recentUntil, feedId: wire.ep, sequence: wire.seq,
+});
 
-module.exports = { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline };
+// What the page gets when it follows a session live: the session's agents, where the feed is, and the events new or different since it last asked.
+const serializeFeed = (timeline, events) => ({ id: timeline.sessionId, agents: timeline.agents.map(serializeAgent), ep: timeline.feedId, seq: timeline.sequence, events: events.map(serializeEvent) });
+
+module.exports = { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline, serializeFeed };

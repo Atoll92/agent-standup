@@ -5,7 +5,10 @@ const { deserializeTimeline } = require('./serializers/web');
 
 function demoTimeline() {
   const wire = require('../demo.js')();
-  return { ...deserializeTimeline({ ...wire, events: wire.events.map((event, index) => ({ ...event, k: 'd:' + index })) }), ep: 'demo', seq: 1 };
+  const timeline = deserializeTimeline({ ...wire, events: wire.events.map((event, index) => ({ ...event, k: 'd:' + index })) });
+  timeline.feedId = 'demo';
+  timeline.sequence = 1;
+  return timeline;
 }
 
 module.exports = { demoTimeline };

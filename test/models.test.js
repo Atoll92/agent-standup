@@ -129,3 +129,13 @@ test('an agent is the lead or a sub-agent, with readable attributes', () => {
   assert.deepEqual([subAgent.isLead, subAgent.launchCallId, subAgent.lastActiveAt, subAgent.workflow], [false, 'toolu_1', 5, undefined]);
   assert.deepEqual(subAgent.translations, {});
 });
+
+test('a timeline finds its agents', () => {
+  const { Agent, Timeline } = require('../core/models');
+  const lead = Agent.lead(), helper = new Agent({ id: 'a1', role: 'Help', type: 'general-purpose' });
+  const timeline = new Timeline({ sessionId: 's', project: '-p', agents: [lead, helper], events: [], durationMs: 0, recentUntil: 0 });
+  assert.equal(timeline.lead, lead);
+  assert.equal(timeline.agent('a1'), helper);
+  assert.equal(timeline.agent('nobody'), null);
+  assert.deepEqual([timeline.feedId, timeline.sequence], [undefined, undefined], 'the live feed numbers it, not its builder');
+});
