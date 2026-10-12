@@ -1,8 +1,7 @@
-const { Event } = require('./event');
+const { Signal } = require('../signal');
 
 // The answer to a Workflow call (`callId`) names the run it started: that run's agents are in subagents/workflows/<run>/.
-// Never sent to a display.
-class WorkflowRun extends Event {
+class WorkflowRun extends Signal {
   static kind = 'wfrun';
   constructor({ timestamp, agentId, callId, run, key }) {
     super({ timestamp, agentId, key });

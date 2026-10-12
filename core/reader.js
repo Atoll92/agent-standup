@@ -57,7 +57,7 @@ function createReader() {
   // path → what has been read of that file so far:
   //   { agent, journal, gen, offset, mtime, fp, tail, raw[], toolName{}, msgUsage Map }
   //   offset  how many bytes were read      fp    the last bytes of them      tail  the half-written line after the last newline
-  //   raw     the events made so far        toolName, msgUsage  what the record parser needs to remember between records
+  //   raw     the events and signals read so far (see models)        toolName, msgUsage  what the record parser needs to remember between records
   // The record parser (sources/claude/record.js, or Codex's) adds its own fields to it (lastTs, act, th, bg, prompt…).
   const fileStates = new Map();
   // Each time a transcript is read from its start it gets a new number, which is how the live feed knows its events were numbered again.

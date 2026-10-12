@@ -1,4 +1,4 @@
-const { Event } = require('./event');
+const { Event } = require('../event');
 
 // An agent giving work to another (`recipientId`): the lead launching a sub-agent, or a workflow starting one (`workflow`: which run).
 // `callId` is the tool call that launched it, `background` whether it runs in the background. `translations`: as for Say.

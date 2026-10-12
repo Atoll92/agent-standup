@@ -1,4 +1,4 @@
-const { Event } = require('./event');
+const { Event } = require('../event');
 
 // A sub-agent is done (`recipientId`: the agent it reports to).
 class Finish extends Event {

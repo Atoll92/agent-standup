@@ -1,4 +1,4 @@
-const { Event } = require('./event');
+const { Event } = require('../event');
 
 // The consecutive tool calls of one agent, as one activity. It keeps the key and the thought of its first call;
 // a beat that closed a turn takes no more calls.

@@ -44,7 +44,7 @@ test('usage: the four counts as u, and the context window only when it is known'
 test('what a transcript says before the timeline is built never reaches a display', () => {
   for (const signal of [new ToolCall({ timestamp: 1, agentId: 'a', tool: {} }), new AgentCall({ timestamp: 1, agentId: 'a', callId: 't' }), new AgentDone({ timestamp: 1, agentId: 'a', callId: 't' }),
     new WorkflowRun({ timestamp: 1, agentId: 'a', callId: 't', run: 'r' }), new WorkflowDone({ agentId: 'a', childId: 'c' })]) {
-    assert.throws(() => serializeEvent(signal), /are not sent to displays/, signal.constructor.name);
+    assert.throws(() => serializeEvent(signal), /is not sent to displays/, signal.constructor.name);
   }
 });
 

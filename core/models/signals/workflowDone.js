@@ -1,8 +1,7 @@
-const { Event } = require('./event');
+const { Signal } = require('../signal');
 
 // A workflow's journal says an agent (`childId`, by the name of its file) handed its result back. The journal has no times.
-// Never sent to a display.
-class WorkflowDone extends Event {
+class WorkflowDone extends Signal {
   static kind = 'wfdone';
   constructor({ agentId, childId, key }) {
     super({ timestamp: 0, agentId, key });

@@ -1,4 +1,4 @@
-const { Event } = require('./event');
+const { Event } = require('../event');
 
 // The tool compacted the conversation.
 class Compact extends Event {

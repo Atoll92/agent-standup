@@ -1,4 +1,4 @@
-const { Event } = require('./event');
+const { Event } = require('../event');
 
 // What tool calls returned. Each item is { callId, failed, output (trimmed), pictures (how many came back) }.
 class Results extends Event {

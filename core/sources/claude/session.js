@@ -33,7 +33,7 @@ function createClaudeSession({ root, files, reader }) {
     for (const journal of subs.journals) {
       const state = reader.readNew(journal.file, 'wf:' + journal.run, true, parseRecord), run = runs[journal.run];
       touched.push(journal.file);
-      if (state && run) for (const event of state.raw) if (run.agents[event.childId]) run.done.add(run.agents[event.childId]);
+      if (state && run) for (const entry of state.raw) if (run.agents[entry.childId]) run.done.add(run.agents[entry.childId]);
     }
     return { agents, states, runs };
   }

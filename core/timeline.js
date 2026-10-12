@@ -8,7 +8,7 @@
 //   5. mergeToolBeats  sorts them by time and groups consecutive tool calls
 // The agents that launch agents (Claude Code's Agent tool and workflows) are part of this model; a source with a single agent, as Codex, just has none.
 
-const { Say, Report, ToolCall, ToolBeat, Order, Finish, Usage, AgentCall, AgentDone, WorkflowRun, WorkflowDone } = require('./models');
+const { Say, Report, ToolCall, ToolBeat, Order, Finish, Usage, Signal, AgentCall, AgentDone, WorkflowRun } = require('./models');
 
 // An old transcript without a completion record counts as finished once it has been silent this long.
 const QUIET_MS = 4 * 60 * 1000;
@@ -25,11 +25,11 @@ function linkLaunches({ agents, states, runs }) {
   const runByTool = {};
   for (const state of states) {
     if (!state) continue;
-    for (const event of state.raw) {
-      const run = event instanceof WorkflowRun ? runs[event.run] : null;
+    for (const entry of state.raw) {
+      const run = entry instanceof WorkflowRun ? runs[entry.run] : null;
       if (!run || run.by) continue;
-      run.by = event.agentId; run.callId = event.callId;
-      runByTool[event.callId] = run;
+      run.by = entry.agentId; run.callId = entry.callId;
+      runByTool[entry.callId] = run;
     }
   }
   return { childByTool, runByTool };
@@ -44,10 +44,10 @@ function findFinished({ agents, states, runs }, { childByTool, runByTool }) {
 
   for (const state of states) {
     if (!state) continue;
-    for (const event of state.raw) {
-      if (!(event instanceof AgentDone)) continue;
-      if (childByTool[event.callId]) finished.add(childByTool[event.callId]);
-      else if (runByTool[event.callId]) for (const agentId of Object.values(runByTool[event.callId].agents)) finished.add(agentId);   // a run that stopped: so did every agent in it
+    for (const entry of state.raw) {
+      if (!(entry instanceof AgentDone)) continue;
+      if (childByTool[entry.callId]) finished.add(childByTool[entry.callId]);
+      else if (runByTool[entry.callId]) for (const agentId of Object.values(runByTool[entry.callId].agents)) finished.add(agentId);   // a run that stopped: so did every agent in it
     }
   }
   for (const run of Object.values(runs)) for (const agentId of run.done) finished.add(agentId);
@@ -86,22 +86,22 @@ function collectEvents({ agents, states, runs }, { childByTool, runByTool }, fin
       events.push(new Order({ timestamp: state.prompt.timestamp, agentId: parent[state.agent], recipientId: state.agent, callId: run.callId, background: true, workflow: agent.wf, text: state.prompt.text, title: agent.role, key: 'o/' + state.agent }));
     }
 
-    state.raw.forEach((event, index) => {
-      if (event instanceof AgentDone) {
-        const child = childByTool[event.callId], workflow = runByTool[event.callId];
-        if (child) finish(child, event.timestamp, event.agentId);
-        else if (workflow) for (const agentId of Object.values(workflow.agents)) if (!workflow.done.has(agentId)) finish(agentId, Math.max(event.timestamp, lastTs[agentId] || 0), event.agentId);   // the agents the journal knows about are finished below, at their own time
-      } else if (event instanceof AgentCall) {
-        const child = childByTool[event.callId];
+    state.raw.forEach((entry, index) => {
+      if (entry instanceof AgentDone) {
+        const child = childByTool[entry.callId], workflow = runByTool[entry.callId];
+        if (child) finish(child, entry.timestamp, entry.agentId);
+        else if (workflow) for (const agentId of Object.values(workflow.agents)) if (!workflow.done.has(agentId)) finish(agentId, Math.max(entry.timestamp, lastTs[agentId] || 0), entry.agentId);   // the agents the journal knows about are finished below, at their own time
+      } else if (entry instanceof AgentCall) {
+        const child = childByTool[entry.callId];
         if (!child) return;
-        parent[child] = event.agentId;
-        events.push(new Order({ timestamp: event.timestamp, agentId: event.agentId, recipientId: child, callId: event.callId, background: event.background, text: event.text, title: event.title, key: event.key }));
-      } else if (event instanceof WorkflowRun || event instanceof WorkflowDone) {
-        return;   // bookkeeping of the workflow, nothing to show
+        parent[child] = entry.agentId;
+        events.push(new Order({ timestamp: entry.timestamp, agentId: entry.agentId, recipientId: child, callId: entry.callId, background: entry.background, text: entry.text, title: entry.title, key: entry.key }));
+      } else if (entry instanceof Signal) {
+        return;   // the other signals (the workflows' own) have been read above: nothing to show
       } else if (index === reportAt) {
-        events.push(Report.from(event));   // `to` is filled below, once every order is known
+        events.push(Report.from(entry));   // its recipient is filled in below, once every order is known
       } else {
-        events.push(event);
+        events.push(entry);
       }
     });
 

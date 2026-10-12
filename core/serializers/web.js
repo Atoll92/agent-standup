@@ -65,7 +65,7 @@ const KINDS = {
 // has no place here: it would be a mistake for it to reach a display.
 function serializeEvent(event) {
   const kind = KINDS[event.kind];
-  if (!kind) throw new Error(`${event.constructor.name} events are not sent to displays`);
+  if (!kind) throw new Error(`${event.constructor.name} is not sent to displays`);
   const french = event.translations && event.translations.fr;
   return {
     ts: event.timestamp,

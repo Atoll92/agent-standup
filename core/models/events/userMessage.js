@@ -1,4 +1,4 @@
-const { Event } = require('./event');
+const { Event } = require('../event');
 
 // What the human typed. `translations`: as for Say.
 class UserMessage extends Event {

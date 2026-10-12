@@ -1,6 +1,6 @@
 // test/models.test.js: the events of a timeline (core/models), the errors, and the contract of a source (core/sources/source.js). What the page receives is in serializers.test.js.
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), os = require('os'), path = require('path');
-const { Event, Say, Report, ToolCall, ToolBeat, Results, UserMessage, Order, Finish, Usage, Compact, AgentCall, AgentDone, WorkflowRun, WorkflowDone } = require('../core/models');
+const { Event, Say, Report, ToolCall, ToolBeat, Results, UserMessage, Order, Finish, Usage, Compact, Signal, AgentCall, AgentDone, WorkflowRun, WorkflowDone } = require('../core/models');
 const { SessionNotFound, NotImplemented } = require('../core/errors');
 const { Source } = require('../core/sources/source');
 const { ClaudeSource } = require('../core/sources/claude');
@@ -17,11 +17,21 @@ test('an event says what it is with readable attributes', () => {
   const usage = new Usage({ timestamp: 5, agentId: 'main', tokens: { input: 1, output: 2, cacheReads: 3, cacheWrites: 4 }, model: 'm', contextWindow: 200000, key: 'k' });
   assert.deepEqual([usage.tokens.cacheReads, usage.contextWindow], [3, 200000]);
   assert.equal(new WorkflowDone({ agentId: 'wf:r1', childId: 'a1' }).timestamp, 0, 'a journal has no times');
-  for (const event of [new ToolCall({ timestamp: 1, agentId: 'a', tool: {} }), new Results({ timestamp: 1, agentId: 'a', items: [] }), new Compact({ timestamp: 1, agentId: 'a' }),
-    new AgentCall({ timestamp: 1, agentId: 'a', callId: 't' }), new AgentDone({ timestamp: 1, agentId: 'a', callId: 't' }), new WorkflowRun({ timestamp: 1, agentId: 'a', callId: 't', run: 'r' }), new Finish({ timestamp: 1, agentId: 'a', recipientId: 'main', key: 'k' })]) {
+  for (const event of [new ToolCall({ timestamp: 1, agentId: 'a', tool: {} }), new Results({ timestamp: 1, agentId: 'a', items: [] }), new Compact({ timestamp: 1, agentId: 'a' }), new Finish({ timestamp: 1, agentId: 'a', recipientId: 'main', key: 'k' })]) {
     assert.equal(event.kind, event.constructor.kind);
     assert.equal(event.endsTurn, false);
   }
+});
+
+test('signals are what the timeline reads and drops: not events, with nothing of what a display needs', () => {
+  const signals = [new AgentCall({ timestamp: 1, agentId: 'main', callId: 't', background: true, text: 'x', title: 'y', key: 'main:3' }), new AgentDone({ timestamp: 1, agentId: 'main', callId: 't' }),
+    new WorkflowRun({ timestamp: 1, agentId: 'main', callId: 't', run: 'r' }), new WorkflowDone({ agentId: 'wf:r', childId: 'a1' })];
+  for (const signal of signals) {
+    assert.ok(signal instanceof Signal && !(signal instanceof Event), signal.constructor.name);
+    assert.equal(signal.kind, signal.constructor.kind);
+    for (const member of ['endTurn', 'relativeTo', 'signature', 'bookkeeping']) assert.equal(member in signal, false, signal.constructor.name + '.' + member);
+  }
+  assert.deepEqual({ ...signals[0] }, { timestamp: 1, agentId: 'main', kind: 'agentcall', key: 'main:3', callId: 't', background: true, text: 'x', title: 'y' });
 });
 
 test('a report is what a sub-agent said last, keeping its key and its thought', () => {
@@ -102,9 +112,11 @@ test('Claude Code and Codex are sources, and a session that is not there is a Se
 });
 
 test('the registry gives the class of each kind, and refuses a kind no class is for', () => {
-  const { EVENT_CLASSES, eventClassFor } = require('../core/models');
+  const { EVENT_CLASSES, SIGNAL_CLASSES, eventClassFor } = require('../core/models');
   const { UnknownEventKind } = require('../core/errors');
   assert.equal(new Set(EVENT_CLASSES.map((EventClass) => EventClass.kind)).size, EVENT_CLASSES.length, 'one class per kind');
   for (const EventClass of EVENT_CLASSES) assert.equal(eventClassFor(EventClass.kind), EventClass);
   assert.throws(() => eventClassFor('nope'), UnknownEventKind);
+  for (const SignalClass of SIGNAL_CLASSES) assert.throws(() => eventClassFor(SignalClass.kind), UnknownEventKind, 'a signal is not an event: ' + SignalClass.kind);
+  assert.equal(new Set([...EVENT_CLASSES, ...SIGNAL_CLASSES].map((Model) => Model.kind)).size, EVENT_CLASSES.length + SIGNAL_CLASSES.length, 'no kind is both');
 });

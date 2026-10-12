@@ -1,6 +1,6 @@
 // Turns one Claude Code transcript record into events. The incremental reader (reader.js) calls parseRecord for every new line of a file.
 //
-// The events pushed to state.raw are the raw material of the timeline (see timeline.js); core/models says what each kind is.
+// The events and signals pushed to state.raw are the raw material of the timeline (see timeline.js); core/models says what each kind is.
 // An event's `k` is its key in the live feed (see feed.js).
 const { blocks, clip, toolLabel, resultText, resultImages, RESULT_MAX, NO_RESULT, HARNESS } = require('../../transcript');
 const { Say, ToolCall, AgentCall, AgentDone, Results, UserMessage, Compact, WorkflowRun, WorkflowDone } = require('../../models');

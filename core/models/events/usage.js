@@ -1,4 +1,4 @@
-const { Event } = require('./event');
+const { Event } = require('../event');
 
 // The tokens one message used: tokens = { input, output, cacheReads, cacheWrites }, and the model.
 // `contextWindow`: the size of the model's context window, when the transcript says.
