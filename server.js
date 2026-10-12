@@ -6,7 +6,6 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
-const { PROJ } = require('./codex.js');     // the made-up project the Codex sessions are listed under (see codex.js)
 const kokoro = require('./kokoro.js');   // natural voices, installed on demand (see kokoro.js)
 const zlib = require('zlib');
 const { execFileSync } = require('child_process');
@@ -14,7 +13,8 @@ const { execFileSync } = require('child_process');
 const { blocks, resultImages } = require('./core/transcript');
 const { createCore, configFromEnv } = require('./core');
 const core = createCore(configFromEnv());   // sessions → timeline, board and live feed (no web in there); read from the environment once, here
-const { root: ROOT, codex, subFiles, timelineEntry, feedSince, listSessions, boardRows, currentSession } = core;
+const { root: ROOT, timelineEntry, feedSince, listSessions, boardRows, currentSession } = core;
+const { subFiles } = core.sources.claude;   // the pictures of a session are in the transcripts of its sub-agents
 
 const PORT = process.env.PORT || 4747;
 const PUBLIC = path.join(__dirname, 'public');
@@ -301,7 +301,7 @@ function start(port = PORT) {
     if (url.pathname === '/api/session') {
       const proj = url.searchParams.get('proj') || '', sid = url.searchParams.get('id') || '', SAFE = /^[\w.\-]+$/;
       if (!SAFE.test(proj) || !SAFE.test(sid) || proj === '..' || sid === '..' || proj.length > 200 || sid.length > 200) { res.writeHead(400); return res.end('bad request'); }
-      if (proj !== '_demo' && !(proj === PROJ ? codex.fileOf(sid) : fs.existsSync(path.join(ROOT, proj, sid + '.jsonl')))) return json({ error: 'session not found' }, 404);
+      if (proj !== '_demo' && !core.exists(proj, sid)) return json({ error: 'session not found' }, 404);
       const entry = proj === '_demo' ? demoEntry() : timelineEntry(proj, sid), tl = entry.tl;   // built-in fictional session
       const after = url.searchParams.get('after'), ep = url.searchParams.get('ep');
       if (after == null) {   // the whole timeline: serialize once per version, send gzip-compressed when the browser allows it (12 MB → ~1.5 MB)

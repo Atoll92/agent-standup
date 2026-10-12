@@ -11,7 +11,7 @@
 //   wfrun      { toolId, run }                    a Workflow call named the run it started
 //   wfdone     { child }                          a workflow journal says an agent handed its result back
 // Every event also has { ts, agent, k }: k is its key in the live feed (see feed.js).
-const { blocks, clip, toolLabel, resultText, resultImages, RESULT_MAX, NO_RESULT, HARNESS } = require('./transcript');
+const { blocks, clip, toolLabel, resultText, resultImages, RESULT_MAX, NO_RESULT, HARNESS } = require('../../transcript');
 
 // What the harness writes into a "user" message that the human did not type.
 const NOT_TYPED = /^<(system-reminder|command-|local-command|task-notification)/;

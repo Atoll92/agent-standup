@@ -1,9 +1,9 @@
-// Where a session's files are on disk: its sub-agent transcripts, workflow journals and their .meta.json files.
+// Where Claude Code keeps a session on disk: <root>/<project>/<session>.jsonl, and its sub-agent transcripts, workflow journals and .meta.json files beside it.
 const fs = require('fs'), path = require('path');
 
 const mtimeOf = (f) => { try { return fs.statSync(f).mtimeMs; } catch { return 0; } };   // 0 for a file that is gone, or a symlink that points nowhere: never an exception
 // Where the files of the sessions in `root` are. The only thing kept is the .meta.json files already read.
-function createSessionFiles({ root }) {
+function createClaudeFiles({ root }) {
   // Every sub-agent transcript of a session: <id>/subagents/*.jsonl, plus the ones a workflow launched, one folder deeper in <id>/subagents/workflows/<run>/agent-*.jsonl (each run also keeps a journal.jsonl, which is not an agent).
   function subFiles(proj, id) {
     const sd = path.join(root, proj, id, 'subagents'), out = [], seen = new Set(['main', 'user']); out.dirs = [sd]; out.journals = [];
@@ -39,4 +39,4 @@ function createSessionFiles({ root }) {
   return { subFiles, readMeta, transcripts };
 }
 
-module.exports = { mtimeOf, createSessionFiles };
+module.exports = { mtimeOf, createClaudeFiles };

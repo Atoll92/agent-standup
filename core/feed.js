@@ -2,21 +2,19 @@
 //
 // timelineEntry(proj, id) gives the timeline of a session, rebuilt only when a file of the session changed.
 // feedSince(entry, after) gives what is new or different since a reader last looked: the live feed.
-const fs = require('fs'), path = require('path'), crypto = require('crypto');
-const { PROJ } = require('../codex.js');
-const { mtimeOf } = require('./sessionFiles');
+const crypto = require('crypto');
 const { BOOKKEEPING } = require('./timeline');
 
 const MAX_CACHED_SESSIONS = 3;
 const MIN_REBUILD_GAP_MS = 250;
 
 // The cache of timelines is kept in the feed that is created here, and nowhere else.
-function createFeed({ root, codex, files: sessionFiles, reader, buildTimeline }) {
+function createFeed({ sourceOf, reader, buildTimeline }) {
   // "proj/id" → { st (file stamp), tl, at (when built), ms (how long it took), files[], feed, sq, recentUntil, json?, gz?, idle? }
   const timelines = new Map();
 
   function timelineEntry(proj, id) {
-    const key = proj + '/' + id, stamp = sessionStamp(proj, id), cached = timelines.get(key), now = Date.now();
+    const key = proj + '/' + id, stamp = sourceOf(proj).stamp(proj, id), cached = timelines.get(key), now = Date.now();
     if (cached && isStillGood(cached, stamp, now)) {
       timelines.delete(key); timelines.set(key, cached);   // asked for again: the last one to be dropped
       return cached;
@@ -38,19 +36,6 @@ function createFeed({ root, codex, files: sessionFiles, reader, buildTimeline })
       timelines.delete(oldKey);
       for (const file of old.files) reader.fileStates.delete(file);
     }
-  }
-
-  // A number that changes when anything in the session's files changes: the transcripts and the folders they are in
-  // (a folder changes when a file appears in it, e.g. an agent's meta file), not every file around them.
-  function sessionStamp(proj, id) {
-    let n = 0;
-    const add = (file) => { try { const s = fs.statSync(file); n += s.mtimeMs + s.size; } catch {} };
-    add(proj === PROJ ? codex.fileOf(id) || '' : path.join(root, proj, id + '.jsonl'));
-    const subs = sessionFiles.subFiles(proj, id);
-    for (const x of subs) add(x.file);
-    for (const x of subs.journals) add(x.file);
-    for (const dir of subs.dirs) n += mtimeOf(dir);
-    return n;
   }
 
   const generationOf = (file) => (reader.fileStates.get(file) || {}).gen;

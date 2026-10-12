@@ -1,4 +1,4 @@
-// test/codex.test.js: Codex sessions (codex.js) read as a call, next to a Claude Code session that must stay exactly as it was. Made-up rollout files in the two formats, a real server on a free port.
+// test/codex.test.js: Codex sessions (core/sources/codex) read as a call, next to a Claude Code session that must stay exactly as it was. Made-up rollout files in the two formats, a real server on a free port.
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), os = require('os'), path = require('path'), http = require('http');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-codex-')), CX = path.join(tmp, 'codex'), PROJECTS = path.join(tmp, 'projects');
 process.env.AGENT_STANDUP_PREFS = path.join(tmp, 'prefs.json'); process.env.AGENT_STANDUP_KOKORO_DIR = path.join(tmp, 'kokoro'); process.env.AGENT_STANDUP_PROJECTS = PROJECTS; process.env.AGENT_STANDUP_CODEX = CX;
@@ -159,8 +159,8 @@ test('the live call follows a Codex session: the newest session wins, a project 
 });
 
 test('Codex can be turned off, and is not looked for when the app is pointed at one folder of Claude Code sessions', () => {
-  const { createCodex } = require('../codex.js'), { codexHomeFromEnv } = require('../core/config');
-  const look = () => createCodex({ home: CX, scanTtlMs: 0 });   // 0: the files are looked at again on every call, as a poll two seconds later would
+  const { createCodexFiles } = require('../core/sources/codex/files'), { codexHomeFromEnv } = require('../core/config');
+  const look = () => createCodexFiles({ home: CX, scanTtlMs: 0 });   // 0: the files are looked at again on every call, as a poll two seconds later would
   const on = look();
   assert.equal(on.sessions().length, 2);
   const HALF = '01a00000-0000-7000-8000-00000000000d', meta = JSON.stringify({ timestamp: new Date().toISOString(), type: 'session_meta', payload: { id: HALF, cwd: WORK, parent_thread_id: NEW } });
@@ -170,7 +170,7 @@ test('Codex can be turned off, and is not looked for when the app is pointed at 
   assert.equal(on.sessions().length, 2); assert.equal(on.inProject(HALF, WORK.replace(/[^a-zA-Z0-9]/g, '-')), true);   // read again once whole (the half line was not kept): still not a session (another thread started it), and its folder is known
   fs.unlinkSync(fileOf(HALF));
 
-  const off = createCodex({ home: null });
+  const off = createCodexFiles({ home: null });
   assert.equal(off.home, null); assert.deepEqual(off.sessions(), []); assert.equal(off.fileOf(NEW), null);
 
   // Which of the two the app makes is the environment's to say.

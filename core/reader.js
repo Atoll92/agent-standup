@@ -1,7 +1,6 @@
 // Incremental transcript reader: each .jsonl is parsed once, then only the bytes appended since are read.
 // A session is merged from its main file and one file per sub-agent; the per-file results are cached and re-assembled cheaply (see timeline.js).
 const fs = require('fs');
-const { parseRecord } = require('./claudeRecord');
 
 // Read in chunks of at most this many bytes, so a huge transcript never needs one giant buffer.
 const CHUNK_BYTES = 16 * 1024 * 1024;
@@ -59,14 +58,14 @@ function createReader() {
   //   { agent, journal, gen, offset, mtime, fp, tail, raw[], toolName{}, msgUsage Map }
   //   offset  how many bytes were read      fp    the last bytes of them      tail  the half-written line after the last newline
   //   raw     the events made so far        toolName, msgUsage  what the record parser needs to remember between records
-  // The record parser (claudeRecord.js, or Codex's) adds its own fields to it (lastTs, act, th, bg, prompt…).
+  // The record parser (sources/claude/record.js, or Codex's) adds its own fields to it (lastTs, act, th, bg, prompt…).
   const fileStates = new Map();
   // Each time a transcript is read from its start it gets a new number, which is how the live feed knows its events were numbered again.
   let fileGen = 0;
 
   // Reads what was appended to `file` since the last call and returns its state, or null when the file is gone.
-  // `record(state, parsedLine)` turns each new line into events: Claude Code's by default.
-  function readNew(file, agent, journal, record = parseRecord) {
+  // `record(state, parsedLine)` turns each new line into events: it belongs to the tool the file is from.
+  function readNew(file, agent, journal, record) {
     const stat = statOrNull(file);
     if (!stat) { fileStates.delete(file); return null; }
 

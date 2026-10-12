@@ -123,6 +123,44 @@ test('two cores over two folders do not share anything, and a core needs its fol
   assert.deepEqual(one.core.boardRows().map((r) => r.proj), ['-only-one']);
   assert.deepEqual(two.core.boardRows().map((r) => r.proj), ['-only-two']);
   assert.throws(() => one.core.timeline('-only-two', 's'), /session not found/);
-  assert.equal(one.core.codex.home, null, 'Codex is left out unless a folder is given');
+  assert.equal(one.core.sources.codex.home, null, 'Codex is left out unless a folder is given');
   assert.throws(() => createCore({}), /root/);
+});
+
+test('every source gives the whole interface', () => {
+  const { core } = newCore();
+  for (const [name, source] of Object.entries(core.sources)) {
+    for (const method of ['readSession', 'exists', 'mtime', 'stamp', 'inProject', 'recent', 'listSessions', 'boardRows']) assert.equal(typeof source[method], 'function', name + '.' + method);
+  }
+});
+
+test('the timeline, the board and the session to follow work through the interface only: a made-up source is a source like any other', () => {
+  const { createTimeline } = require('../core/timeline'), { createBoard } = require('../core/board'), { createCurrent } = require('../core/current');
+  const at = Date.now() - 5000;
+  const fake = {
+    name: 'fake', owns: (proj) => proj === '_fake',
+    readSession: (proj, id, touched) => {
+      if (id !== 'one') throw new Error('session not found');
+      touched.push('/fake/one');
+      const say = { ts: at, agent: 'main', kind: 'say', text: 'Hello from nowhere.', k: 'main:0' };
+      return { agents: { main: { id: 'main', role: 'Lead', type: 'main', name: 'Fake' } }, states: [{ agent: 'main', raw: [say], msgUsage: new Map(), lastTs: at }], runs: {} };
+    },
+    exists: (proj, id) => id === 'one', mtime: (proj, id) => (id === 'one' ? at : 0), stamp: () => 1, inProject: (proj, id, folder) => folder === '_fake',
+    recent: () => [{ proj: '_fake', id: 'one', mtime: at }],
+    listSessions: () => [{ proj: '_fake', id: 'one', mtime: at, title: 'One' }],
+    boardRows: () => [{ proj: '_fake', id: 'one', mtime: at, state: 'working' }],
+  };
+  const sourceOf = () => fake, read = [];
+
+  const tl = createTimeline({ sourceOf }).buildTimeline('_fake', 'one', read);
+  assert.deepEqual(tl.events.map((e) => e.kind + ':' + e.text), ['say:Hello from nowhere.']);
+  assert.deepEqual(read, ['/fake/one']);
+  assert.throws(() => createTimeline({ sourceOf }).buildTimeline('_fake', 'two', []), /session not found/);
+
+  assert.deepEqual(createBoard({ sources: [fake] }).boardRows().map((r) => r.state), ['working']);
+  assert.deepEqual(createBoard({ sources: [fake] }).listSessions().map((r) => r.title), ['One']);
+  const current = createCurrent({ sources: [fake], sourceOf });
+  assert.deepEqual(current.currentSession('', '', null), { proj: '_fake', id: 'one', mtime: at });
+  assert.ok(current.currentSession('_fake', 'one', null).mtime > at + 1000, 'pinned: it is named, whatever it did last');
+  assert.deepEqual(current.currentSession('_fake', 'two', null), { proj: '_fake', id: 'one', mtime: at }, 'a session that is not there is not pinned');
 });
