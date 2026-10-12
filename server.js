@@ -12,7 +12,8 @@ const { execFileSync } = require('child_process');
 
 const { blocks, resultImages } = require('./core/transcript');
 const { createCore, configFromEnv } = require('./core');
-const { serializeEvent, serializeTimeline } = require('./core/serializers/web');   // the core's models, in the names the page reads
+const { serializeEvent, serializeTimeline } = require('./core/serializers/web');
+const { demoTimeline } = require('./core/demo');   // the core's models, in the names the page reads
 const core = createCore(configFromEnv());   // sessions → timeline, board and live feed (no web in there); read from the environment once, here
 const { root: ROOT, timelineEntry, feedSince, listSessions, boardRows, currentSession } = core;
 const subFiles = (proj, id) => core.sources.claude.subFiles(proj, id);   // the pictures of a session are in the transcripts of its sub-agents
@@ -47,7 +48,7 @@ function toolImage(file, toolId, n) {   // looks for the tool's result line in t
   return found;
 }
 
-const demoEntry = () => { const tl = require('./demo.js')(); tl.events.forEach((e, i) => { e.k = 'd:' + i; }); tl.ep = 'demo'; tl.seq = 1; return { tl }; };   // the built-in session never changes: one sequence number for all of it
+const demoEntry = () => ({ tl: demoTimeline() });   // the built-in fictional session, as models like any other
 
 // Settings live in a file, not only in the page's localStorage: the port changes between VS Code windows and reloads, and localStorage is per origin (port included).
 const PREFS = process.env.AGENT_STANDUP_PREFS || (process.platform === 'win32' ? path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'agent-standup', 'prefs.json') : path.join(os.homedir(), '.config', 'agent-standup', 'prefs.json'));
@@ -303,12 +304,12 @@ function start(port = PORT) {
       const proj = url.searchParams.get('proj') || '', sid = url.searchParams.get('id') || '', SAFE = /^[\w.\-]+$/;
       if (!SAFE.test(proj) || !SAFE.test(sid) || proj === '..' || sid === '..' || proj.length > 200 || sid.length > 200) { res.writeHead(400); return res.end('bad request'); }
       if (proj !== '_demo' && !core.exists(proj, sid)) return json({ error: 'session not found' }, 404);
-      const isDemo = proj === '_demo', entry = isDemo ? demoEntry() : timelineEntry(proj, sid), tl = entry.tl;   // built-in fictional session
-      const wire = (events) => (isDemo ? events : events.map(serializeEvent));   // the demo is written in the page's format already
+      const entry = proj === '_demo' ? demoEntry() : timelineEntry(proj, sid), tl = entry.tl;   // built-in fictional session
+      const wire = (events) => events.map(serializeEvent);
       const after = url.searchParams.get('after'), ep = url.searchParams.get('ep');
       if (after == null) {   // the whole timeline: serialize once per version, send gzip-compressed when the browser allows it (12 MB → ~1.5 MB)
         const gz = /\bgzip\b/.test(req.headers['accept-encoding'] || '');
-        if (!entry.json) entry.json = JSON.stringify(isDemo ? tl : serializeTimeline(tl));
+        if (!entry.json) entry.json = JSON.stringify(serializeTimeline(tl));
         if (gz && !entry.gz) entry.gz = zlib.gzipSync(entry.json, { level: 5 });
         res.writeHead(200, { 'content-type': 'application/json', ...(gz ? { 'content-encoding': 'gzip' } : {}), vary: 'accept-encoding' });
         return res.end(gz ? entry.gz : entry.json);

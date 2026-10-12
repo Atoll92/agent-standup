@@ -154,3 +154,17 @@ test('the reasoning before a line or a call rides on it when the transcript keep
     assert.deepEqual(ev.map((e) => [e.kind, e.th || null]), [['tools', 'The query scans the whole table.\nI should check the index.'], ['say', null]]);
   } finally { srv.close(); require('../server.js').shutdown(); }
 });
+test('the demo is served as the page reads it, its French with it, and its live feed is one sequence', async () => {
+  const srv = require('../server.js').start(0); await new Promise((r) => srv.once('listening', r)); const port = srv.address().port;
+  const session = async (query) => JSON.parse((await get(port, '/api/session?proj=_demo&id=demo' + query)).body);
+  try {
+    const written = require('../demo.js')(), all = await session('');
+    assert.equal(all.ep, 'demo'); assert.equal(all.seq, 1);
+    assert.equal(all.events.length, written.events.length);
+    assert.deepEqual(all.events.map((e) => e.kind), written.events.map((e) => e.kind));
+    assert.deepEqual(all.events.map((e) => e.k).slice(0, 3), ['d:0', 'd:1', 'd:2']);
+    assert.deepEqual(all.events.filter((e) => e.fr).map((e) => e.fr), written.events.filter((e) => e.fr).map((e) => e.fr), 'the French of every line');
+    assert.equal((await session('&after=0&ep=demo')).events.length, written.events.length, 'a page that has nothing gets everything');
+    assert.deepEqual((await session('&after=1&ep=demo')).events, [], 'a page that is up to date gets nothing');
+  } finally { srv.close(); require('../server.js').shutdown(); }
+});

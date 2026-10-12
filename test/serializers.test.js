@@ -1,7 +1,10 @@
 // test/serializers.test.js: the format the page reads (core/serializers/web.js). It must not change: public/index.html reads these names.
 const test = require('node:test'), assert = require('node:assert');
 const { Say, Report, ToolBeat, ToolCall, Results, UserMessage, Order, Finish, Usage, Compact, AgentCall, AgentDone, WorkflowRun, WorkflowDone } = require('../core/models');
-const { serializeEvent, serializeTimeline } = require('../core/serializers/web');
+const { serializeEvent, deserializeEvent, serializeTimeline, deserializeTimeline } = require('../core/serializers/web');
+const { Event } = require('../core/models');
+const { UnknownEventKind } = require('../core/errors');
+const { demoTimeline } = require('../core/demo');
 
 test('each event in the short names the page reads, and nothing else', () => {
   const tool = { id: 'toolu_1', name: 'Bash', arg: 'ls' };
@@ -48,4 +51,43 @@ test('what a transcript says before the timeline is built never reaches a displa
 test('a timeline keeps what it is and has its events serialized', () => {
   const timeline = { id: 's', proj: '-p', agents: [{ id: 'main', role: 'Lead' }], events: [new Say({ timestamp: 5, agentId: 'main', text: 'hi', key: 'main:0' }).relativeTo(5)], durationMs: 0, recentUntil: 0, ep: 'e', seq: 1 };
   assert.deepEqual(serializeTimeline(timeline), { ...timeline, events: [{ ts: 5, agent: 'main', kind: 'say', text: 'hi', k: 'main:0', t: 0 }] });
+});
+
+test('reading back what the page receives gives the same event, of the same class', () => {
+  const tool = { id: 'toolu_1', name: 'Bash', arg: 'ls' };
+  const closing = new Say({ timestamp: 5, agentId: 'main', text: 'Done.', thought: 'phew', translations: { fr: 'Fini.' }, key: 'main:9' }); closing.endTurn();
+  const report = Report.from(new Say({ timestamp: 5, agentId: 'a1', text: 'ok', key: 'a1:2' })); report.recipientId = 'main';
+  const events = [
+    closing.relativeTo(1),
+    report,
+    ToolBeat.startingWith(new ToolCall({ timestamp: 5, agentId: 'a1', tool, thought: 'look', key: 'a1:0' })),
+    new Results({ timestamp: 5, agentId: 'a1', key: 'a1:1', items: [{ callId: 't1', failed: true, output: 'no', pictures: 2 }] }),
+    new UserMessage({ timestamp: 5, text: 'go', translations: { fr: 'vas-y' }, key: 'user:1' }),
+    new Order({ timestamp: 5, agentId: 'main', recipientId: 'a2', background: true, workflow: 'run1', text: 'x', title: 'Phase', key: 'o/a2' }),
+    new Finish({ timestamp: 5, agentId: 'a1', recipientId: 'main', key: 'f/a1' }),
+    new Usage({ timestamp: 5, agentId: 'main', tokens: { input: 1, output: 2, cacheReads: 3, cacheWrites: 4 }, model: 'm', contextWindow: 200000, key: 'u' }),
+    new Compact({ timestamp: 5, agentId: 'main', key: 'main:4' }),
+  ];
+  for (const event of events) {
+    const back = deserializeEvent(serializeEvent(event));
+    assert.equal(back.constructor, event.constructor, event.kind);
+    assert.deepEqual(serializeEvent(back), serializeEvent(event), event.kind);
+  }
+  assert.deepEqual([deserializeEvent(serializeEvent(closing)).translations, deserializeEvent(serializeEvent(closing)).endsTurn], [{ fr: 'Fini.' }, true]);
+});
+
+test('data of a kind the page does not receive is refused by name', () => {
+  for (const kind of ['nope', 'tool', 'agentcall', 'wfrun']) assert.throws(() => deserializeEvent({ ts: 1, agent: 'main', kind }), (error) => error instanceof UnknownEventKind && error.kind === kind, kind);
+});
+
+test('the demo is models like a real session, and the page receives it as it was written', () => {
+  const written = require('../demo.js')();
+  const demo = demoTimeline();
+  assert.ok(demo.events.every((event) => event instanceof Event), 'models');
+  assert.deepEqual([demo.ep, demo.seq, demo.events[0].key, demo.events.length], ['demo', 1, 'd:0', written.events.length]);
+  const french = demo.events.find((event) => event.kind === 'say');
+  assert.ok(french.translations.fr, 'its lines keep their French');
+  // as the page receives it: what demo.js wrote, each line with its key
+  const sent = serializeTimeline(deserializeTimeline({ ...written, events: written.events.map((event, index) => ({ ...event, k: 'd:' + index })) }));
+  assert.deepEqual(JSON.parse(JSON.stringify(sent.events)), written.events.map((event, index) => ({ ...event, k: 'd:' + index })));
 });

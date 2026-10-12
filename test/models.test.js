@@ -9,7 +9,7 @@ const { createCore } = require('../core');
 
 test('an event says what it is with readable attributes', () => {
   const say = new Say({ timestamp: 5, agentId: 'main', text: 'hi', thought: 'hmm', key: 'main:0' });
-  assert.deepEqual({ ...say }, { timestamp: 5, agentId: 'main', kind: 'say', key: 'main:0', endsTurn: false, text: 'hi', thought: 'hmm' });
+  assert.deepEqual({ ...say }, { timestamp: 5, agentId: 'main', kind: 'say', key: 'main:0', endsTurn: false, text: 'hi', thought: 'hmm', translations: {} });
   assert.equal(new Say({ timestamp: 5, agentId: 'main', text: 'hi' }).thought, '', 'no thought: an empty one');
   assert.equal(new UserMessage({ timestamp: 5, text: 'go' }).agentId, 'user');
   const order = new Order({ timestamp: 5, agentId: 'main', recipientId: 'a1', callId: 't', background: true, workflow: 'r1', text: 'x', title: 'y', key: 'o/a1' });
@@ -99,4 +99,12 @@ test('Claude Code and Codex are sources, and a session that is not there is a Se
   assert.ok(new SessionNotFound() instanceof Error);
   assert.equal(new SessionNotFound().message, 'session not found');
   assert.ok(Event, 'the base class is exported');
+});
+
+test('the registry gives the class of each kind, and refuses a kind no class is for', () => {
+  const { EVENT_CLASSES, eventClassFor } = require('../core/models');
+  const { UnknownEventKind } = require('../core/errors');
+  assert.equal(new Set(EVENT_CLASSES.map((EventClass) => EventClass.kind)).size, EVENT_CLASSES.length, 'one class per kind');
+  for (const EventClass of EVENT_CLASSES) assert.equal(eventClassFor(EventClass.kind), EventClass);
+  assert.throws(() => eventClassFor('nope'), UnknownEventKind);
 });
