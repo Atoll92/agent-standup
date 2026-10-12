@@ -22,4 +22,18 @@ function readMeta(f) {
   try { const mt = fs.statSync(f).mtimeMs, c = metaCache.get(f); if (c && c.mtime === mt) return c.value; const v = JSON.parse(fs.readFileSync(f, 'utf8')); if (metaCache.size > 3000) metaCache.clear(); metaCache.set(f, { mtime: mt, value: v }); return v; } catch { return {}; }
 }
 
-module.exports = { mtimeOf, subFiles, readMeta };
+// Every main transcript of every Claude Code project: { proj, id, stat }.
+// A project folder that cannot be read is skipped, and so is a transcript that cannot be looked at (a link to a file that is gone).
+function* transcripts() {
+  for (const proj of fs.existsSync(ROOT) ? fs.readdirSync(ROOT) : []) {
+    let names;
+    try { names = fs.readdirSync(path.join(ROOT, proj)).filter((f) => f.endsWith('.jsonl')); } catch { continue; }
+    for (const name of names) {
+      let stat;
+      try { stat = fs.statSync(path.join(ROOT, proj, name)); } catch { continue; }
+      yield { proj, id: name.slice(0, -'.jsonl'.length), stat };
+    }
+  }
+}
+
+module.exports = { mtimeOf, subFiles, readMeta, transcripts };
