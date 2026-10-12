@@ -26,7 +26,7 @@ Give it its own name and its own icon, draw or bring your own characters, and sa
 
 ## Other people's names
 
-Claude and Claude Code are trademarks of Anthropic. Codex is a trademark of OpenAI. They are used here only to say what Agent Standup works with. Agent Standup is an unofficial community project, not affiliated with or endorsed by either company.
+Claude and Claude Code are trademarks of Anthropic. Codex is a trademark of OpenAI. Mistral and Mistral Vibe are trademarks of Mistral AI. They are used here only to say what Agent Standup works with. Agent Standup is an unofficial community project, not affiliated with or endorsed by any of these companies.
 
 Another, unrelated project also goes by the name "Agent Standup": a task tracker for AI coding agents by a different author. This page is about this project (the live team call at https://github.com/Atoll92/agent-standup), its logo and its characters, and claims nothing over theirs.
 

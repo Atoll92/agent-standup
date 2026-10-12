@@ -1,6 +1,6 @@
 # Agent Standup
 
-Watch the Claude Code and Codex sessions on your computer as a live team call. Each agent is a small character at its desk: the lead gives orders, sub-agents join, share their screen with the real commands and diffs, and report back. You see at a glance who is working, who waits on whom, and who needs you.
+Watch the Claude Code, Codex and Mistral Vibe sessions on your computer as a live team call. Each agent is a small character at its desk: the lead gives orders, sub-agents join, share their screen with the real commands and diffs, and report back. You see at a glance who is working, who waits on whom, and who needs you.
 
 This plugin is a thin way in to the [Agent Standup](https://github.com/Atoll92/agent-standup) app. It adds two skills to Claude Code.
 
@@ -32,7 +32,7 @@ Both skills run one command, pinned to an exact version of the app's npm package
 
 ## Data
 
-The app reads the session files Claude Code writes in `~/.claude/projects` and the ones Codex writes in `~/.codex/sessions`. It never writes to them. By default it sends nothing anywhere: the page is served from your machine to your browser.
+The app reads the session files Claude Code writes in `~/.claude/projects` the ones Codex writes in `~/.codex/sessions` and the ones Mistral Vibe writes in `~/.vibe/logs/session`. It never writes to them. By default it sends nothing anywhere: the page is served from your machine to your browser.
 
 On your machine it keeps your settings in one small file and, when voices are on, the spoken lines as sound files in a private temporary folder, deleted after a day.
 
@@ -46,4 +46,4 @@ Three things in the app's settings call out, all off by default: French translat
 
 The app also exists as a VS Code extension and a desktop app. Source, documentation and issues: https://github.com/Atoll92/agent-standup
 
-Unofficial: not affiliated with or endorsed by Anthropic or OpenAI. MIT licensed.
+Unofficial: not affiliated with or endorsed by Anthropic, OpenAI or Mistral AI. MIT licensed.

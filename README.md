@@ -2,11 +2,13 @@
 
 # Agent Standup
 
-**See who is waiting on whom, and who is blocked — across all your Claude Code and Codex sessions — at zero token cost.** Agent Standup turns the session files Claude Code and Codex already write into a live team call (and a board of every session): it only reads local files and never calls Claude unless you turn on French translation or the jokes.
+**See who is waiting on whom, and who is blocked — across all your Claude Code, Codex and Mistral Vibe sessions — at zero token cost.** Agent Standup turns the session files Claude Code, Codex and Mistral Vibe already write into a live team call (and a board of every session): it only reads local files and never calls Claude unless you turn on French translation or the jokes.
 
-**Your Claude Code or Codex session as a live team call.** The lead gives orders, sub-agents join the call, work at their desks, share their screen and report back — with voices, expressions and a view of the real work as it happens.
+**Your Claude Code, Codex or Mistral Vibe session as a live team call.** The lead gives orders, sub-agents join the call, work at their desks, share their screen and report back — with voices, expressions and a view of the real work as it happens.
 
 **Runs as a VS Code extension, a terminal command, or a desktop app.** Try it in 30 seconds, no install and no editor (Node 18+): `npx @double_geste/agent-standup --open`, then ⚙ → Source → Demo.
+
+**Works with:** Claude Code · Codex · Mistral Vibe — in VS Code, Cursor, Windsurf, any terminal, or as a desktop app.
 
 **→ Website & download: https://agent-standup.com**
 
@@ -16,7 +18,7 @@ _A fictional team fixing a slow login page — the built-in demo (⚙ → Source
 
 [![Buy me a coffee](https://img.shields.io/badge/-Buy%20the%20(replaced)%20dev%20a%20coffee-ffdd00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/bored_dev_and_his_robots)
 
-> Unofficial community project, not affiliated with or endorsed by Anthropic or OpenAI. "Claude" is a trademark of Anthropic; "Codex" is a trademark of OpenAI.
+> Unofficial community project, not affiliated with or endorsed by Anthropic, OpenAI or Mistral AI. "Claude" is a trademark of Anthropic; "Codex" is a trademark of OpenAI; "Mistral" is a trademark of Mistral AI.
 
 ## What you get
 
@@ -27,7 +29,7 @@ _A fictional team fixing a slow login page — the built-in demo (⚙ → Source
 - **Real voices, lip-sync** — lines are spoken aloud; mouths follow the actual volume of the voice. For the best experience, switch to the very natural voices (see [Voices](#voices)).
 - **Live screen sharing with the real output** — when an agent works, its screen fills the stage (presenter's camera in the corner, "sharing" badge): a **terminal** with the command history and the actual output of each command, search results and tool calls; or an **editor** with the file it reads (real content and line numbers) or the exact diff it applies. See *What you see for each agent* below.
 - **Agents come and go** — a sub-agent joins when it is given a task and leaves the call 2 minutes (playback time) after its report, with a dissolve animation. It comes back if it gets a new task.
-- **Sub-agent tree** — the full hierarchy (you → Claude → sub-agents → their sub-agents) with status, tool counts and the current action.
+- **Sub-agent tree** — the full hierarchy (you → the lead → sub-agents → their sub-agents) with status, tool counts and the current action.
 - **Click any agent** — its prompt, tool usage and reports.
 - **Replay** — pick any past session, scrub through it, see a timeline of who worked when, and get a **recap** (agents, tool calls, commands, files changed, busiest agents).
 - **Video export** — ⚙ → Tools → 🎞 Export video records the call at 1280×720 with voices and subtitles, as an MP4 (H.264 + AAC) when the browser can record it, and as a `.webm` when it cannot. X, phones and most chat apps refuse `.webm`.
@@ -49,10 +51,22 @@ On Claude Code before 2.1.275: `/plugin marketplace add Atoll92/agent-standup`, 
 
 Sessions of OpenAI’s Codex (the desktop app and the `codex` command) appear next to your Claude Code sessions: in the session list (project “Codex”), on the board, and in the live call when one of them is the most recent. Nothing to set up: the app reads the files Codex already writes in `~/.codex/sessions` (or `$CODEX_HOME`), and never writes there.
 
-- **What is shown:** what you typed, what the agent says, each command with its real output and whether it failed, files it created or changed, web searches, MCP calls, the questions it asks you, its reasoning summaries as inner thoughts, token counts, and the end of each turn. The lead is called Codex.
+- **What is shown:** what you typed, what the agent says, each command with its real output and whether it failed, files it created or changed, web searches, MCP calls, the questions it asks you, its reasoning summaries as inner thoughts, token counts, and the end of each turn.
 - **Not yet:** Codex sub-agents (a Codex session is the lead and you), and pictures. The short reviews Codex runs on its own before a command are not shown as sessions.
 - **In VS Code** the call follows the Codex sessions started in the folder you have open, like it does for Claude Code.
 - **Turn it off or point it elsewhere:** in VS Code, the setting `agentStandup.codex`; anywhere else `AGENT_STANDUP_CODEX=off`, or `AGENT_STANDUP_CODEX=/path/to/codex-home` (command line: `--codex off` or `--codex DIR`). With `--projects DIR`, Codex sessions are only read if you also pass `--codex`.
+
+## Mistral Vibe sessions too
+
+Sessions of [Mistral Vibe](https://github.com/mistralai/mistral-vibe) (Mistral's coding agent, the `vibe` command) appear next to your Claude Code sessions: in the session list (project “Mistral Vibe”), on the board, and in the live call when one of them is the most recent. Nothing to set up: the app reads the folders Vibe already writes in `~/.vibe/logs/session` (or `$VIBE_HOME`), and never writes there.
+
+- **What is shown:** what you typed, what the agent says, each command and tool call with its real output and whether it failed, files it created or changed, its todo list, its reasoning as inner thoughts, token totals, the end of each turn, and **its sub-agents**: each one joins the call under the name the lead gave it, with its orders and its answers.
+- **Two engines, both read.** Vibe 2.26 starts a new engine by default, which keeps the time of every event: the call is exact. With it a sub-agent leaves no record of its own, so you see what the lead asked it and what it answered, not each of its commands. The earlier engine (`vibe --legacy-harness`, and older versions) does record a sub-agent's own commands, but writes no times and saves at the end of each step: followed live the times are right to within a step, and a session opened afterwards is spread between its start and its end.
+- **On the board** a Vibe session that waits for your approval or your answer shows as “needs you”, because Vibe says so itself.
+- **Not shown:** pictures, and sessions kept somewhere else through `session_logging.save_dir` in Vibe's own settings (point `AGENT_STANDUP_VIBE` at a home folder that has `logs/session` in it).
+- **Turn it off or point it elsewhere:** in VS Code, the setting `agentStandup.vibe`; anywhere else `AGENT_STANDUP_VIBE=off`, or `AGENT_STANDUP_VIBE=/path/to/vibe-home` (command line: `--vibe off` or `--vibe DIR`). With `--projects DIR`, Vibe sessions are only read if you also pass `--vibe`.
+
+Checked against real sessions of Vibe 2.26.1, in both formats.
 
 ## What you see for each agent
 
@@ -105,7 +119,7 @@ The header shows how full the lead's context is (`ctx 62%`, orange then red, wit
 | **Neovim** *(not tested here)* | call `vim.fn.system('agent-standup status --here')` from a timer and show the result in your statusline plugin; `agent-standup status --json` gives machine-readable output. |
 | **JetBrains IDEs** *(not native yet)* | *Settings → Tools → External Tools → +*: program `npx`, arguments `-y @double_geste/agent-standup --open`, working directory `$ProjectFileDir$`. |
 
-Codex CLI sessions are read as well (see [Codex sessions too](#codex-sessions-too)). Other agent tools (Gemini CLI, OpenCode…) are researched in [ROADMAP.md](ROADMAP.md): their log formats are mostly undocumented, so no adapter is shipped for them yet.
+Codex and Mistral Vibe sessions are read as well (see [Codex sessions too](#codex-sessions-too) and [Mistral Vibe sessions too](#mistral-vibe-sessions-too)). Other agent tools (Gemini CLI, OpenCode…) are researched in [ROADMAP.md](ROADMAP.md): their log formats are mostly undocumented, so no adapter is shipped for them yet.
 
 ## Languages
 Pick one in ⚙ → Language: **English, Français, 繁體中文, 简体中文, Español, Deutsch, Dansk, Português (Brasil), 日本語, 한국어**. The interface (menus, chips, tooltips, recap) is translated; VS Code's command titles, setting descriptions and status bar follow VS Code's own display language. English and French are written by hand; the other languages are **AI-drafted and not yet reviewed by native speakers**, so corrections are very welcome: each language is one small JSON file (`public/locales/<code>.json`), see [public/locales/README.md](public/locales/README.md) to fix or add one (`npm run i18n` checks the files). The words the agents say stay in the language of your session (French translation of their lines is optional); the little banter lines and the demo exist in English and French.
@@ -198,6 +212,7 @@ The first click on **Join** is required by browsers to allow sound.
 | `agentStandup.shareUsage` | `false` | Opt-in, anonymous: at most one empty request per day to a 1-pixel file on GitHub, to count active installs (ignored when VS Code telemetry is off) |
 | `agentStandup.charactersPath` | _(empty)_ | Folder with your own character images (default `~/.agent-standup/characters`) |
 | `agentStandup.codex` | `true` | Also show Codex sessions (read from `~/.codex/sessions`, or `$CODEX_HOME`). Turn off to show Claude Code sessions only |
+| `agentStandup.vibe` | `true` | Also show Mistral Vibe sessions (read from `~/.vibe/logs/session`, or `$VIBE_HOME`). Turn off to leave them out |
 | `agentStandup.claudePath` | _(auto)_ | Full path to the Claude Code executable if it isn't found automatically (needed only for French translation) |
 | `agentStandup.autoOpen` | `false` | Open the call when VS Code starts |
 | `agentStandup.onlyThisWorkspace` | `true` | Follow only sessions started in the open folder (falls back to the newest session if there is none) |
@@ -284,7 +299,7 @@ The website at agent-standup.com counts nothing. The earlier landing page on Git
 - "Hide code & file names in videos" does not mask what the agents say (speech bubbles, subtitles, voices).
 
 ## Credits
-Several ideas in 1.23 (settings kept in a file, session stickiness, subtitles that follow the voice, Kokoro voices) started in [neondragon's fork](https://github.com/neondragon/agent-standup) of this project. Thank you!  Their code was read and rewritten for this codebase. [rqwj](https://github.com/rqwj) made each sub-agent get its own character image (#1) and [KajetanCiunelis](https://github.com/KajetanCiunelis) drew the cat pack in `examples/cats` and suggested the laptop option (#2). The Traditional Chinese wording was polished with suggestions from a Taiwanese reader on Reddit. [jainefer](https://github.com/jainefer) added the Korean interface (#5). Unofficial: not affiliated with Anthropic or OpenAI.
+Several ideas in 1.23 (settings kept in a file, session stickiness, subtitles that follow the voice, Kokoro voices) started in [neondragon's fork](https://github.com/neondragon/agent-standup) of this project. Thank you!  Their code was read and rewritten for this codebase. [rqwj](https://github.com/rqwj) made each sub-agent get its own character image (#1) and [KajetanCiunelis](https://github.com/KajetanCiunelis) drew the cat pack in `examples/cats` and suggested the laptop option (#2). The Traditional Chinese wording was polished with suggestions from a Taiwanese reader on Reddit. [jainefer](https://github.com/jainefer) added the Korean interface (#5). Unofficial: not affiliated with Anthropic, OpenAI or Mistral AI.
 
 ## License
 
@@ -306,7 +321,7 @@ The code is MIT licensed: use it, change it, fork it. The name, the logo and the
 ## Security and what it reads
 The full [privacy policy](PRIVACY.md) says what is read, what is kept on your computer and what can leave it.
 
-- **It reads local files and sends nothing by default.** Agent Standup reads the session files Claude Code already writes (`~/.claude/projects`, or `CLAUDE_CONFIG_DIR`) and the ones Codex writes (`~/.codex/sessions`, or `CODEX_HOME`; this can be turned off) and draws them in a page. It never writes to your sessions; the only time it starts Claude Code is the optional translation helper described below.
+- **It reads local files and sends nothing by default.** Agent Standup reads the session files Claude Code already writes (`~/.claude/projects`, or `CLAUDE_CONFIG_DIR`) and the ones Codex and Mistral Vibe write (`~/.codex/sessions`, or `CODEX_HOME`; `~/.vibe/logs/session`, or `VIBE_HOME`; each can be turned off) and draws them in a page. It never writes to your sessions; the only time it starts Claude Code is the optional translation helper described below.
 - **Local only.** The server listens on `127.0.0.1` (never on the network), refuses requests whose Host or Origin is not local, and refuses cross-site requests on every endpoint that does something (translation, jokes, sound, settings).
 - **The only things that call out** are optional and off by default: French translation and jokes (your own Claude login, the small Haiku model, with all tools disabled; when one of them is on, the lines of a Codex session are sent the same way, to Anthropic), the FIP radio stream, and the usage counter (one empty request a day to a 1-pixel file, only if you turn it on).
 - **No dependencies**: the code is plain Node.js and one HTML file, so there is nothing hidden in `node_modules`. The optional Kokoro voices install a third-party package only when you click Install.

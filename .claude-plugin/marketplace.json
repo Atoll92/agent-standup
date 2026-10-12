@@ -1,6 +1,6 @@
 {
   "name": "double-geste",
-  "description": "Agent Standup: your Claude Code and Codex sessions as a live team call",
+  "description": "Agent Standup: your Claude Code, Codex and Mistral Vibe sessions as a live team call",
   "owner": {
     "name": "Double Geste",
     "url": "https://github.com/Atoll92"
@@ -9,10 +9,10 @@
     {
       "name": "agent-standup",
       "source": "./plugin",
-      "description": "Watch the Claude Code and Codex sessions on your computer as a live team call: who is working, who waits on whom, who needs you."
+      "description": "Watch the Claude Code, Codex and Mistral Vibe sessions on your computer as a live team call: who is working, who waits on whom, who needs you."
     }
   ],
   "metadata": {
-    "description": "Agent Standup: your Claude Code and Codex sessions as a live team call"
+    "description": "Agent Standup: your Claude Code, Codex and Mistral Vibe sessions as a live team call"
   }
 }

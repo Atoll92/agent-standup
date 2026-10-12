@@ -10,7 +10,7 @@ Agent Standup runs on your own computer. It reads files that are already there, 
 
 ## What it reads
 
-- **Your session files.** The ones Claude Code writes in `~/.claude/projects` and the ones Codex writes in `~/.codex/sessions`. They hold what you typed, what the agents answered and what they ran, so they can contain personal or confidential information. Agent Standup only reads them. It never changes or deletes them. Reading Codex sessions can be turned off.
+- **Your session files.** The ones Claude Code writes in `~/.claude/projects`, the ones Codex writes in `~/.codex/sessions` and the ones Mistral Vibe writes in `~/.vibe/logs/session`. They hold what you typed, what the agents answered and what they ran, so they can contain personal or confidential information. Agent Standup only reads them. It never changes or deletes them. Reading Codex sessions can be turned off.
 - **Your own character images**, if you put some in its characters folder.
 
 ## What it keeps on your computer
