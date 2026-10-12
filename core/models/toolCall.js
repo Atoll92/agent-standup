@@ -4,10 +4,10 @@ const { Event } = require('./event');
 // `tool` is what the call looks like on a screen (see transcript.toolLabel).
 class ToolCall extends Event {
   static kind = 'tool';
-  constructor({ ts, agent, tool, thought }) {
-    super({ ts, agent });
+  constructor({ timestamp, agentId, tool, thought, key }) {
+    super({ timestamp, agentId, key });
     this.tool = tool;
-    if (thought) this.th = thought;
+    this.thought = thought || '';
   }
 }
 

@@ -17,18 +17,18 @@ function parser({ toolLabel, clip, resultMax = {} }) {
   const NO_RESULT = new Set(['TodoWrite']);
   return function record(state, rolloutRecord) {
     if (rolloutRecord.type !== 'event_msg' && rolloutRecord.type !== 'response_item' && rolloutRecord.type !== 'turn_context' && rolloutRecord.type !== 'compacted') return;
-    const agent = state.agent, payload = rolloutRecord.payload && typeof rolloutRecord.payload === 'object' ? rolloutRecord.payload : {}, context = state.cx || (state.cx = { items: false, model: '', n: 0, tot: null, last: 0, userAt: -1 });
-    const ts = Math.max(Date.parse(rolloutRecord.timestamp) || 0, state.lastTs || 0); state.lastTs = ts;   // the lines of one file are in order; a line without a time takes the last one
-    const push = (event) => { event.k = agent + ':' + state.raw.length; state.raw.push(event); if (event.ts > context.last) context.last = event.ts; return event; };
-    const takeThought = () => { const thought = state.th; state.th = ''; return thought; };
-    const say = (text, final) => { const trimmed = String(text == null ? '' : text).trim(); if (!trimmed) return; const event = push(new Say({ ts, agent, text: trimmed, thought: takeThought() })); state.act = state.raw.length - 1; if (final && agent === 'main') event.endTurn(); };
-    const user = (text) => { const typedText = typed(text); if (!typedText) return; push(new UserMessage({ ts, text: typedText })); context.userAt = state.raw.length - 1; };
-    const call = (id, name, input, at) => { const when = Math.max(Math.min(at || ts, ts), context.last); state.toolName[id] = name; push(new ToolCall({ ts: when, agent, tool: toolLabel({ id, name, input: input || {} }, when), thought: takeThought() })); state.act = state.raw.length - 1; };   // a command is placed when it started, never before what the file already said
-    const result = (id, out, err) => { const toolName = state.toolName[id]; if (!toolName || NO_RESULT.has(toolName)) return; push(new Results({ ts, agent, items: [{ id, err: !!err, out: clip(String(out == null ? '' : out).trimEnd(), resultMax[toolName] || (/^mcp__/.test(toolName) ? 900 : 600)) }] })); };
-    const endTurn = () => { if (agent === 'main' && state.act > context.userAt && state.raw[state.act]) state.raw[state.act].endTurn(); };   // the turn is over (or was stopped): the last thing the lead said or did closes it
+    const agentId = state.agent, payload = rolloutRecord.payload && typeof rolloutRecord.payload === 'object' ? rolloutRecord.payload : {}, context = state.cx || (state.cx = { items: false, model: '', n: 0, tot: null, last: 0, userAt: -1 });
+    const timestamp = Math.max(Date.parse(rolloutRecord.timestamp) || 0, state.lastTs || 0); state.lastTs = timestamp;   // the lines of one file are in order; a line without a time takes the last one
+    const push = (event) => { event.key = agentId + ':' + state.raw.length; state.raw.push(event); if (event.timestamp > context.last) context.last = event.timestamp; return event; };
+    const takeThought = () => { const thought = state.pendingThought; state.pendingThought = ''; return thought; };
+    const say = (text, final) => { const trimmed = String(text == null ? '' : text).trim(); if (!trimmed) return; const event = push(new Say({ timestamp, agentId, text: trimmed, thought: takeThought() })); state.act = state.raw.length - 1; if (final && agentId === 'main') event.endTurn(); };
+    const user = (text) => { const typedText = typed(text); if (!typedText) return; push(new UserMessage({ timestamp, text: typedText })); context.userAt = state.raw.length - 1; };
+    const call = (id, name, input, at) => { const when = Math.max(Math.min(at || timestamp, timestamp), context.last); state.toolName[id] = name; push(new ToolCall({ timestamp: when, agentId, tool: toolLabel({ id, name, input: input || {} }, when), thought: takeThought() })); state.act = state.raw.length - 1; };   // a command is placed when it started, never before what the file already said
+    const result = (id, out, err) => { const toolName = state.toolName[id]; if (!toolName || NO_RESULT.has(toolName)) return; push(new Results({ timestamp, agentId, items: [{ callId: id, failed: !!err, output: clip(String(out == null ? '' : out).trimEnd(), resultMax[toolName] || (/^mcp__/.test(toolName) ? 900 : 600)) }] })); };
+    const endTurn = () => { if (agentId === 'main' && state.act > context.userAt && state.raw[state.act]) state.raw[state.act].endTurn(); };   // the turn is over (or was stopped): the last thing the lead said or did closes it
 
     if (rolloutRecord.type === 'turn_context') { if (typeof payload.model === 'string') context.model = payload.model; return; }
-    if (rolloutRecord.type === 'compacted') { push(new Compact({ ts, agent })); return; }
+    if (rolloutRecord.type === 'compacted') { push(new Compact({ timestamp, agentId })); return; }
     if (rolloutRecord.type === 'event_msg') {
       if (payload.type === 'item_completed' && payload.item && typeof payload.item === 'object') {
         const item = payload.item, id = String(item.id || 'cx' + state.raw.length), at = +payload.started_at_ms || 0; context.items = true;
@@ -56,7 +56,7 @@ function parser({ toolLabel, clip, resultMax = {} }) {
         const info = payload.info && typeof payload.info === 'object' ? payload.info : null, usage = info && info.last_token_usage, tot = info && info.total_token_usage ? info.total_token_usage.total_tokens : null;
         if (!usage || (tot != null && tot === context.tot)) return; context.tot = tot;
         const cached = usage.cached_input_tokens || 0, cacheWrites = usage.cache_write_input_tokens || 0;
-        state.msgUsage.set('t' + context.n++, { ts, u: { i: Math.max(0, (usage.input_tokens || 0) - cached - cacheWrites), o: usage.output_tokens || 0, r: cached, w: cacheWrites }, model: context.model || 'codex', ...(info.model_context_window > 0 ? { cw: info.model_context_window } : {}) });   // cw: the size of the context window, which Codex states
+        state.msgUsage.set('t' + context.n++, { timestamp, tokens: { input: Math.max(0, (usage.input_tokens || 0) - cached - cacheWrites), output: usage.output_tokens || 0, cacheReads: cached, cacheWrites }, model: context.model || 'codex', contextWindow: info.model_context_window > 0 ? info.model_context_window : undefined });   // the size of the context window, which Codex states
         return;
       }
       if (payload.type === 'task_complete' || payload.type === 'turn_complete' || payload.type === 'turn_aborted') endTurn();
@@ -65,7 +65,7 @@ function parser({ toolLabel, clip, resultMax = {} }) {
     // response_item: what the model sent, raw
     if (payload.type === 'reasoning') {   // the summary Codex keeps of what the agent was thinking: an inner thought on its next line or call
       const summary = (Array.isArray(payload.summary) ? payload.summary : []).map((part) => (part && typeof part.text === 'string' ? part.text : '')).filter(Boolean).join('\n').replace(/\*\*/g, '');
-      if (summary.trim()) state.th = clip(summary.replace(/[^\S\n]+/g, ' ').replace(/ ?\n[\n ]*/g, '\n').trim(), 900);
+      if (summary.trim()) state.pendingThought = clip(summary.replace(/[^\S\n]+/g, ' ').replace(/ ?\n[\n ]*/g, '\n').trim(), 900);
       return;
     }
     const isCall = payload.type === 'function_call' || payload.type === 'custom_tool_call' || payload.type === 'local_shell_call', id = String(payload.call_id || payload.id || '');

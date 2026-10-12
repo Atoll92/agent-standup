@@ -1,4 +1,4 @@
-// test/models.test.js: the events of a timeline (core/models), the errors, and the contract of a source (core/sources/source.js).
+// test/models.test.js: the events of a timeline (core/models), the errors, and the contract of a source (core/sources/source.js). What the page receives is in serializers.test.js.
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), os = require('os'), path = require('path');
 const { Event, Say, Report, ToolCall, ToolBeat, Results, UserMessage, Order, Finish, Usage, Compact, AgentCall, AgentDone, WorkflowRun, WorkflowDone } = require('../core/models');
 const { SessionNotFound, NotImplemented } = require('../core/errors');
@@ -7,42 +7,35 @@ const { ClaudeSource } = require('../core/sources/claude');
 const { CodexSource } = require('../core/sources/codex');
 const { createCore } = require('../core');
 
-const wire = (event) => JSON.parse(JSON.stringify(event));   // what a display receives
-
-test('each event carries its kind and its data on the wire, and nothing else', () => {
-  const tool = { id: 'toolu_1', name: 'Bash', arg: 'ls' };
-  assert.deepEqual(wire(new Say({ ts: 5, agent: 'main', text: 'hi' })), { ts: 5, agent: 'main', kind: 'say', text: 'hi' });
-  assert.deepEqual(wire(new Say({ ts: 5, agent: 'main', text: 'hi', thought: 'hmm' })), { ts: 5, agent: 'main', kind: 'say', text: 'hi', th: 'hmm' });
-  assert.deepEqual(wire(new ToolCall({ ts: 5, agent: 'a1', tool })), { ts: 5, agent: 'a1', kind: 'tool', tool });
-  assert.deepEqual(wire(new UserMessage({ ts: 5, text: 'go' })), { ts: 5, agent: 'user', kind: 'user', text: 'go' });
-  assert.deepEqual(wire(new Results({ ts: 5, agent: 'a1', items: [] })), { ts: 5, agent: 'a1', kind: 'results', items: [] });
-  assert.deepEqual(wire(new Compact({ ts: 5, agent: 'main' })), { ts: 5, agent: 'main', kind: 'compact' });
-  assert.deepEqual(wire(new AgentCall({ ts: 5, agent: 'main', toolId: 't', bg: false, text: 'x', title: 'y' })), { ts: 5, agent: 'main', kind: 'agentcall', toolId: 't', bg: false, text: 'x', title: 'y' });
-  assert.deepEqual(wire(new AgentDone({ ts: 5, agent: 'main', toolId: 't' })), { ts: 5, agent: 'main', kind: 'agentdone', toolId: 't' });
-  assert.deepEqual(wire(new WorkflowRun({ ts: 5, agent: 'main', toolId: 't', run: 'r1' })), { ts: 5, agent: 'main', kind: 'wfrun', toolId: 't', run: 'r1' });
-  assert.deepEqual(wire(new WorkflowDone({ agent: 'wf:r1', child: 'a1' })), { ts: 0, agent: 'wf:r1', kind: 'wfdone', child: 'a1' });
-  assert.deepEqual(wire(new Finish({ ts: 5, agent: 'a1', to: 'main', key: 'f/a1' })), { ts: 5, agent: 'a1', kind: 'finish', to: 'main', k: 'f/a1' });
-  assert.deepEqual(wire(new Usage({ ts: 5, agent: 'main', u: { i: 1, o: 2, r: 3, w: 4 }, model: 'm', key: 'u/main/1' })), { ts: 5, agent: 'main', kind: 'usage', u: { i: 1, o: 2, r: 3, w: 4 }, model: 'm', k: 'u/main/1' });
-  assert.equal(wire(new Usage({ ts: 5, agent: 'main', u: {}, model: 'm', cw: 200000, key: 'k' })).cw, 200000);
-  // an order launched by a workflow names it; one launched by a call names the call
-  assert.deepEqual(wire(new Order({ ts: 5, agent: 'main', to: 'a1', toolId: 't', bg: true, wf: 'r1', text: 'x', title: 'y', key: 'o/a1' })),
-    { ts: 5, agent: 'main', kind: 'order', to: 'a1', toolId: 't', bg: true, wf: 'r1', text: 'x', title: 'y', k: 'o/a1' });
-  assert.equal('wf' in wire(new Order({ ts: 5, agent: 'main', to: 'a1', toolId: 't', bg: false, text: 'x', title: 'y', key: 'k' })), false);
+test('an event says what it is with readable attributes', () => {
+  const say = new Say({ timestamp: 5, agentId: 'main', text: 'hi', thought: 'hmm', key: 'main:0' });
+  assert.deepEqual({ ...say }, { timestamp: 5, agentId: 'main', kind: 'say', key: 'main:0', endsTurn: false, text: 'hi', thought: 'hmm' });
+  assert.equal(new Say({ timestamp: 5, agentId: 'main', text: 'hi' }).thought, '', 'no thought: an empty one');
+  assert.equal(new UserMessage({ timestamp: 5, text: 'go' }).agentId, 'user');
+  const order = new Order({ timestamp: 5, agentId: 'main', recipientId: 'a1', callId: 't', background: true, workflow: 'r1', text: 'x', title: 'y', key: 'o/a1' });
+  assert.deepEqual([order.recipientId, order.callId, order.background, order.workflow], ['a1', 't', true, 'r1']);
+  const usage = new Usage({ timestamp: 5, agentId: 'main', tokens: { input: 1, output: 2, cacheReads: 3, cacheWrites: 4 }, model: 'm', contextWindow: 200000, key: 'k' });
+  assert.deepEqual([usage.tokens.cacheReads, usage.contextWindow], [3, 200000]);
+  assert.equal(new WorkflowDone({ agentId: 'wf:r1', childId: 'a1' }).timestamp, 0, 'a journal has no times');
+  for (const event of [new ToolCall({ timestamp: 1, agentId: 'a', tool: {} }), new Results({ timestamp: 1, agentId: 'a', items: [] }), new Compact({ timestamp: 1, agentId: 'a' }),
+    new AgentCall({ timestamp: 1, agentId: 'a', callId: 't' }), new AgentDone({ timestamp: 1, agentId: 'a', callId: 't' }), new WorkflowRun({ timestamp: 1, agentId: 'a', callId: 't', run: 'r' }), new Finish({ timestamp: 1, agentId: 'a', recipientId: 'main', key: 'k' })]) {
+    assert.equal(event.kind, event.constructor.kind);
+    assert.equal(event.endsTurn, false);
+  }
 });
 
 test('a report is what a sub-agent said last, keeping its key and its thought', () => {
-  const say = new Say({ ts: 5, agent: 'a1', text: 'Found it.', thought: 'easy' }); say.k = 'a1:3';
+  const say = new Say({ timestamp: 5, agentId: 'a1', text: 'Found it.', thought: 'easy', key: 'a1:3' });
   const report = Report.from(say);
   assert.ok(report instanceof Say && report.kind === 'report');
-  assert.deepEqual(wire(report), { ts: 5, agent: 'a1', kind: 'report', text: 'Found it.', th: 'easy', to: null, k: 'a1:3' });
+  assert.deepEqual([report.text, report.thought, report.key, report.recipientId], ['Found it.', 'easy', 'a1:3', null]);
   assert.equal(say.kind, 'say', 'the line it was made from is left as it was');
 });
 
 test('a beat groups the calls of one agent until a turn is closed', () => {
-  const call = (agent, id, extra) => Object.assign(new ToolCall({ ts: 1, agent, tool: { id, name: 'Read' } }), extra);
-  const first = call('a1', 'one', { k: 'a1:0', th: 'because' });
-  const beat = ToolBeat.startingWith(first);
-  assert.deepEqual(wire(beat), { ts: 1, agent: 'a1', kind: 'tools', tools: [{ id: 'one', name: 'Read' }], th: 'because', k: 'a1:0' }, 'it keeps the key and the thought of its first call');
+  const call = (agentId, id, extra) => new ToolCall({ timestamp: 1, agentId, tool: { id, name: 'Read' }, ...extra });
+  const beat = ToolBeat.startingWith(call('a1', 'one', { key: 'a1:0', thought: 'because' }));
+  assert.deepEqual([beat.tools, beat.thought, beat.key], [[{ id: 'one', name: 'Read' }], 'because', 'a1:0'], 'it keeps the key and the thought of its first call');
 
   assert.equal(beat.accepts(call('a2', 'x')), false, 'another agent starts its own');
   assert.equal(beat.accepts(call('a1', 'two')), true);
@@ -58,29 +51,29 @@ test('a beat groups the calls of one agent until a turn is closed', () => {
 });
 
 test('only usage, finishes and compactions are bookkeeping', () => {
-  const bookkeeping = [new Usage({ ts: 1, agent: 'main', u: {}, model: 'm', key: 'k' }), new Finish({ ts: 1, agent: 'a', to: 'main', key: 'k' }), new Compact({ ts: 1, agent: 'main' })];
-  const activity = [new Say({ ts: 1, agent: 'main', text: 'x' }), new ToolCall({ ts: 1, agent: 'main', tool: {} }), new UserMessage({ ts: 1, text: 'x' }), new Order({ ts: 1, agent: 'main', to: 'a' }), new Results({ ts: 1, agent: 'main', items: [] })];
+  const bookkeeping = [new Usage({ timestamp: 1, agentId: 'main', tokens: {}, model: 'm', key: 'k' }), new Finish({ timestamp: 1, agentId: 'a', recipientId: 'main', key: 'k' }), new Compact({ timestamp: 1, agentId: 'main' })];
+  const activity = [new Say({ timestamp: 1, agentId: 'main', text: 'x' }), new ToolCall({ timestamp: 1, agentId: 'main', tool: {} }), new UserMessage({ timestamp: 1, text: 'x' }), new Order({ timestamp: 1, agentId: 'main', recipientId: 'a' }), new Results({ timestamp: 1, agentId: 'main', items: [] })];
   assert.deepEqual(bookkeeping.map((event) => event.bookkeeping), [true, true, true]);
   assert.deepEqual(activity.map((event) => event.bookkeeping), [false, false, false, false, false]);
 });
 
 test('a copy with relative time leaves the shared event alone and is still the same kind of event', () => {
-  const say = new Say({ ts: 1500, agent: 'main', text: 'x' }); say.k = 'main:0';
+  const say = new Say({ timestamp: 1500, agentId: 'main', text: 'x', key: 'main:0' });
   const copy = say.relativeTo(1000);
   assert.ok(copy instanceof Say);
-  assert.equal(copy.t, 500);
-  assert.equal('t' in say, false, 'the event is shared by every build of a timeline: it must not be touched');
+  assert.equal(copy.elapsed, 500);
+  assert.equal('elapsed' in say, false, 'the event is shared by every build of a timeline: it must not be touched');
   assert.equal(copy.signature(), say.signature());
-  assert.equal(new Say({ ts: 10, agent: 'main', text: 'x' }).relativeTo(1000).t, 0, 'never before time zero');
+  assert.equal(new Say({ timestamp: 10, agentId: 'main', text: 'x' }).relativeTo(1000).elapsed, 0, 'never before time zero');
 });
 
 test('what changes between two builds changes the signature, and what does not, does not', () => {
-  const say = new Say({ ts: 1, agent: 'main', text: 'x' });
+  const say = new Say({ timestamp: 1, agentId: 'main', text: 'x' });
   const open = say.signature();
   say.endTurn();
   assert.notEqual(say.signature(), open, 'a line that closed the turn');
-  assert.equal(new Say({ ts: 2, agent: 'main', text: 'something else' }).signature(), open, 'the text of a line never changes, so it is not part of it');
-  const order = (title) => new Order({ ts: 1, agent: 'main', to: 'a1', toolId: 't', bg: false, title, key: 'k' }).signature();
+  assert.equal(new Say({ timestamp: 2, agentId: 'main', text: 'something else' }).signature(), open, 'the text of a line never changes, so it is not part of it');
+  const order = (title) => new Order({ timestamp: 1, agentId: 'main', recipientId: 'a1', callId: 't', background: false, title, key: 'k' }).signature();
   assert.notEqual(order('one'), order('two'));
 });
 

@@ -3,8 +3,8 @@ const { Event } = require('./event');
 // What the human typed.
 class UserMessage extends Event {
   static kind = 'user';
-  constructor({ ts, text }) {
-    super({ ts, agent: 'user' });
+  constructor({ timestamp, text, key }) {
+    super({ timestamp, agentId: 'user', key });
     this.text = text;
   }
 }

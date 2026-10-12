@@ -44,12 +44,12 @@ test('a lead and its sub-agent become one timeline: order, work, report, finish,
 
   const tl = core.timeline('-tl', 's');
   assert.deepEqual(tl.agents.map((a) => [a.id, a.role]), [['main', 'Lead'], ['a1', 'Look at login']]);
-  const story = tl.events.filter((e) => e.kind !== 'usage').map((e) => e.kind + ':' + e.agent + (e.to ? '>' + e.to : ''));
+  const story = tl.events.filter((event) => event.kind !== 'usage').map((event) => event.kind + ':' + event.agentId + (event.recipientId ? '>' + event.recipientId : ''));
   assert.deepEqual(story, ['user:user', 'say:main', 'order:main>a1', 'tools:a1', 'results:a1', 'report:a1>main', 'finish:a1>main', 'say:main']);
-  assert.equal(tl.events.at(-1).end, 1, 'the lead\'s last line closes its turn');
+  assert.equal(tl.events.at(-1).endsTurn, true, 'the lead\'s last line closes its turn');
   assert.equal(tl.events.find((e) => e.kind === 'tools').tools[0].d.kind, 'read');
-  assert.equal(tl.events[0].t, 0, 'time zero is the first thing said');
-  assert.ok(tl.events.every((e, i) => i === 0 || e.ts >= tl.events[i - 1].ts), 'events are sorted by time');
+  assert.equal(tl.events[0].elapsed, 0, 'time zero is the first thing said');
+  assert.ok(tl.events.every((event, i) => i === 0 || event.timestamp >= tl.events[i - 1].timestamp), 'events are sorted by time');
 });
 
 test('consecutive tool calls of one agent are one beat; a line in between starts a new one', () => {
@@ -143,8 +143,7 @@ test('the timeline, the board and the session to follow work through the interfa
     readSession: (proj, id, touched) => {
       if (id !== 'one') throw new Error('session not found');
       touched.push('/fake/one');
-      const say = new Say({ ts: at, agent: 'main', text: 'Hello from nowhere.' });
-      say.k = 'main:0';
+      const say = new Say({ timestamp: at, agentId: 'main', text: 'Hello from nowhere.', key: 'main:0' });
       return { agents: { main: { id: 'main', role: 'Lead', type: 'main', name: 'Fake' } }, states: [{ agent: 'main', raw: [say], msgUsage: new Map(), lastTs: at }], runs: {} };
     },
     exists: (proj, id) => id === 'one', mtime: (proj, id) => (id === 'one' ? at : 0), stamp: () => 1, inProject: (proj, id, folder) => folder === '_fake',

@@ -1,21 +1,20 @@
 const { Event } = require('./event');
 
-// An agent giving work to another (`to`): the lead launching a sub-agent, or a workflow starting one (`wf`: which workflow).
-// `toolId` is the call that launched it, `bg` whether it runs in the background.
+// An agent giving work to another (`recipientId`): the lead launching a sub-agent, or a workflow starting one (`workflow`: which run).
+// `callId` is the tool call that launched it, `background` whether it runs in the background.
 class Order extends Event {
   static kind = 'order';
-  constructor({ ts, agent, to, toolId, bg, wf, text, title, key }) {
-    super({ ts, agent });
-    this.to = to;
-    if (toolId) this.toolId = toolId;
-    this.bg = bg;
-    if (wf) this.wf = wf;
+  constructor({ timestamp, agentId, recipientId, callId, background, workflow, text, title, key }) {
+    super({ timestamp, agentId, key });
+    this.recipientId = recipientId;
+    this.callId = callId;
+    this.background = background;
+    this.workflow = workflow;
     this.text = text;
     this.title = title;
-    this.k = key;
   }
 
-  signatureDetail() { return `${this.toolId},${this.bg},${this.title}`; }
+  signatureDetail() { return `${this.callId},${this.background},${this.title}`; }
 }
 
 module.exports = { Order };

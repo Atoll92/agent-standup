@@ -28,8 +28,8 @@ function linkLaunches({ agents, states, runs }) {
     for (const event of state.raw) {
       const run = event instanceof WorkflowRun ? runs[event.run] : null;
       if (!run || run.by) continue;
-      run.by = event.agent; run.toolId = event.toolId;
-      runByTool[event.toolId] = run;
+      run.by = event.agentId; run.callId = event.callId;
+      runByTool[event.callId] = run;
     }
   }
   return { childByTool, runByTool };
@@ -46,8 +46,8 @@ function findFinished({ agents, states, runs }, { childByTool, runByTool }) {
     if (!state) continue;
     for (const event of state.raw) {
       if (!(event instanceof AgentDone)) continue;
-      if (childByTool[event.toolId]) finished.add(childByTool[event.toolId]);
-      else if (runByTool[event.toolId]) for (const agentId of Object.values(runByTool[event.toolId].agents)) finished.add(agentId);   // a run that stopped: so did every agent in it
+      if (childByTool[event.callId]) finished.add(childByTool[event.callId]);
+      else if (runByTool[event.callId]) for (const agentId of Object.values(runByTool[event.callId].agents)) finished.add(agentId);   // a run that stopped: so did every agent in it
     }
   }
   for (const run of Object.values(runs)) for (const agentId of run.done) finished.add(agentId);
@@ -68,10 +68,10 @@ function collectEvents({ agents, states, runs }, { childByTool, runByTool }, fin
   for (const state of states) if (state) lastTs[state.agent] = state.lastTs || 0;
 
   // One finish per agent, whichever record says it first: the key is the agent, not the record.
-  const finish = (agent, ts, reportsTo) => {
-    if (finishedSeen.has(agent)) return;
-    finishedSeen.add(agent);
-    events.push(new Finish({ ts, agent, to: reportsTo, key: 'f/' + agent }));
+  const finish = (agentId, timestamp, reportsTo) => {
+    if (finishedSeen.has(agentId)) return;
+    finishedSeen.add(agentId);
+    events.push(new Finish({ timestamp, agentId, recipientId: reportsTo, key: 'f/' + agentId }));
   };
 
   for (const state of states) {
@@ -83,19 +83,19 @@ function collectEvents({ agents, states, runs }, { childByTool, runByTool }, fin
     // the workflow (the lead when nothing says who), given in the background, when the agent started.
     if (run && state.prompt) {
       parent[state.agent] = run.by || 'main';
-      events.push(new Order({ ts: state.prompt.ts, agent: parent[state.agent], to: state.agent, toolId: run.toolId, bg: true, wf: agent.wf, text: state.prompt.text, title: agent.role, key: 'o/' + state.agent }));
+      events.push(new Order({ timestamp: state.prompt.timestamp, agentId: parent[state.agent], recipientId: state.agent, callId: run.callId, background: true, workflow: agent.wf, text: state.prompt.text, title: agent.role, key: 'o/' + state.agent }));
     }
 
     state.raw.forEach((event, index) => {
       if (event instanceof AgentDone) {
-        const child = childByTool[event.toolId], workflow = runByTool[event.toolId];
-        if (child) finish(child, event.ts, event.agent);
-        else if (workflow) for (const agentId of Object.values(workflow.agents)) if (!workflow.done.has(agentId)) finish(agentId, Math.max(event.ts, lastTs[agentId] || 0), event.agent);   // the agents the journal knows about are finished below, at their own time
+        const child = childByTool[event.callId], workflow = runByTool[event.callId];
+        if (child) finish(child, event.timestamp, event.agentId);
+        else if (workflow) for (const agentId of Object.values(workflow.agents)) if (!workflow.done.has(agentId)) finish(agentId, Math.max(event.timestamp, lastTs[agentId] || 0), event.agentId);   // the agents the journal knows about are finished below, at their own time
       } else if (event instanceof AgentCall) {
-        const child = childByTool[event.toolId];
+        const child = childByTool[event.callId];
         if (!child) return;
-        parent[child] = event.agent;
-        events.push(new Order({ ts: event.ts, agent: event.agent, to: child, toolId: event.toolId, bg: event.bg, text: event.text, title: event.title, key: event.k }));
+        parent[child] = event.agentId;
+        events.push(new Order({ timestamp: event.timestamp, agentId: event.agentId, recipientId: child, callId: event.callId, background: event.background, text: event.text, title: event.title, key: event.key }));
       } else if (event instanceof WorkflowRun || event instanceof WorkflowDone) {
         return;   // bookkeeping of the workflow, nothing to show
       } else if (index === reportAt) {
@@ -109,11 +109,11 @@ function collectEvents({ agents, states, runs }, { childByTool, runByTool }, fin
     if (run && run.done.has(state.agent) && state.lastTs) finish(state.agent, state.lastTs, parent[state.agent] || 'main');
 
     for (const [messageId, usage] of state.msgUsage) {
-      events.push(new Usage({ ts: usage.ts, agent: state.agent, u: usage.u, model: usage.model, cw: usage.cw, key: 'u/' + state.agent + '/' + messageId }));
+      events.push(new Usage({ timestamp: usage.timestamp, agentId: state.agent, tokens: usage.tokens, model: usage.model, contextWindow: usage.contextWindow, key: 'u/' + state.agent + '/' + messageId }));
     }
   }
 
-  for (const event of events) if (event instanceof Report && event.to === null) event.to = parent[event.agent] || 'main';
+  for (const event of events) if (event instanceof Report && event.recipientId === null) event.recipientId = parent[event.agentId] || 'main';
   return events;
 }
 
@@ -128,7 +128,7 @@ function lastSayIndex(state) {
 // Consecutive tool calls of one agent become one activity beat ("tools" event); bookkeeping events are transparent to that rule.
 // A beat keeps the key of its first call; one that closed a turn takes no more calls.
 function mergeToolBeats(events) {
-  events.sort((first, second) => first.ts - second.ts);
+  events.sort((first, second) => first.timestamp - second.timestamp);
   const merged = [];
   let last = -1;   // index in `merged` of the last event that is not bookkeeping
   for (const event of events) {
@@ -157,8 +157,8 @@ function createTimeline({ sourceOf }) {
 
     // Time zero is the first thing said or done.
     const first = merged.find((event) => !event.bookkeeping);
-    const start = first ? first.ts : 0;
-    const end = merged.length ? merged[merged.length - 1].ts : 0;
+    const start = first ? first.timestamp : 0;
+    const end = merged.length ? merged[merged.length - 1].timestamp : 0;
     return {
       id,
       proj,

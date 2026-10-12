@@ -1,11 +1,12 @@
 const { Event } = require('./event');
 
-// A workflow's journal says an agent (`child`, by the name of its file) handed its result back. The journal has no times.
+// A workflow's journal says an agent (`childId`, by the name of its file) handed its result back. The journal has no times.
+// Never sent to a display.
 class WorkflowDone extends Event {
   static kind = 'wfdone';
-  constructor({ agent, child }) {
-    super({ ts: 0, agent });
-    this.child = child;
+  constructor({ agentId, childId, key }) {
+    super({ timestamp: 0, agentId, key });
+    this.childId = childId;
   }
 }
 

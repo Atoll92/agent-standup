@@ -1,16 +1,15 @@
 const { Event } = require('./event');
 
-// A sub-agent is done (`to`: the agent it reports to).
+// A sub-agent is done (`recipientId`: the agent it reports to).
 class Finish extends Event {
   static kind = 'finish';
-  constructor({ ts, agent, to, key }) {
-    super({ ts, agent });
-    this.to = to;
-    this.k = key;
+  constructor({ timestamp, agentId, recipientId, key }) {
+    super({ timestamp, agentId, key });
+    this.recipientId = recipientId;
   }
 
   get bookkeeping() { return true; }
-  signatureDetail() { return this.ts; }
+  signatureDetail() { return this.timestamp; }
 }
 
 module.exports = { Finish };

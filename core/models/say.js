@@ -3,10 +3,10 @@ const { Event } = require('./event');
 // What an agent says. `thought`: what it was thinking before, when the transcript kept it (shown as an inner thought).
 class Say extends Event {
   static kind = 'say';
-  constructor({ ts, agent, text, thought }) {
-    super({ ts, agent });
+  constructor({ timestamp, agentId, text, thought, key }) {
+    super({ timestamp, agentId, key });
     this.text = text;
-    if (thought) this.th = thought;
+    this.thought = thought || '';
   }
 }
 

@@ -89,13 +89,13 @@ function numberEvents(feed, builtTimeline) {
   const events = builtTimeline.events, sequenceNumbers = new Uint32Array(events.length), nextSequence = feed.seq + 1, before = feed.known.size;
 
   // Time zero moved (something now comes before the first line): every `t` is different.
-  const zero = events.find((event) => !event.bookkeeping), firstEventTime = zero ? zero.ts : 0, moved = feed.t0 !== firstEventTime;
+  const zero = events.find((event) => !event.bookkeeping), firstEventTime = zero ? zero.timestamp : 0, moved = feed.t0 !== firstEventTime;
   feed.t0 = firstEventTime;
 
   let hits = 0, changed = false;
   events.forEach((event, index) => {
-    const eventSignature = event.signature(), knownEvent = feed.known.get(event.k);
-    if (!knownEvent) { feed.known.set(event.k, { s: eventSignature, q: nextSequence }); sequenceNumbers[index] = nextSequence; changed = true; return; }
+    const eventSignature = event.signature(), knownEvent = feed.known.get(event.key);
+    if (!knownEvent) { feed.known.set(event.key, { s: eventSignature, q: nextSequence }); sequenceNumbers[index] = nextSequence; changed = true; return; }
     hits++;
     if (knownEvent.s !== eventSignature || moved) { knownEvent.s = eventSignature; knownEvent.q = nextSequence; changed = true; }
     sequenceNumbers[index] = knownEvent.q;
