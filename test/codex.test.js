@@ -100,7 +100,7 @@ test('a Codex session becomes the same events as a Claude Code one: lines, comma
   const s = await serve();
   try {
     const tl = (await get(s.port, '/api/session?proj=_codex&id=' + NEW)).json();
-    assert.deepEqual(tl.agents, [{ id: 'main', role: 'Lead', type: 'main', name: 'Codex' }]);
+    assert.deepEqual(tl.agents, [{ id: 'main', role: 'Lead', type: 'main' }]);   // the lead is named by the page, the same in every call
     const talk = tl.events.filter((e) => e.kind === 'user' || e.kind === 'say').map((e) => e.agent + ':' + e.text);
     assert.deepEqual(talk, ['user:Why is the cart total wrong?', 'main:I will read the cart code first.', 'main:Fixed: the total now adds the prices.']);   // each line once, nothing of what the harness wraps around them
     const first = tl.events.find((e) => e.kind === 'say'), last = tl.events.filter((e) => e.kind === 'say').pop();

@@ -419,7 +419,7 @@ function renameAll() {   // ⚙ → own names on or off: every sub-agent is name
 }
 function persona0(a) {
   const h = hash(a.id), base = { ...a, given: 'given' in a ? a.given : a.name };
-  if (a.id === 'main') return { ...base, name: a.name || 'Claude', role: L('Chef', 'Lead'), shirt: '#e8845f', shape: 0, acc: 1, eye: 0, glasses: false, scene: 6, prop: 1, acc2: '#f5c04a', lead: true, vi: 0, gid: 'main' };
+  if (a.id === 'main') return { ...base, name: a.name || 'Margot', role: L('Chef', 'Lead'), shirt: '#e8845f', shape: 0, acc: 1, eye: 0, glasses: false, scene: 6, prop: 1, acc2: '#f5c04a', lead: true, vi: 0, gid: 'main' };
   if (a.id === 'user') return { ...base, name: L('Vous', 'You'), role: L('Humain', 'Human'), shirt: '#8a94c9', shape: 1, acc: 2, eye: 1, glasses: false, scene: 7, prop: 1, acc2: '#ff7a6b', vi: 3, gid: 'user' };
   return { ...base, name: subName(base, h), roleEn: a.roleEn || a.role, role: (FR() && a.roleFr) || a.roleEn || a.role, shirt: PAL[(h >>> 6) % 8], shape: (h >>> 3) % 5, acc: (h >>> 9) % 6, eye: (h >>> 12) % 3, glasses: ((h >>> 15) % 4) === 0,
            scene: (h >>> 18) % 6, prop: (h >>> 21) % 3, acc2: PAL[(h >>> 24) % 8], vi: h >>> 4, gid: h.toString(36) };
@@ -1930,7 +1930,7 @@ async function loadSession(proj, id) {
   if (proj === '_demo') S.events.forEach((e) => { if (e.fr) trMem.set(baseText(e), e.fr); });   // the demo ships its own French
   $('#subtitle').textContent = S.title; recomputeStatus(0); buildStage(); renderHighlights(); setFocus('main'); renderLog(true); computeGantt(); layout(); paintStatus(); prefetchTr(0); return true;
 }
-const niceProj = (p) => (p === '_demo' ? '' : p === '_codex' ? 'Codex' : String(p).replace(/^-+/, '').replace(/-/g, '/').split('/').slice(-2).join('/'));
+const niceProj = (p) => (p === '_demo' ? '' : p === '_codex' ? 'Codex' : p === '_vibe' ? 'Mistral Vibe' : String(p).replace(/^-+/, '').replace(/-/g, '/').split('/').slice(-2).join('/'));
 async function fillProjects() {   // live view: follow the latest activity anywhere, or pin one project
   const sel = $('#liveProj'); let rows = []; try { rows = await (await fetch('/api/projects')).json(); } catch {}
   sel.innerHTML = `<option value="">${L('Tous les projets (le plus récent)', 'All projects (most recent)')}</option>` + rows.map((r) => `<option value="${esc(r.proj)}">${esc(niceProj(r.proj))}</option>`).join('');
@@ -2283,7 +2283,7 @@ function paintPill() {
     const what = (id) => `${nameOf(id)} — ${st[id].txt.replace(/^\S+\s/, '')}`, more = (a) => (a.length > 1 ? ` +${a.length - 1}` : ''), lead = st.main || { k: 'idle' };
     if (by.blocked.length) { cls = 'blocked'; to = by.blocked[0]; txt = '✋ ' + what(to) + more(by.blocked); }
     else if (by.stalled.length) { cls = 'stalled'; to = by.stalled[0]; txt = '⚠ ' + what(to) + more(by.stalled); }
-    else if (by.working.length || by.waiting.length) {   // "2 working · Claude — waiting on Ken, Mira", or what the only one at work is doing
+    else if (by.working.length || by.waiting.length) {   // "2 working · Margot — waiting on Ken, Mira", or what the only one at work is doing
       const w = by.working, wt = lead.k === 'waiting' ? 'main' : w.length ? '' : by.waiting[0]; cls = 'working'; to = wt || (w.length === 1 ? w[0] : 'main');
       txt = (w.length === 1 && !wt ? '⚙ ' + what(w[0]) : w.length ? `⚙ ${w.length} ${L('au travail', 'working')}` : '') + (wt ? (w.length ? ' · ' : '🔗 ') + what(wt) : '');
     }

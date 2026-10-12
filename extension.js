@@ -95,9 +95,9 @@ function pingActive(ctx) {
 }
 function activate(ctx) {
   pingActive(ctx);
-  const codex0 = process.env.AGENT_STANDUP_CODEX;   // what the environment asked for, put back when the setting is on
-  const applyPath = () => { process.env.AGENT_STANDUP_CLAUDE = cfg().get('claudePath') || ''; process.env.AGENT_STANDUP_CHARACTERS = cfg().get('charactersPath') || ''; if (cfg().get('codex') === false) process.env.AGENT_STANDUP_CODEX = 'off'; else if (codex0 === undefined) delete process.env.AGENT_STANDUP_CODEX; else process.env.AGENT_STANDUP_CODEX = codex0; };
-  applyPath(); ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration((ev) => { if (ev.affectsConfiguration('agentStandup.claudePath') || ev.affectsConfiguration('agentStandup.charactersPath') || ev.affectsConfiguration('agentStandup.codex')) applyPath(); }));
+  const codex0 = process.env.AGENT_STANDUP_CODEX, vibe0 = process.env.AGENT_STANDUP_VIBE;   // what the environment asked for, put back when the setting is on
+  const applyPath = () => { process.env.AGENT_STANDUP_CLAUDE = cfg().get('claudePath') || ''; process.env.AGENT_STANDUP_CHARACTERS = cfg().get('charactersPath') || ''; if (cfg().get('codex') === false) process.env.AGENT_STANDUP_CODEX = 'off'; else if (codex0 === undefined) delete process.env.AGENT_STANDUP_CODEX; else process.env.AGENT_STANDUP_CODEX = codex0; if (cfg().get('vibe') === false) process.env.AGENT_STANDUP_VIBE = 'off'; else if (vibe0 === undefined) delete process.env.AGENT_STANDUP_VIBE; else process.env.AGENT_STANDUP_VIBE = vibe0; };
+  applyPath(); ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration((ev) => { if (ev.affectsConfiguration('agentStandup.claudePath') || ev.affectsConfiguration('agentStandup.charactersPath') || ev.affectsConfiguration('agentStandup.codex') || ev.affectsConfiguration('agentStandup.vibe')) applyPath(); }));
   ctx.subscriptions.push(
     vscode.commands.registerCommand('agentStandup.open', openPanel),
     vscode.commands.registerCommand('agentStandup.openInBrowser', openBrowser),

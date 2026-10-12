@@ -89,6 +89,11 @@
           "default": true,
           "description": "%config.codex.description%"
         },
+        "agentStandup.vibe": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.vibe.description%"
+        },
         "agentStandup.claudePath": {
           "type": "string",
           "default": "",
@@ -127,6 +132,8 @@
     "claude code",
     "codex",
     "openai codex",
+    "mistral",
+    "mistral vibe",
     "agents",
     "subagents",
     "visualization",

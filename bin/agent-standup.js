@@ -9,12 +9,12 @@ const pkg = require('../package.json');
 const argv = process.argv.slice(2), flags = {}, rest = [];
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], val = () => argv[++i];
-  if (a === '--port') flags.port = val(); else if (a === '--projects') flags.projects = val(); else if (a === '--codex') flags.codex = val(); else if (a === '--characters') flags.characters = val(); else if (a === '--config-dir') flags.config = val();
+  if (a === '--port') flags.port = val(); else if (a === '--projects') flags.projects = val(); else if (a === '--codex') flags.codex = val(); else if (a === '--vibe') flags.vibe = val(); else if (a === '--characters') flags.characters = val(); else if (a === '--config-dir') flags.config = val();
   else if (a === '--open') flags.open = true; else if (a === '--here') flags.here = true; else if (a === '--json') flags.json = true; else if (a === '--titles') flags.titles = true;
   else if (a === '-h' || a === '--help') flags.help = true; else if (a === '-v' || a === '--version') flags.version = true; else rest.push(a);
 }
 const cmd = rest[0] || 'serve';
-const HELP = `Agent Standup ${pkg.version} — your Claude Code and Codex agents as a live video call
+const HELP = `Agent Standup ${pkg.version} — your Claude Code, Codex and Mistral Vibe agents as a live video call
 
 Usage
   agent-standup [serve] [--port 4747] [--open]   start the local server (http://localhost:4747)
@@ -26,6 +26,7 @@ Options
   --open            open the page in your browser
   --projects DIR    where the session files are (default ~/.claude/projects, or $CLAUDE_CONFIG_DIR/projects)
   --codex DIR       where Codex keeps its files (default ~/.codex, or $CODEX_HOME); "off" to leave Codex sessions out
+  --vibe DIR        where Mistral Vibe keeps its files (default ~/.vibe, or $VIBE_HOME); "off" to leave Vibe sessions out
   --characters DIR  folder with your own pixel-art characters (default ~/.agent-standup/characters)
   --here            status: only sessions of the current folder (matched on its real path, as Claude Code names it)
   --json            status: machine-readable output (add --titles to include session titles)
@@ -34,6 +35,7 @@ if (flags.help || cmd === 'help') { process.stdout.write(HELP); process.exit(0);
 if (flags.version || cmd === 'version') { console.log(pkg.version); process.exit(0); }
 if (flags.projects) process.env.AGENT_STANDUP_PROJECTS = path.resolve(flags.projects);
 if (flags.codex !== undefined) process.env.AGENT_STANDUP_CODEX = /^(0|off|no|false)?$/i.test(String(flags.codex)) ? 'off' : path.resolve(String(flags.codex));
+if (flags.vibe !== undefined) process.env.AGENT_STANDUP_VIBE = /^(0|off|no|false)?$/i.test(String(flags.vibe)) ? 'off' : path.resolve(String(flags.vibe));
 if (flags.config) process.env.CLAUDE_CONFIG_DIR = path.resolve(flags.config);
 if (flags.characters) process.env.AGENT_STANDUP_CHARACTERS = path.resolve(flags.characters);
 if (flags.port !== undefined) {   // a real port number or nothing: no silent fallback to another port

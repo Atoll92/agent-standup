@@ -1,5 +1,5 @@
 {
-  "extension.description": "Watch your Claude Code or Codex session as a live, animated team call: the lead gives orders, sub-agents join, share their screen and report back — with voices, a sub-agent tree, timeline, recap and video export.",
+  "extension.description": "Watch your Claude Code, Codex or Mistral Vibe session as a live, animated team call: the lead gives orders, sub-agents join, share their screen and report back — with voices, a sub-agent tree, timeline, recap and video export.",
   "command.open.title": "Agent Standup: Open live call",
   "command.openInBrowser.title": "Agent Standup: Open in browser (voice + sound)",
   "command.focus.title": "Agent Standup: Show sidebar",
@@ -11,6 +11,7 @@
   "config.statusBar.description": "Show live counts in the status bar (agents working, needs you, your turn) for this workspace; the item turns red when an agent may be waiting for you.",
   "config.shareUsage.description": "Help the project count active installs: once a day, send one empty request to a 1-pixel file on GitHub (no identifier, no content; GitHub sees your IP like for any download). Off by default; ignored if VS Code telemetry is off.",
   "config.codex.description": "Also show Codex sessions (read from ~/.codex/sessions, or $CODEX_HOME). Turn off to show Claude Code sessions only.",
+  "config.vibe.description": "Also show Mistral Vibe sessions (read from ~/.vibe/logs/session, or $VIBE_HOME). Turn off to leave them out.",
   "config.claudePath.description": "Full path to the Claude Code executable, if it is not found automatically (used for French translation).",
   "config.charactersPath.description": "Folder with your own character images (PNG, GIF or WebP, up to 300 KB each). Empty uses ~/.agent-standup/characters. lead.png is the lead, you.png is you, any other image is a sub-agent, name-talk.png is an optional open-mouth frame."
 }

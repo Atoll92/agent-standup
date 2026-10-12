@@ -4,7 +4,7 @@
 // events a Claude Code record gives (say, user, tool, results, usage, compact), so everything after that is shared: the timeline, the live feed, the page.
 // All Codex sessions are listed under one made-up project, PROJ. No Claude Code project folder can have that name: theirs are paths with every other character turned into "-".
 const fs = require('fs'), os = require('os'), path = require('path');
-const PROJ = '_codex';
+const PROJ = '_codex', SOURCE = 'codex';
 // Where Codex keeps its files: AGENT_STANDUP_CODEX (a folder; "0" or "off" turns Codex sessions off), else $CODEX_HOME, else ~/.codex.
 // When AGENT_STANDUP_PROJECTS points the app at one folder of Claude Code sessions (--projects, the tests), Codex is only read if it is asked for too.
 function home() {
@@ -206,4 +206,4 @@ function parser({ toolLabel, clip, resultMax = {} }) {
     if (p.type === 'web_search_call' && !cx.items && id) call(id, 'WebSearch', { query: (p.action && p.action.query) || '' });
   };
 }
-module.exports = { PROJ, home, dirKey, sessions, row, fileOf, inProject, projectLabel, title, boardRow, parser };
+module.exports = { PROJ, SOURCE, home, dirKey, sessions, row, fileOf, inProject, projectLabel, title, boardRow, parser };

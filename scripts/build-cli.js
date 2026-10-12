@@ -6,18 +6,18 @@ const root = path.join(__dirname, '..'), out = path.join(root, 'dist-cli'), pkg 
 const NAME = process.env.CLI_PACKAGE_NAME || '@double_geste/agent-standup';
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive: true });
 const cp = (rel) => fs.cpSync(path.join(root, rel), path.join(out, rel), { recursive: true });
-['server.js', 'codex.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'LICENSE', 'public', 'bin', 'examples/cats'].forEach(cp);   // the cat pack ships with the command too
+['server.js', 'codex.js', 'vibe.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'LICENSE', 'public', 'bin', 'examples/cats'].forEach(cp);   // the cat pack ships with the command too
 fs.mkdirSync(path.join(out, 'media'), { recursive: true }); fs.copyFileSync(path.join(root, 'media/icon.png'), path.join(out, 'media/icon.png'));
 const cli = {
-  name: NAME, version: pkg.version, description: 'Your Claude Code and Codex agents as a live video call, from the terminal: a local page in your browser, plus one-line status for status bars. Free, open source, zero token cost.',
-  bin: { 'agent-standup': 'bin/agent-standup.js' }, main: 'server.js', files: ['bin', 'server.js', 'codex.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'public', 'examples', 'media', 'LICENSE', 'README.md'], license: 'MIT',
+  name: NAME, version: pkg.version, description: 'Your Claude Code, Codex and Mistral Vibe agents as a live video call, from the terminal: a local page in your browser, plus one-line status for status bars. Free, open source, zero token cost.',
+  bin: { 'agent-standup': 'bin/agent-standup.js' }, main: 'server.js', files: ['bin', 'server.js', 'codex.js', 'vibe.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'public', 'examples', 'media', 'LICENSE', 'README.md'], license: 'MIT',
   engines: { node: '>=18' }, repository: { type: 'git', url: String(pkg.repository.url).replace(/^(git\+)?/, 'git+') }, homepage: pkg.homepage, bugs: pkg.bugs, keywords: ['claude-code', 'claude', 'codex', 'agents', 'sub-agents', 'monitoring', 'viewer', 'statusline', 'standup'],
   author: 'Double Geste', publishConfig: { access: 'public' },
 };
 fs.writeFileSync(path.join(out, 'package.json'), JSON.stringify(cli, null, 2) + '\n');
 fs.writeFileSync(path.join(out, 'README.md'), `# Agent Standup (command line)
 
-Your Claude Code and Codex sessions as a live team call, without any editor. Free, MIT, and it never calls Claude: it only reads the session files Claude Code and Codex already write.
+Your Claude Code, Codex and Mistral Vibe sessions as a live team call, without any editor. Free, MIT, and it never calls Claude: it only reads the session files Claude Code, Codex and Mistral Vibe already write.
 
 \`\`\`bash
 npx ${NAME}            # then open http://localhost:4747   (add --open to open it for you)
@@ -32,6 +32,6 @@ Install once for status bars (faster than npx): \`npm i -g ${NAME}\`
 
 Full documentation, the VS Code extension, the desktop app and the demo: ${pkg.homepage} · ${String(pkg.repository.url).replace(/\\.git$/, '')}
 
-Unofficial: not affiliated with Anthropic or OpenAI.
+Unofficial: not affiliated with Anthropic, OpenAI or Mistral AI.
 `);
 console.log(`staged ${NAME}@${pkg.version} in dist-cli/`);

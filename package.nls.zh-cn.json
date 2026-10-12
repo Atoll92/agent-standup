@@ -1,5 +1,5 @@
 {
-  "extension.description": "把你的 Claude Code 或 Codex 会话变成一场实时动画团队视频通话：主代理下达指令，子代理加入、共享屏幕并汇报——配有语音、子代理树状图、时间线、回顾和视频导出。",
+  "extension.description": "把你的 Claude Code、Codex 或 Mistral Vibe 会话变成一场实时动画团队视频通话：主代理下达指令，子代理加入、共享屏幕并汇报——配有语音、子代理树状图、时间线、回顾和视频导出。",
   "command.open.title": "Agent Standup: 打开实时视频通话",
   "command.openInBrowser.title": "Agent Standup: 在浏览器中打开（语音 + 声音）",
   "command.focus.title": "Agent Standup: 显示侧边栏",
@@ -11,6 +11,7 @@
   "config.statusBar.description": "在状态栏显示当前工作区的实时计数（工作中的代理、需要你、轮到你了）；有代理可能在等你时，该项会变红。",
   "config.shareUsage.description": "帮助项目统计活跃安装量：每天向 GitHub 上一个 1 像素文件发送一次空请求（无标识符、无内容；GitHub 会像普通下载一样看到你的 IP）。默认关闭；VS Code 遥测关闭时将被忽略。",
   "config.codex.description": "同时显示 Codex 会话（读取自 ~/.codex/sessions 或 $CODEX_HOME）。关闭后仅显示 Claude Code 会话。",
+  "config.vibe.description": "同时显示 Mistral Vibe 会话（读取自 ~/.vibe/logs/session 或 $VIBE_HOME）。关闭后不显示。",
   "config.claudePath.description": "Claude Code 可执行文件的完整路径（若无法自动找到；用于法语翻译）。",
   "config.charactersPath.description": "存放你自己角色图片的文件夹（PNG、GIF 或 WebP，每张最大 300 KB）。留空则使用 ~/.agent-standup/characters。lead.png 是主代理，you.png 是你，其他图片是子代理，name-talk.png 是可选的张嘴帧。"
 }

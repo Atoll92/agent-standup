@@ -15,6 +15,7 @@ jobs:
         run: |
           node --check server.js
           node --check codex.js
+          node --check vibe.js
           node --check kokoro.js
           node --check kokoro-worker.js
           node --check demo.js

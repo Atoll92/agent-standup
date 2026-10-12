@@ -7,6 +7,8 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const codex = require('./codex.js');     // Codex sessions, read as the same call (see codex.js)
+const vibe = require('./vibe.js');       // Mistral Vibe sessions, the same way (see vibe.js)
+const SOURCES = [codex, vibe], sourceOf = (proj) => SOURCES.find((m) => m.PROJ === proj) || null;   // the tools other than Claude Code: each lists its sessions under one made-up project
 const kokoro = require('./kokoro.js');   // natural voices, installed on demand (see kokoro.js)
 const zlib = require('zlib');
 const { execFileSync, execFile } = require('child_process');
@@ -66,6 +68,7 @@ function subFiles(proj, id) {
   }
   return out;
 }
+const subFilesOf = (proj, id) => { const sx = sourceOf(proj); return sx && sx.subFiles ? sx.subFiles(id) : subFiles(proj, id); };   // Mistral Vibe keeps its sub-agents its own way
 function mediaFile(proj, sid, agent) {
   if (agent === 'main') return path.join(ROOT, proj, sid + '.jsonl');
   const hit = subFiles(proj, sid).find((x) => x.aid === agent);
@@ -103,7 +106,7 @@ function listSessions() {
 }
 function listSessions0() {
   const rows = [];
-  for (const r of codex.sessions(30)) rows.push({ proj: codex.PROJ, id: r.id, mtime: r.mtime, size: r.size, agents: 0, cx: r });
+  for (const m of SOURCES) for (const r of m.sessions(30)) rows.push({ proj: m.PROJ, id: r.id, mtime: r.mtime, size: r.size, agents: m.subFiles ? m.subFiles(r.id).length : 0, cx: r, src: m });
   for (const proj of fs.existsSync(ROOT) ? fs.readdirSync(ROOT) : []) {
     const dir = path.join(ROOT, proj);
     let files;
@@ -115,9 +118,9 @@ function listSessions0() {
     }
   }
   rows.sort((a, b) => b.mtime - a.mtime);
-  const top = rows.filter((r) => !r.cx).slice(0, 60).concat(rows.filter((r) => r.cx)).sort((a, b) => b.mtime - a.mtime);   // the 60 most recent Claude Code sessions as always, and up to 30 Codex ones beside them: neither pushes the other out
+  const top = rows.filter((r) => !r.cx).slice(0, 60).concat(rows.filter((r) => r.cx)).sort((a, b) => b.mtime - a.mtime);   // the 60 most recent Claude Code sessions as always, and up to 30 of each other tool beside them: none pushes another out
   for (const r of top) {
-    if (r.cx) { const c = r.cx; delete r.cx; r.title = codex.title(c); r.project = codex.projectLabel(c.cwd); r.source = 'codex'; continue; }
+    if (r.cx) { const c = r.cx, m = r.src; delete r.cx; delete r.src; r.title = m.title(c); r.project = m.projectLabel(c.cwd); r.source = m.SOURCE; continue; }
     // titles come from the cached tail read (custom title, then AI title, then first prompt): no whole-file reads
     let t = null; try { const f = path.join(ROOT, r.proj, r.id + '.jsonl'); t = parseTail(f, fs.statSync(f)).title; } catch {}
     r.title = t || r.id; r.project = r.proj.replace(/^-Users-[^-]+-/, '').replace(/-/g, '/');
@@ -128,8 +131,8 @@ function listSessions0() {
 function stamp(proj, id) {
   const base = path.join(ROOT, proj); let n = 0;
   const add = (f) => { try { const s = fs.statSync(f); n += s.mtimeMs + s.size; } catch {} };
-  add(proj === codex.PROJ ? codex.fileOf(id) || '' : path.join(base, id + '.jsonl'));
-  const subs = subFiles(proj, id);   // the transcripts and the folders they are in (a folder changes when a file appears in it, e.g. an agent's meta file), not every file around them
+  const sx = sourceOf(proj); add(sx ? sx.fileOf(id) || '' : path.join(base, id + '.jsonl')); if (sx && sx.watch) for (const f of sx.watch(id)) add(f);
+  const subs = subFilesOf(proj, id);   // the transcripts and the folders they are in (a folder changes when a file appears in it, e.g. an agent's meta file), not every file around them
   for (const x of subs) add(x.file); for (const x of subs.journals) add(x.file); for (const d of subs.dirs) n += mtimeOf(d);
   return n;
 }
@@ -213,14 +216,14 @@ function boardRows() {
 }
 function boardRows0() {
   const now = Date.now(), rows = [];
-  for (const r of codex.sessions()) if (now - r.mtime < 12 * 3600e3) rows.push({ proj: codex.PROJ, id: r.id, st: { mtimeMs: r.mtime, size: r.size }, cx: r });
+  for (const m of SOURCES) for (const r of m.sessions()) if (now - r.mtime < 12 * 3600e3) rows.push({ proj: m.PROJ, id: r.id, st: { mtimeMs: r.mtime, size: r.size }, cx: r, src: m });
   for (const proj of fs.existsSync(ROOT) ? fs.readdirSync(ROOT) : []) {
     const dir = path.join(ROOT, proj); let files; try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.jsonl')); } catch { continue; }
     for (const f of files) { try { const st = fs.statSync(path.join(dir, f)); if (now - st.mtimeMs < 12 * 3600e3) rows.push({ proj, id: f.slice(0, -6), st }); } catch {} }
   }
   rows.sort((a, b) => b.st.mtimeMs - a.st.mtimeMs);
-  return rows.filter((r) => !r.cx).slice(0, 40).concat(rows.filter((r) => r.cx).slice(0, 20)).sort((a, b) => b.st.mtimeMs - a.st.mtimeMs).map(({ proj, id, st, cx }) => {
-    if (cx) return codex.boardRow(cx, now);
+  return rows.filter((r) => !r.cx).slice(0, 40).concat(...SOURCES.map((m) => rows.filter((r) => r.src === m).slice(0, 20))).sort((a, b) => b.st.mtimeMs - a.st.mtimeMs).map(({ proj, id, st, cx, src }) => {
+    if (cx) return src.boardRow(cx, now);
     const file = path.join(ROOT, proj, id + '.jsonl'); let p; try { p = parseTail(file, st); } catch { p = { pending: [] }; }
     const age = now - st.mtimeMs, lp = (p.pending || [])[(p.pending || []).length - 1]; let state = 'idle', tool = '', ageMs = age;
     if (age < 30 * 60e3) {
@@ -241,17 +244,17 @@ function writePrefs(v) { fs.mkdirSync(path.dirname(PREFS), { recursive: true });
 // Most recently active session (optionally limited to one project dir) — drives the live feed.
 const STICK_MS = 90000;   // a session written to in the last 90 s keeps the call, so another session writing elsewhere does not steal it mid-line
 function sessionMtime(proj, id) {
-  if (proj === codex.PROJ) { const r = codex.row(id); return r ? r.mtime : 0; }
-  let m = mtimeOf(path.join(ROOT, proj, id + '.jsonl')); if (!m) return 0; const subs = subFiles(proj, id);
+  const sx = sourceOf(proj), r = sx ? sx.row(id) : null; if (sx && (!r || !sx.subFiles)) return r ? r.mtime : 0;
+  let m = sx ? r.mtime : mtimeOf(path.join(ROOT, proj, id + '.jsonl')); if (!m) return 0; const subs = subFilesOf(proj, id);
   for (const x of subs) m = Math.max(m, mtimeOf(x.file)); for (const d of subs.dirs) m = Math.max(m, mtimeOf(d)); return m;   // the folders too: a new file in them is activity, as when every file around the transcripts was looked at
 }
 function currentSession(projFilter, idFilter, stick) {
   const safe = (x) => typeof x === 'string' && /^[\w.\-]+$/.test(x) && x !== '..';
-  if (stick && safe(stick.id) && safe(stick.proj) && (!projFilter || stick.proj === projFilter || stick.proj.startsWith(projFilter + '-') || (stick.proj === codex.PROJ && codex.inProject(stick.id, projFilter))) && Date.now() - sessionMtime(stick.proj, stick.id) < STICK_MS) return { proj: stick.proj, id: stick.id, mtime: sessionMtime(stick.proj, stick.id) };
-  if (idFilter && projFilter && projFilter !== '..' && idFilter !== '..' && /^[\w.\-]+$/.test(idFilter) && /^[\w.\-]+$/.test(projFilter) && (projFilter === codex.PROJ ? !!codex.fileOf(idFilter) : fs.existsSync(path.join(ROOT, projFilter, idFilter + '.jsonl')))) return { proj: projFilter, id: idFilter, mtime: Date.now() };   // pinned from the board
+  if (stick && safe(stick.id) && safe(stick.proj) && (!projFilter || stick.proj === projFilter || stick.proj.startsWith(projFilter + '-') || (sourceOf(stick.proj) && sourceOf(stick.proj).inProject(stick.id, projFilter))) && Date.now() - sessionMtime(stick.proj, stick.id) < STICK_MS) return { proj: stick.proj, id: stick.id, mtime: sessionMtime(stick.proj, stick.id) };
+  if (idFilter && projFilter && projFilter !== '..' && idFilter !== '..' && /^[\w.\-]+$/.test(idFilter) && /^[\w.\-]+$/.test(projFilter) && (sourceOf(projFilter) ? !!sourceOf(projFilter).fileOf(idFilter) : fs.existsSync(path.join(ROOT, projFilter, idFilter + '.jsonl')))) return { proj: projFilter, id: idFilter, mtime: Date.now() };   // pinned from the board
   let best = null;
   const consider = (proj, id, m) => { if (!best || m > best.mtime) best = { proj, id, mtime: m }; };
-  for (const r of codex.sessions()) if (!projFilter || codex.inProject(r.id, projFilter)) consider(codex.PROJ, r.id, r.mtime);   // a Codex session counts for a project when it was started in that folder
+  for (const m of SOURCES) for (const r of m.sessions()) if (!projFilter || m.inProject(r.id, projFilter)) consider(m.PROJ, r.id, r.mtime);   // a Codex or Vibe session counts for a project when it was started in that folder
   for (const proj of fs.existsSync(ROOT) ? fs.readdirSync(ROOT) : []) {
     if (projFilter && proj !== projFilter && !proj.startsWith(projFilter + '-')) continue;   // the folder itself, or a folder inside it
     const dir = path.join(ROOT, proj); let files;
@@ -276,7 +279,7 @@ function readNew(file, agent, journal, record = parseRecord) {
   let size, mtime; try { const s = fs.statSync(file); size = s.size; mtime = s.mtimeMs; } catch { fileStates.delete(file); return null; }
   let st = fileStates.get(file);
   if (st && size >= st.offset && mtime !== st.mtime && st.fp.length && !sameBytes(file, st)) st = null;   // rewritten in place and not shorter: checked only when the file was written to, with one small read
-  if (!st || size < st.offset) { st = { agent, journal: !!journal, gen: ++fileGen, offset: 0, mtime: 0, fp: Buffer.alloc(0), tail: Buffer.alloc(0), raw: [], toolName: {}, msgUsage: new Map() }; fileStates.set(file, st); }
+  if (!st || size < st.offset) { st = { agent, file, journal: !!journal, gen: ++fileGen, offset: 0, mtime: 0, fp: Buffer.alloc(0), tail: Buffer.alloc(0), raw: [], toolName: {}, msgUsage: new Map() }; fileStates.set(file, st); }
   st.mtime = mtime;
   while (size > st.offset) {   // read in chunks of at most 16 MB so a huge transcript never needs one giant buffer
     const fd = fs.openSync(file, 'r'); let buf;
@@ -292,6 +295,7 @@ function readNew(file, agent, journal, record = parseRecord) {
       try { record(st, r); } catch {}   // one odd record must not take the whole timeline down
     }
   }
+  if (record.after) { try { record.after(st); } catch {} }   // a format without a time on each line (Mistral Vibe) dates what was just read, once it has all of it
   return st;
 }
 function parseRecord(st, r) {
@@ -346,7 +350,8 @@ function parseRecord(st, r) {
     }
   }
 }
-const codexRecord = codex.parser({ toolLabel, clip, resultMax: RESULT_MAX });
+const codexRecord = codex.parser({ toolLabel, clip, resultMax: RESULT_MAX }), vibeRecord = vibe.parser({ toolLabel, clip, resultMax: RESULT_MAX });
+const recordOf = (sx) => (sx === codex ? codexRecord : sx === vibe ? vibeRecord : parseRecord);
 // A sub-agent the person named keeps that name on screen: the name given when it was launched, or else its type when that type is the person's own (.claude/agents/code-reviewer.md → "Code Reviewer").
 // The types Claude Code ships are not names: those agents get a first name from the page, as before.
 const STOCK_AGENT = /^(general-purpose|explore|plan|claude|agent|task|fork|main|default|worker|subagent|workflow-subagent|statusline-setup|output-style-setup|claude-code-guide|verification|magic-docs)$/i;
@@ -362,16 +367,16 @@ function readMeta(f) {
 }
 
 function buildTimeline(proj, id, files = []) {
-  const cx = proj === codex.PROJ, base = path.join(ROOT, proj), mainFile = cx ? codex.fileOf(id) || '' : path.join(base, id + '.jsonl');   // a Codex session is one file somewhere else, in another format (codexRecord); from here on it is a session like any other, without sub-agents
+  const sx = sourceOf(proj), rec = recordOf(sx), base = path.join(ROOT, proj), mainFile = sx ? sx.fileOf(id) || '' : path.join(base, id + '.jsonl');   // a Codex or Vibe session is kept somewhere else, in another format (rec); from here on it is a session like any other (Codex without sub-agents)
   if (!fs.existsSync(mainFile)) throw new Error('session not found');
-  const agents = { main: { id: 'main', role: 'Lead', type: 'main', ...(cx ? { name: 'Codex' } : {}) } };
-  const states = [readNew(mainFile, 'main', false, cx ? codexRecord : parseRecord)], subs = subFiles(proj, id), runs = {}; files.push(mainFile);   // runs: workflow run → { agents (file name → agent id), by (who launched it), toolId, done }
+  const agents = { main: { id: 'main', role: 'Lead', type: 'main' } };   // the lead has the same name whatever tool runs the session: the page gives it
+  const states = [(sx && sx.state && sx.state(id)) || readNew(mainFile, 'main', false, rec)], subs = subFilesOf(proj, id), runs = {}; files.push(mainFile);   // sx.state: a format that is not read line by line hands over the events of the session whole   // runs: workflow run → { agents (file name → agent id), by (who launched it), toolId, done }
   for (const x of subs) {
-    const aid = x.aid, m = readMeta(x.file.replace(/\.jsonl$/, '.meta.json'));
+    const aid = x.aid, m = x.meta || readMeta(x.file.replace(/\.jsonl$/, '.meta.json'));
     agents[aid] = { id: aid, role: m.description || m.workflowPhase || m.agentType || 'Agent', type: m.agentType || 'agent', toolUseId: m.toolUseId };
     if (x.run) { agents[aid].wf = x.run; if (m.workflowPhase) agents[aid].phase = m.workflowPhase; (runs[x.run] = runs[x.run] || { agents: {}, done: new Set() }).agents[x.id0] = aid; }   // launched by a workflow: no Agent call of the lead points at it
-    agents[aid].mtime = mtimeOf(x.file) || undefined;
-    const st = readNew(x.file, aid); if (st) states.push(st); files.push(x.file);
+    agents[aid].mtime = x.mtime || mtimeOf(x.file) || undefined;
+    const st = x.st || readNew(x.file, aid, false, rec); if (st) states.push(st); files.push(x.file);
   }
   for (const j of subs.journals) { const st = readNew(j.file, 'wf:' + j.run, true), run = runs[j.run]; files.push(j.file); if (st && run) for (const e of st.raw) if (run.agents[e.child]) run.done.add(run.agents[e.child]); }
   const childByTool = {};   // Agent tool_use id → the sub-agent it created, so we know who ordered whom
@@ -666,7 +671,7 @@ function start(port = PORT) {
     if (url.pathname === '/api/session') {
       const proj = url.searchParams.get('proj') || '', sid = url.searchParams.get('id') || '', SAFE = /^[\w.\-]+$/;
       if (!SAFE.test(proj) || !SAFE.test(sid) || proj === '..' || sid === '..' || proj.length > 200 || sid.length > 200) { res.writeHead(400); return res.end('bad request'); }
-      if (proj !== '_demo' && !(proj === codex.PROJ ? codex.fileOf(sid) : fs.existsSync(path.join(ROOT, proj, sid + '.jsonl')))) return json({ error: 'session not found' }, 404);
+      if (proj !== '_demo' && !(sourceOf(proj) ? sourceOf(proj).fileOf(sid) : fs.existsSync(path.join(ROOT, proj, sid + '.jsonl')))) return json({ error: 'session not found' }, 404);
       const entry = proj === '_demo' ? demoEntry() : timelineEntry(proj, sid), tl = entry.tl;   // built-in fictional session
       const after = url.searchParams.get('after'), ep = url.searchParams.get('ep');
       if (after == null) {   // the whole timeline: serialize once per version, send gzip-compressed when the browser allows it (12 MB → ~1.5 MB)
