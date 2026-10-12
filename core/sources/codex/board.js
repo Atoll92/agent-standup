@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path');
 const { PROJ, projectLabel } = require('./files');
 const { typed, partsText } = require('./text');
-const { SessionStatus } = require('../../models');
+const { SessionStatus, SessionListing } = require('../../models');
 
 const MAX_BOARD_ROWS = 20;   // rows on the board
 const MAX_LISTED = 30;       // sessions in the list to pick from
@@ -50,9 +50,9 @@ function createCodexBoard({ files }) {
     return new SessionStatus({ project: PROJ, sessionId: rollout.id, source: 'codex', title: title(rollout), lastActiveAt: rollout.mtime, state, stateAgeMs: age, folderKey: rollout.dir });
   }
 
-  // The most recent sessions, newest first, to pick from: { proj, id, mtime, size, agents, title, project, source }.
-  const listSessions = () => files.sessions(MAX_LISTED).map((rollout) => ({
-    proj: PROJ, id: rollout.id, mtime: rollout.mtime, size: rollout.size, agents: 0, title: title(rollout), project: projectLabel(rollout.cwd), source: 'codex',
+  // The most recent sessions, newest first, to pick from (SessionListing).
+  const listSessions = () => files.sessions(MAX_LISTED).map((rollout) => new SessionListing({
+    project: PROJ, sessionId: rollout.id, source: 'codex', title: title(rollout), projectLabel: projectLabel(rollout.cwd), lastActiveAt: rollout.mtime, sizeBytes: rollout.size,
   }));
 
   // One row per session written to in the last `windowMs`, newest first.

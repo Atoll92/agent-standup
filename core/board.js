@@ -5,15 +5,14 @@ const HOUR_MS = 3600e3;
 const SESSION_WINDOW_MS = 12 * HOUR_MS;   // sessions older than this are not on the board
 
 // Newest first. Two sessions from different tools written to at the very same millisecond keep the order of the sources.
-const listedFirst = (first, second) => second.mtime - first.mtime;
 const activeFirst = (first, second) => second.lastActiveAt - first.lastActiveAt;
 
 function createBoard({ sources }) {
   let sessionsMemo = { at: 0, rows: [] };
-  // The sessions to pick from, newest first, with a title each. Shared by all the polls of two seconds.
+  // The sessions to pick from (SessionListing), the most recently active first. Shared by all the polls of two seconds.
   function listSessions() {
     if (Date.now() - sessionsMemo.at < 2000) return sessionsMemo.rows;
-    const rows = sources.flatMap((source) => source.listSessions()).sort(listedFirst);
+    const rows = sources.flatMap((source) => source.listSessions()).sort(activeFirst);
     sessionsMemo = { at: Date.now(), rows };
     return rows;
   }

@@ -139,7 +139,7 @@ test('every source gives the whole interface', () => {
 
 test('the timeline, the board and the session to follow work through the interface only: a made-up source is a source like any other', () => {
   const { createTimeline } = require('../core/timeline'), { createBoard } = require('../core/board'), { createCurrent } = require('../core/current');
-  const { Say, SessionStatus } = require('../core/models');
+  const { Say, SessionStatus, SessionListing } = require('../core/models');
   const at = Date.now() - 5000;
   const fake = {
     name: 'fake', owns: (proj) => proj === '_fake',
@@ -151,7 +151,7 @@ test('the timeline, the board and the session to follow work through the interfa
     },
     exists: (proj, id) => id === 'one', mtime: (proj, id) => (id === 'one' ? at : 0), stamp: () => 1, inProject: (proj, id, folder) => folder === '_fake',
     recent: () => [{ proj: '_fake', id: 'one', mtime: at }],
-    listSessions: () => [{ proj: '_fake', id: 'one', mtime: at, title: 'One' }],
+    listSessions: () => [new SessionListing({ project: '_fake', sessionId: 'one', source: 'fake', title: 'One', projectLabel: 'Fake', lastActiveAt: at, sizeBytes: 10 })],
     boardRows: () => [new SessionStatus({ project: '_fake', sessionId: 'one', source: 'fake', title: 'One', lastActiveAt: at, state: 'working' })],
   };
   const sourceOf = () => fake, read = [];
@@ -167,4 +167,15 @@ test('the timeline, the board and the session to follow work through the interfa
   assert.deepEqual(current.currentSession('', '', null), { proj: '_fake', id: 'one', mtime: at });
   assert.ok(current.currentSession('_fake', 'one', null).mtime > at + 1000, 'pinned: it is named, whatever it did last');
   assert.deepEqual(current.currentSession('_fake', 'two', null), { proj: '_fake', id: 'one', mtime: at }, 'a session that is not there is not pinned');
+});
+
+test('the sessions to pick from, the most recently active first, each with its title and its sub-agents', () => {
+  const { core, dir } = newCore();
+  write(path.join(dir('-list-a'), 's.jsonl'), [rec.user('first thing typed', ago(30))]); setAge(path.join(dir('-list-a'), 's.jsonl'), 60);
+  write(path.join(dir('-list-b'), 's.jsonl'), [rec.user('the other one', ago(30))]);
+  write(path.join(dir('-list-b'), 's', 'subagents', 'agent-a1.jsonl'), [rec.say('hi', ago(5))]);
+  const listings = core.listSessions();
+  assert.deepEqual(listings.map((listing) => [listing.project, listing.title, listing.subAgents, listing.source]), [['-list-b', 'the other one', 1, 'claude'], ['-list-a', 'first thing typed', 0, 'claude']]);
+  assert.ok(listings[0].sizeBytes > 0 && listings[0].lastActiveAt > listings[1].lastActiveAt);
+  assert.equal(listings[0].projectLabel, '/list/b', 'the folder name, as a path');
 });

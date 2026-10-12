@@ -151,7 +151,20 @@ const serializeSessionStatus = (status) => ({
   ...(status.source !== 'claude' ? { source: status.source } : {}),
 });
 
+// A session to pick from, as the page reads it: proj, id, mtime, size, agents (how many sub-agents), project (its label),
+// and source only for a session that is not Claude Code's.
+const serializeSessionListing = (listing) => ({
+  proj: listing.project,
+  id: listing.sessionId,
+  mtime: listing.lastActiveAt,
+  size: listing.sizeBytes,
+  agents: listing.subAgents,
+  title: listing.title,
+  project: listing.projectLabel,
+  ...(listing.source !== 'claude' ? { source: listing.source } : {}),
+});
+
 // What the page gets when it follows a session live: the session's agents, where the feed is, and the events new or different since it last asked.
 const serializeFeed = (timeline, events) => ({ id: timeline.sessionId, agents: timeline.agents.map(serializeAgent), ep: timeline.feedId, seq: timeline.sequence, events: events.map(serializeEvent) });
 
-module.exports = { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline, serializeFeed, serializeSessionStatus };
+module.exports = { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline, serializeFeed, serializeSessionStatus, serializeSessionListing };

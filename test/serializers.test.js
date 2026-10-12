@@ -1,7 +1,7 @@
 // test/serializers.test.js: the format the page reads (core/serializers/web.js). It must not change: public/index.html reads these names.
 const test = require('node:test'), assert = require('node:assert');
 const { Say, Report, ToolBeat, ToolCall, Results, UserMessage, Order, Finish, Usage, Compact, AgentCall, AgentDone, WorkflowRun, WorkflowDone } = require('../core/models');
-const { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline, serializeFeed, serializeSessionStatus } = require('../core/serializers/web');
+const { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline, serializeFeed, serializeSessionStatus, serializeSessionListing } = require('../core/serializers/web');
 const { Event, Agent, Timeline } = require('../core/models');
 const { UnknownEventKind } = require('../core/errors');
 const { demoTimeline } = require('../core/demo');
@@ -115,4 +115,12 @@ test('a row of the board in the names the page and the command line read', () =>
   assert.deepEqual(serializeSessionStatus(claude), { proj: '-p', id: 's', title: 'Fix it', mtime: 10, state: 'blocked', tool: 'Edit', ageMs: 20000, subActive: 1, subTotal: 2 });
   const codex = new SessionStatus({ project: '_codex', sessionId: 'c', source: 'codex', title: 'T', lastActiveAt: 10, state: 'turn', stateAgeMs: 5, folderKey: '-Users-me-work' });
   assert.deepEqual(serializeSessionStatus(codex), { proj: '_codex', id: 'c', title: 'T', mtime: 10, state: 'turn', tool: '', ageMs: 5, subActive: 0, subTotal: 0, dir: '-Users-me-work', source: 'codex' });
+});
+
+test('a session to pick from in the names the page reads', () => {
+  const { SessionListing } = require('../core/models');
+  const claude = new SessionListing({ project: '-Users-me-code-site', sessionId: 's', source: 'claude', title: 'Fix it', projectLabel: 'code/site', lastActiveAt: 10, sizeBytes: 2048, subAgents: 3 });
+  assert.deepEqual(serializeSessionListing(claude), { proj: '-Users-me-code-site', id: 's', mtime: 10, size: 2048, agents: 3, title: 'Fix it', project: 'code/site' });
+  const codex = new SessionListing({ project: '_codex', sessionId: 'c', source: 'codex', title: 'T', projectLabel: 'Codex · work', lastActiveAt: 10, sizeBytes: 5 });
+  assert.deepEqual(serializeSessionListing(codex), { proj: '_codex', id: 'c', mtime: 10, size: 5, agents: 0, title: 'T', project: 'Codex · work', source: 'codex' });
 });

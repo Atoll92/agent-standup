@@ -12,7 +12,7 @@ const { execFileSync } = require('child_process');
 
 const { blocks, resultImages } = require('./core/transcript');
 const { createCore, configFromEnv } = require('./core');
-const { serializeEvent, serializeAgent, serializeTimeline, serializeFeed, serializeSessionStatus } = require('./core/serializers/web');
+const { serializeEvent, serializeAgent, serializeTimeline, serializeFeed, serializeSessionStatus, serializeSessionListing } = require('./core/serializers/web');
 const { demoTimeline } = require('./core/demo');   // the core's models, in the names the page reads
 const core = createCore(configFromEnv());   // sessions → timeline, board and live feed (no web in there); read from the environment once, here
 const { root: ROOT, timelineEntry, feedSince, listSessions, currentSession } = core;
@@ -264,10 +264,10 @@ function start(port = PORT) {
   try {
     if (url.pathname === '/api/translate' && req.method === 'POST') return readBody(async (body) => { try { json(await translate(textList(JSON.parse(body).texts))); } catch (e) { json({ error: String(e) }, 400); } });
     if (url.pathname === '/api/quips' && req.method === 'POST') return readBody(async (body) => { try { const b = JSON.parse(body); json(await quips(textList(b.texts), b.lang === 'fr' ? 'fr' : 'en')); } catch (e) { json({ error: String(e) }, 400); } });
-    if (url.pathname === '/api/sessions') return json(listSessions());
+    if (url.pathname === '/api/sessions') return json(listSessions().map(serializeSessionListing));
     if (url.pathname === '/api/projects') {   // projects (working folders) ordered by latest activity — lets the live view follow one of them
-      const m = new Map(); for (const r of listSessions()) { const p = m.get(r.proj) || { proj: r.proj, mtime: 0, sessions: 0 }; p.mtime = Math.max(p.mtime, r.mtime); p.sessions++; m.set(r.proj, p); }
-      return json([...m.values()].sort((a, b) => b.mtime - a.mtime));
+      const byProject = new Map(); for (const listing of listSessions()) { const project = byProject.get(listing.project) || { proj: listing.project, mtime: 0, sessions: 0 }; project.mtime = Math.max(project.mtime, listing.lastActiveAt); project.sessions++; byProject.set(listing.project, project); }
+      return json([...byProject.values()].sort((first, second) => second.mtime - first.mtime));
     }
     if (url.pathname === '/api/audio') {   // only one window at a time plays sound: the last one that claimed it (expires if that window stops answering)
       const cid = url.searchParams.get('cid') || '', ok = /^[\w-]{4,40}$/.test(cid);

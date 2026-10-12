@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path');
 const { blocks, HARNESS } = require('../../transcript');
 const { mtimeOf } = require('./files');
-const { SessionStatus } = require('../../models');
+const { SessionStatus, SessionListing } = require('../../models');
 
 const MINUTE_MS = 60e3;
 
@@ -99,17 +99,21 @@ function sessionState(tail, stat, now) {
 
 // The tails read so far are kept in the board that is created here, and nowhere else.
 function createClaudeBoard({ root, files }) {
-  // The most recent sessions, newest first, to pick from: { proj, id, mtime, size, agents, title, project }.
+  // The most recent sessions, newest first, to pick from (SessionListing).
   function listSessions() {
-    const rows = [];
-    for (const { proj, id, stat } of files.transcripts()) rows.push({ proj, id, mtime: stat.mtimeMs, size: stat.size });
-    rows.sort((first, second) => second.mtime - first.mtime);
+    const found = [];
+    for (const { proj, id, stat } of files.transcripts()) found.push({ proj, id, stat });
+    found.sort((first, second) => second.stat.mtimeMs - first.stat.mtimeMs);
 
-    return rows.slice(0, MAX_LISTED).map((row) => {
+    return found.slice(0, MAX_LISTED).map(({ proj, id, stat }) => {
       // Titles come from the cached tail read (custom title, then AI title, then first prompt): no whole-file reads.
       let title = null;
-      try { const file = path.join(root, row.proj, row.id + '.jsonl'); title = parseTail(file, fs.statSync(file)).title; } catch {}
-      return { ...row, agents: files.subFiles(row.proj, row.id).length, title: title || row.id, project: row.proj.replace(/^-Users-[^-]+-/, '').replace(/-/g, '/') };
+      try { const file = path.join(root, proj, id + '.jsonl'); title = parseTail(file, fs.statSync(file)).title; } catch {}
+      return new SessionListing({
+        project: proj, sessionId: id, source: 'claude', title: title || id,
+        projectLabel: proj.replace(/^-Users-[^-]+-/, '').replace(/-/g, '/'),   // the folder's path, without the home folder
+        lastActiveAt: stat.mtimeMs, sizeBytes: stat.size, subAgents: files.subFiles(proj, id).length,
+      });
     });
   }
 

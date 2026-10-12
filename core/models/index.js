@@ -2,6 +2,7 @@
 //
 // AGENTS (agent.js): who is in the call. TIMELINE (timeline.js): a session as a call, its agents and its events.
 // SESSION STATUS (sessionStatus.js): what a session is doing right now, one row of the board.
+// SESSION LISTING (sessionListing.js): a session to pick from.
 //
 // EVENTS (events/, extending Event) are what a display shows:
 //   from the transcript   Say ('say'), ToolCall ('tool'), Results ('results'), UserMessage ('user'), Compact ('compact')
@@ -12,6 +13,7 @@ const { UnknownEventKind } = require('../errors');
 const { Agent } = require('./agent');
 const { Timeline } = require('./timeline');
 const { SessionStatus } = require('./sessionStatus');
+const { SessionListing } = require('./sessionListing');
 const { Event } = require('./event');
 const { Signal } = require('./signal');
 const { Say } = require('./events/say');
@@ -43,7 +45,7 @@ function eventClassFor(kind) {
 }
 
 module.exports = {
-  Agent, Timeline, SessionStatus,
+  Agent, Timeline, SessionStatus, SessionListing,
   Event, Say, Report, ToolCall, ToolBeat, Results, UserMessage, Order, Finish, Usage, Compact,
   Signal, AgentCall, AgentDone, WorkflowRun, WorkflowDone,
   EVENT_CLASSES, SIGNAL_CLASSES, eventClassFor,
