@@ -66,7 +66,7 @@ Sessions of [Mistral Vibe](https://github.com/mistralai/mistral-vibe) (Mistral's
 - **Not shown:** pictures, and sessions kept somewhere else through `session_logging.save_dir` in Vibe's own settings (point `AGENT_STANDUP_VIBE` at a home folder that has `logs/session` in it).
 - **Turn it off or point it elsewhere:** in VS Code, the setting `agentStandup.vibe`; anywhere else `AGENT_STANDUP_VIBE=off`, or `AGENT_STANDUP_VIBE=/path/to/vibe-home` (command line: `--vibe off` or `--vibe DIR`). With `--projects DIR`, Vibe sessions are only read if you also pass `--vibe`.
 
-Checked against real sessions of Vibe 2.26.1, in both formats.
+Checked against real sessions of Vibe 2.26.1, in both formats. [Watch the 45-second video](https://atoll92.github.io/agent-standup/media/promo-vibe.mp4) ([en français](https://atoll92.github.io/agent-standup/media/promo-vibe-fr.mp4)).
 
 ## What you see for each agent
 

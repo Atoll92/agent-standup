@@ -9,6 +9,9 @@ const LANG = process.env.CAPTURE_LANG === 'fr' ? 'fr' : 'en', SUF = LANG === 'fr
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const T = (en, fr) => (LANG === 'fr' ? fr : en);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Nothing here reads your real sessions or settings: every folder the server looks at is a temporary one, and the drawn characters are used.
+const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'as-capture-')); for (const d of ['projects', 'characters']) fs.mkdirSync(path.join(tmp, d));
+Object.assign(process.env, { AGENT_STANDUP_PROJECTS: path.join(tmp, 'projects'), AGENT_STANDUP_CHARACTERS: path.join(tmp, 'characters'), AGENT_STANDUP_PREFS: path.join(tmp, 'prefs.json'), AGENT_STANDUP_KOKORO_DIR: path.join(tmp, 'kokoro'), AGENT_STANDUP_CODEX: 'off', AGENT_STANDUP_VIBE: 'off' });
 fs.mkdirSync(out, { recursive: true });
 
 const now = Date.now();

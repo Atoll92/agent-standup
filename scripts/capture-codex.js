@@ -10,7 +10,7 @@ const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Conte
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-codex-video-')), CX = path.join(tmp, 'codex');
 for (const d of ['projects', 'characters']) fs.mkdirSync(path.join(tmp, d));
-Object.assign(process.env, { AGENT_STANDUP_CODEX: CX, AGENT_STANDUP_PROJECTS: path.join(tmp, 'projects'), AGENT_STANDUP_CHARACTERS: path.join(tmp, 'characters'), AGENT_STANDUP_PREFS: path.join(tmp, 'prefs.json'), AGENT_STANDUP_KOKORO_DIR: path.join(tmp, 'kokoro') });
+Object.assign(process.env, { AGENT_STANDUP_CODEX: CX, AGENT_STANDUP_PROJECTS: path.join(tmp, 'projects'), AGENT_STANDUP_CHARACTERS: path.join(tmp, 'characters'), AGENT_STANDUP_PREFS: path.join(tmp, 'prefs.json'), AGENT_STANDUP_KOKORO_DIR: path.join(tmp, 'kokoro'), AGENT_STANDUP_VIBE: 'off' });
 
 // ---- the made-up Codex session: a coupon bug, found with the tests, fixed, a question, a new test
 const ID = '01c0de00-0000-7000-8000-00000000c0de', WORK = '/Users/dev/work/shop', T0 = Date.now() - 20 * 60e3; let clock = T0, ord = 0, n = 0;
