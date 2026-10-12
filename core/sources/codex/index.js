@@ -4,15 +4,14 @@
 // the timeline, the live feed, the board.
 const fs = require('fs');
 const { PROJ, createCodexFiles } = require('./files');
+const { createCodexBoard } = require('./board');
 const { parser } = require('./record');
 const { toolLabel, clip, RESULT_MAX } = require('../../transcript');
-
-const MAX_BOARD_ROWS = 20;   // rows on the board
-const MAX_LISTED = 30;       // sessions in the list to pick from
 
 // `home`: the folder Codex keeps its files in, or null for no Codex sessions. `scanTtlMs`: see createCodexFiles.
 function createCodexSource({ home = null, scanTtlMs, reader }) {
   const codex = createCodexFiles({ home, scanTtlMs });
+  const board = createCodexBoard({ files: codex });
   const record = parser({ toolLabel, clip, resultMax: RESULT_MAX });
 
   // Just the lead: the thread is the only agent.
@@ -44,10 +43,8 @@ function createCodexSource({ home = null, scanTtlMs, reader }) {
     inProject: (proj, id, folder) => codex.inProject(id, folder),
     recent: (projFilter) => codex.sessions().filter((r) => !projFilter || codex.inProject(r.id, projFilter)).map((r) => ({ proj: PROJ, id: r.id, mtime: r.mtime })),
 
-    listSessions: () => codex.sessions(MAX_LISTED).map((r) => ({
-      proj: PROJ, id: r.id, mtime: r.mtime, size: r.size, agents: 0, title: codex.title(r), project: codex.projectLabel(r.cwd), source: 'codex',
-    })),
-    boardRows: ({ now, windowMs }) => codex.sessions().filter((r) => now - r.mtime < windowMs).slice(0, MAX_BOARD_ROWS).map((r) => codex.boardRow(r, now)),
+    listSessions: board.listSessions,
+    boardRows: board.boardRows,
 
     files: codex,   // what the Codex files say, for the tests
   };
