@@ -8,77 +8,18 @@
 //   4. collectEvents   gathers every agent's events, adding the orders, the reports and the finishes that no single record says
 //   5. mergeToolBeats  sorts them by time and groups consecutive tool calls
 const fs = require('fs'), path = require('path');
-const codex = require('../codex.js');
-const { ROOT } = require('./config');
+const { PROJ, parser } = require('../codex.js');
 const { clip, toolLabel, RESULT_MAX } = require('./transcript');
-const { mtimeOf, subFiles, readMeta } = require('./sessionFiles');
-const { readNew } = require('./reader');
+const { mtimeOf } = require('./sessionFiles');
 const { parseRecord } = require('./claudeRecord');
 
 // A Codex session is one file somewhere else, in another format (codexRecord); from here on it is a session like any other, without sub-agents.
-const codexRecord = codex.parser({ toolLabel, clip, resultMax: RESULT_MAX });
+const codexRecord = parser({ toolLabel, clip, resultMax: RESULT_MAX });
 
 // An old transcript without a completion record counts as finished once it has been silent this long.
 const QUIET_MS = 4 * 60 * 1000;
 // Events that say nothing about what an agent is doing: they neither start the call nor interrupt a beat of tool calls.
 const BOOKKEEPING = new Set(['usage', 'finish', 'compact']);
-
-function buildTimeline(proj, id, files = []) {
-  const session = readSession(proj, id, files);
-  const launches = linkLaunches(session);
-  const { finished, recentUntil } = findFinished(session, launches);
-  const events = collectEvents(session, launches, finished);
-  const merged = mergeToolBeats(events);
-
-  // Time zero is the first thing said or done.
-  const first = merged.find((e) => !BOOKKEEPING.has(e.kind));
-  const start = first ? first.ts : 0;
-  const end = merged.length ? merged[merged.length - 1].ts : 0;
-  return {
-    id,
-    proj,
-    agents: Object.values(session.agents),
-    events: merged.map((e) => ({ ...e, t: Math.max(0, e.ts - start) })),
-    durationMs: end - start,
-    recentUntil,
-  };
-}
-
-// ---- 1. The files and the agents
-
-// Returns { agents, states, runs }:
-//   agents  id → { id, role, type, … } (a plain object: the order of its keys is the order of the agents in the call)
-//   states  one per transcript read (main first, then the sub-agents), as reader.readNew returns them (null for a file that vanished)
-//   runs    workflow run → { agents (file name → agent id), done (agent ids the journal says are finished), by, toolId }
-// Every file read is added to `files`, so the caller can tell when any of them changes.
-function readSession(proj, id, files) {
-  const isCodex = proj === codex.PROJ;
-  const mainFile = isCodex ? codex.fileOf(id) || '' : path.join(ROOT, proj, id + '.jsonl');
-  if (!fs.existsSync(mainFile)) throw new Error('session not found');
-
-  const agents = { main: { id: 'main', role: 'Lead', type: 'main', ...(isCodex ? { name: 'Codex' } : {}) } };
-  const states = [readNew(mainFile, 'main', false, isCodex ? codexRecord : parseRecord)];
-  const subs = subFiles(proj, id);
-  const runs = {};
-  files.push(mainFile);
-
-  for (const sub of subs) {
-    const meta = readMeta(sub.file.replace(/\.jsonl$/, '.meta.json'));
-    const agent = agents[sub.aid] = describeSubAgent(sub, meta);
-    if (sub.run) joinWorkflowRun(runs, sub, agent, meta);
-    agent.mtime = mtimeOf(sub.file) || undefined;
-    const state = readNew(sub.file, sub.aid);
-    if (state) states.push(state);
-    files.push(sub.file);
-  }
-
-  for (const journal of subs.journals) {
-    const state = readNew(journal.file, 'wf:' + journal.run, true), run = runs[journal.run];
-    files.push(journal.file);
-    if (state && run) for (const e of state.raw) if (run.agents[e.child]) run.done.add(run.agents[e.child]);
-  }
-  return { agents, states, runs };
-}
 
 function describeSubAgent(sub, meta) {
   return {
@@ -229,4 +170,66 @@ function mergeToolBeats(events) {
   return merged;
 }
 
-module.exports = { buildTimeline, BOOKKEEPING };
+// Builds timelines from the files of the sessions in `root` (see sessionFiles.js), read by `reader` (see reader.js).
+// `codex` reads the Codex sessions, which are read from a file somewhere else.
+function createTimeline({ root, codex, files: sessionFiles, reader }) {
+  function buildTimeline(proj, id, files = []) {
+    const session = readSession(proj, id, files);
+    const launches = linkLaunches(session);
+    const { finished, recentUntil } = findFinished(session, launches);
+    const events = collectEvents(session, launches, finished);
+    const merged = mergeToolBeats(events);
+
+    // Time zero is the first thing said or done.
+    const first = merged.find((e) => !BOOKKEEPING.has(e.kind));
+    const start = first ? first.ts : 0;
+    const end = merged.length ? merged[merged.length - 1].ts : 0;
+    return {
+      id,
+      proj,
+      agents: Object.values(session.agents),
+      events: merged.map((e) => ({ ...e, t: Math.max(0, e.ts - start) })),
+      durationMs: end - start,
+      recentUntil,
+    };
+  }
+
+  // ---- 1. The files and the agents
+
+  // Returns { agents, states, runs }:
+  //   agents  id → { id, role, type, … } (a plain object: the order of its keys is the order of the agents in the call)
+  //   states  one per transcript read (main first, then the sub-agents), as reader.readNew returns them (null for a file that vanished)
+  //   runs    workflow run → { agents (file name → agent id), done (agent ids the journal says are finished), by, toolId }
+  // Every file read is added to `files`, so the caller can tell when any of them changes.
+  function readSession(proj, id, files) {
+    const isCodex = proj === PROJ;
+    const mainFile = isCodex ? codex.fileOf(id) || '' : path.join(root, proj, id + '.jsonl');
+    if (!fs.existsSync(mainFile)) throw new Error('session not found');
+
+    const agents = { main: { id: 'main', role: 'Lead', type: 'main', ...(isCodex ? { name: 'Codex' } : {}) } };
+    const states = [reader.readNew(mainFile, 'main', false, isCodex ? codexRecord : parseRecord)];
+    const subs = sessionFiles.subFiles(proj, id);
+    const runs = {};
+    files.push(mainFile);
+
+    for (const sub of subs) {
+      const meta = sessionFiles.readMeta(sub.file.replace(/\.jsonl$/, '.meta.json'));
+      const agent = agents[sub.aid] = describeSubAgent(sub, meta);
+      if (sub.run) joinWorkflowRun(runs, sub, agent, meta);
+      agent.mtime = mtimeOf(sub.file) || undefined;
+      const state = reader.readNew(sub.file, sub.aid);
+      if (state) states.push(state);
+      files.push(sub.file);
+    }
+
+    for (const journal of subs.journals) {
+      const state = reader.readNew(journal.file, 'wf:' + journal.run, true), run = runs[journal.run];
+      files.push(journal.file);
+      if (state && run) for (const e of state.raw) if (run.agents[e.child]) run.done.add(run.agents[e.child]);
+    }
+    return { agents, states, runs };
+  }
+  return { buildTimeline };
+}
+
+module.exports = { createTimeline, BOOKKEEPING };

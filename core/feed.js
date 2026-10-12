@@ -3,32 +3,77 @@
 // timelineEntry(proj, id) gives the timeline of a session, rebuilt only when a file of the session changed.
 // feedSince(entry, after) gives what is new or different since a reader last looked: the live feed.
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
-const codex = require('../codex.js');
-const { ROOT } = require('./config');
-const { mtimeOf, subFiles } = require('./sessionFiles');
-const { fileStates } = require('./reader');
-const { buildTimeline, BOOKKEEPING } = require('./timeline');
+const { PROJ } = require('../codex.js');
+const { mtimeOf } = require('./sessionFiles');
+const { BOOKKEEPING } = require('./timeline');
 
-// ---- The cache of timelines
-
-// "proj/id" → { st (file stamp), tl, at (when built), ms (how long it took), files[], feed, sq, recentUntil, json?, gz?, idle? }
-const timelines = new Map();
 const MAX_CACHED_SESSIONS = 3;
 const MIN_REBUILD_GAP_MS = 250;
 
-function timelineEntry(proj, id) {
-  const key = proj + '/' + id, stamp = sessionStamp(proj, id), cached = timelines.get(key), now = Date.now();
-  if (cached && isStillGood(cached, stamp, now)) {
-    timelines.delete(key); timelines.set(key, cached);   // asked for again: the last one to be dropped
-    return cached;
+// The cache of timelines is kept in the feed that is created here, and nowhere else.
+function createFeed({ root, codex, files: sessionFiles, reader, buildTimeline }) {
+  // "proj/id" → { st (file stamp), tl, at (when built), ms (how long it took), files[], feed, sq, recentUntil, json?, gz?, idle? }
+  const timelines = new Map();
+
+  function timelineEntry(proj, id) {
+    const key = proj + '/' + id, stamp = sessionStamp(proj, id), cached = timelines.get(key), now = Date.now();
+    if (cached && isStillGood(cached, stamp, now)) {
+      timelines.delete(key); timelines.set(key, cached);   // asked for again: the last one to be dropped
+      return cached;
+    }
+
+    const started = Date.now(), files = [];
+    const tl = buildTimeline(proj, id, files), feed = feedStep(cached && cached.feed, tl, files);
+    const entry = { st: stamp, tl, at: Date.now(), ms: Date.now() - started, files, feed, sq: feed.sq, recentUntil: tl.recentUntil || 0 };
+    timelines.delete(key); timelines.set(key, entry);
+    dropOldSessions();
+    return entry;
   }
 
-  const started = Date.now(), files = [];
-  const tl = buildTimeline(proj, id, files), feed = feedStep(cached && cached.feed, tl, files);
-  const entry = { st: stamp, tl, at: Date.now(), ms: Date.now() - started, files, feed, sq: feed.sq, recentUntil: tl.recentUntil || 0 };
-  timelines.delete(key); timelines.set(key, entry);
-  dropOldSessions();
-  return entry;
+  // Free the memory of sessions nobody is looking at any more. Their live feed goes with them:
+  // a reader still on one of them is told to load it again.
+  function dropOldSessions() {
+    while (timelines.size > MAX_CACHED_SESSIONS) {
+      const [oldKey, old] = timelines.entries().next().value;
+      timelines.delete(oldKey);
+      for (const file of old.files) reader.fileStates.delete(file);
+    }
+  }
+
+  // A number that changes when anything in the session's files changes: the transcripts and the folders they are in
+  // (a folder changes when a file appears in it, e.g. an agent's meta file), not every file around them.
+  function sessionStamp(proj, id) {
+    let n = 0;
+    const add = (file) => { try { const s = fs.statSync(file); n += s.mtimeMs + s.size; } catch {} };
+    add(proj === PROJ ? codex.fileOf(id) || '' : path.join(root, proj, id + '.jsonl'));
+    const subs = sessionFiles.subFiles(proj, id);
+    for (const x of subs) add(x.file);
+    for (const x of subs.journals) add(x.file);
+    for (const dir of subs.dirs) n += mtimeOf(dir);
+    return n;
+  }
+
+  const generationOf = (file) => (reader.fileStates.get(file) || {}).gen;
+
+  // Numbers the events of a fresh build against the previous feed (if it is still valid), and returns the feed to keep.
+  function feedStep(previous, tl, files) {
+    let feed = previous && filesNotRewritten(previous, files) ? previous : null;
+    let sq = feed && numberEvents(feed, tl);
+    if (!sq) { feed = newFeed(); sq = numberEvents(feed, tl); }
+
+    for (const file of files) feed.gens.set(file, generationOf(file));
+    feed.sq = sq; tl.ep = feed.ep; tl.seq = feed.seq;
+    return feed;
+  }
+
+  // A transcript read again from its start numbers its events again: the keys no longer mean the same thing.
+  function filesNotRewritten(feed, files) {
+    return files.every((file) => { const was = feed.gens.get(file); return was === undefined || was === generationOf(file); });
+  }
+
+  const timeline = (proj, id) => timelineEntry(proj, id).tl;
+
+  return { timelineEntry, timeline, feedSince };
 }
 
 // Nothing was written (a sub-agent's 4-minute silence rule can flip without any file change, hence recentUntil);
@@ -37,29 +82,6 @@ function isStillGood(cached, stamp, now) {
   const unchanged = cached.st === stamp && !(cached.recentUntil && now > cached.recentUntil);
   const builtJustNow = now - cached.at < Math.max(MIN_REBUILD_GAP_MS, cached.ms * 2);
   return unchanged || builtJustNow;
-}
-
-// Free the memory of sessions nobody is looking at any more. Their live feed goes with them:
-// a reader still on one of them is told to load it again.
-function dropOldSessions() {
-  while (timelines.size > MAX_CACHED_SESSIONS) {
-    const [oldKey, old] = timelines.entries().next().value;
-    timelines.delete(oldKey);
-    for (const file of old.files) fileStates.delete(file);
-  }
-}
-
-// A number that changes when anything in the session's files changes: the transcripts and the folders they are in
-// (a folder changes when a file appears in it, e.g. an agent's meta file), not every file around them.
-function sessionStamp(proj, id) {
-  let n = 0;
-  const add = (file) => { try { const s = fs.statSync(file); n += s.mtimeMs + s.size; } catch {} };
-  add(proj === codex.PROJ ? codex.fileOf(id) || '' : path.join(ROOT, proj, id + '.jsonl'));
-  const subs = subFiles(proj, id);
-  for (const x of subs) add(x.file);
-  for (const x of subs.journals) add(x.file);
-  for (const dir of subs.dirs) n += mtimeOf(dir);
-  return n;
 }
 
 // ---- The live feed
@@ -74,24 +96,7 @@ function sessionStamp(proj, id) {
 // `ep` names this memory: it is a new one after a restart, after the session left the cache, or when a transcript was rewritten,
 // and the reader then loads the whole session again.
 
-// Numbers the events of a fresh build against the previous feed (if it is still valid), and returns the feed to keep.
-function feedStep(previous, tl, files) {
-  let feed = previous && filesNotRewritten(previous, files) ? previous : null;
-  let sq = feed && numberEvents(feed, tl);
-  if (!sq) { feed = newFeed(); sq = numberEvents(feed, tl); }
-
-  for (const file of files) feed.gens.set(file, generationOf(file));
-  feed.sq = sq; tl.ep = feed.ep; tl.seq = feed.seq;
-  return feed;
-}
-
 const newFeed = () => ({ ep: crypto.randomBytes(6).toString('hex'), seq: 0, known: new Map(), gens: new Map() });
-const generationOf = (file) => (fileStates.get(file) || {}).gen;
-
-// A transcript read again from its start numbers its events again: the keys no longer mean the same thing.
-function filesNotRewritten(feed, files) {
-  return files.every((file) => { const was = feed.gens.get(file); return was === undefined || was === generationOf(file); });
-}
 
 // Gives each event the sequence number at which it last changed, and moves the feed on if anything did.
 // Returns that list of numbers (one per event), or null when an event the reader may hold no longer exists:
@@ -128,8 +133,6 @@ function signature(e) {
   return e.kind + '|' + e.agent + '|' + (e.to || '') + '|' + (e.end || '') + '|' + detail;
 }
 
-const timeline = (proj, id) => timelineEntry(proj, id).tl;
-
 // The events that are new or different since sequence number `after`, in timeline order. Nothing to scan when the reader is up to date.
 function feedSince(entry, after) {
   const events = entry.tl.events, sq = entry.sq, out = [];
@@ -137,4 +140,4 @@ function feedSince(entry, after) {
   return out;
 }
 
-module.exports = { timelineEntry, timeline, feedSince };
+module.exports = { createFeed };

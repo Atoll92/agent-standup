@@ -1,11 +1,18 @@
 // test/core.test.js: the core on its own (no server): what a session's files become, what the board says about each session, the live feed, the session to follow.
+// Each test makes its own core over its own folder, so nothing is shared between them.
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), os = require('os'), path = require('path');
+const { createCore } = require('../core');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-core-'));
-process.env.AGENT_STANDUP_PROJECTS = path.join(tmp, 'projects');   // before the core is loaded: it reads this once
-const core = require('../core');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const ago = (seconds) => new Date(Date.now() - seconds * 1000).toISOString();
+
+// A core over a new, empty folder of sessions. `dir(project)` is where a project's transcripts go.
+let folders = 0;
+function newCore() {
+  const root = path.join(tmp, 'projects' + ++folders);
+  return { core: createCore({ root }), dir: (project) => path.join(root, project) };
+}
 
 // ---- transcripts, written the way Claude Code writes them
 const rec = {
@@ -16,11 +23,10 @@ const rec = {
 };
 const write = (file, records) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, records.map((r) => JSON.stringify(r)).join('\n') + '\n'); };
 const append = (file, records) => fs.appendFileSync(file, records.map((r) => JSON.stringify(r)).join('\n') + '\n');
-const projectDir = (name) => path.join(tmp, 'projects', name);
 const setAge = (file, seconds) => { const t = new Date(Date.now() - seconds * 1000); fs.utimesSync(file, t, t); };
 
 test('a lead and its sub-agent become one timeline: order, work, report, finish, in time order', () => {
-  const dir = projectDir('-tl'), main = path.join(dir, 's.jsonl'), sub = path.join(dir, 's', 'subagents', 'agent-a1.jsonl');
+  const { core, dir } = newCore(), main = path.join(dir('-tl'), 's.jsonl'), sub = path.join(dir('-tl'), 's', 'subagents', 'agent-a1.jsonl');
   write(main, [
     rec.user('fix the login', ago(60)),
     rec.say('On it.', ago(58)),
@@ -47,8 +53,8 @@ test('a lead and its sub-agent become one timeline: order, work, report, finish,
 });
 
 test('consecutive tool calls of one agent are one beat; a line in between starts a new one', () => {
-  const file = path.join(projectDir('-beats'), 's.jsonl');
-  write(file, [
+  const { core, dir } = newCore();
+  write(path.join(dir('-beats'), 's.jsonl'), [
     rec.call('t1', 'Grep', { pattern: 'a' }, ago(30)), rec.call('t2', 'Read', { file_path: '/x' }, ago(29)),
     rec.say('Looking.', ago(28)),
     rec.call('t3', 'Bash', { command: 'ls' }, ago(27)),
@@ -58,6 +64,7 @@ test('consecutive tool calls of one agent are one beat; a line in between starts
 });
 
 test('the board tells working, waiting, blocked, turn and idle from the tail of each transcript', () => {
+  const { core, dir } = newCore();
   const sessions = {
     working: [rec.call('t', 'Bash', { command: 'npm test' }, ago(20))],
     editJustNow: [rec.call('t', 'Edit', { file_path: '/x', old_string: 'a', new_string: 'b' }, ago(5))],   // too soon to say it waits for permission
@@ -66,10 +73,10 @@ test('the board tells working, waiting, blocked, turn and idle from the tail of 
     subAgent: [rec.call('t', 'Agent', { prompt: 'p', description: 'd' }, ago(20))],
     turn: [rec.user('hi', ago(20)), rec.say('Here you go.', ago(10), { stop_reason: 'end_turn' })],
   };
-  for (const [name, records] of Object.entries(sessions)) write(path.join(projectDir('-board-' + name), 's.jsonl'), records);
-  write(path.join(projectDir('-board-idle'), 's.jsonl'), [rec.say('Old.', ago(7200))]); setAge(path.join(projectDir('-board-idle'), 's.jsonl'), 3600);
+  for (const [name, records] of Object.entries(sessions)) write(path.join(dir(name), 's.jsonl'), records);
+  write(path.join(dir('idle'), 's.jsonl'), [rec.say('Old.', ago(7200))]); setAge(path.join(dir('idle'), 's.jsonl'), 3600);
 
-  const rows = Object.fromEntries(core.boardRows().filter((r) => r.proj.startsWith('-board-')).map((r) => [r.proj.slice('-board-'.length), r]));
+  const rows = Object.fromEntries(core.boardRows().map((r) => [r.proj, r]));
   assert.deepEqual(Object.fromEntries(Object.entries(rows).map(([k, r]) => [k, r.state])),
     { working: 'working', editJustNow: 'working', editWaiting: 'blocked', question: 'blocked', subAgent: 'waiting', turn: 'turn', idle: 'idle' });
   assert.equal(rows.working.tool, 'Bash');
@@ -77,7 +84,7 @@ test('the board tells working, waiting, blocked, turn and idle from the tail of 
 });
 
 test('the live feed gives only what is new, under the same memory', async () => {
-  const file = path.join(projectDir('-feed'), 's.jsonl');
+  const { core, dir } = newCore(), file = path.join(dir('-feed'), 's.jsonl');
   write(file, [rec.user('start', ago(30)), rec.say('One.', ago(29))]);
   const first = core.timelineEntry('-feed', 's'), seen = first.tl.seq;
   assert.equal(core.feedSince(first, 0).length, first.tl.events.length, 'a reader that has nothing gets everything');
@@ -92,17 +99,30 @@ test('the live feed gives only what is new, under the same memory', async () => 
 });
 
 test('the session to follow: the newest, kept while it is active, or the one pinned', () => {
-  const older = path.join(projectDir('-follow-a'), 's.jsonl'), newer = path.join(projectDir('-follow-b'), 's.jsonl');
+  const { core, dir } = newCore(), older = path.join(dir('-follow-a'), 's.jsonl'), newer = path.join(dir('-follow-b'), 's.jsonl');
   write(older, [rec.say('a', ago(100))]); write(newer, [rec.say('b', ago(100))]);
-  setAge(older, 60); setAge(newer, -5);   // newer than every other session of this file, whatever the order they were written in
+  setAge(older, 60); setAge(newer, 30);
   const pick = (...args) => core.currentSession(...args).proj;
 
+  assert.equal(pick('', '', null), '-follow-b', 'the most recently written');
   // A project asked for by name matches that folder and the folders inside it, whose names start with the same name and a dash.
-  assert.equal(pick('-follow', '', null), '-follow-b', 'the most recently written of the project');
+  assert.equal(pick('-follow', '', null), '-follow-b');
   assert.equal(pick('-follow', '', { proj: '-follow-a', id: 's' }), '-follow-a', 'the one followed stays while it was written to in the last 90 s');
   setAge(older, 200);
   assert.equal(pick('-follow', '', { proj: '-follow-a', id: 's' }), '-follow-b', 'but not once it has been quiet for longer');
   assert.equal(pick('-follow-a', 's', null), '-follow-a', 'pinned by project and session');
-  assert.equal(pick('-follow-nothing', '', null), pick('', '', null), 'a project with no session falls back to the newest anywhere');
+  assert.equal(pick('-follow-nothing', '', null), '-follow-b', 'a project with no session falls back to the newest anywhere');
   assert.deepEqual(core.currentSession('..', '..', { proj: '..', id: '..' }), core.currentSession('', '', null), 'names that climb out of the folder are not followed');
+  assert.deepEqual(newCore().core.currentSession('', '', null), {}, 'no session at all: nothing to follow');
+});
+
+test('two cores over two folders do not share anything, and a core needs its folder', () => {
+  const one = newCore(), two = newCore();
+  write(path.join(one.dir('-only-one'), 's.jsonl'), [rec.say('hi', ago(5))]);
+  write(path.join(two.dir('-only-two'), 's.jsonl'), [rec.say('hi', ago(5))]);
+  assert.deepEqual(one.core.boardRows().map((r) => r.proj), ['-only-one']);
+  assert.deepEqual(two.core.boardRows().map((r) => r.proj), ['-only-two']);
+  assert.throws(() => one.core.timeline('-only-two', 's'), /session not found/);
+  assert.equal(one.core.codex.home, null, 'Codex is left out unless a folder is given');
+  assert.throws(() => createCore({}), /root/);
 });

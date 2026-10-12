@@ -159,15 +159,25 @@ test('the live call follows a Codex session: the newest session wins, a project 
 });
 
 test('Codex can be turned off, and is not looked for when the app is pointed at one folder of Claude Code sessions', () => {
-  const codex = require('../codex.js'), was = process.env.AGENT_STANDUP_CODEX;
-  try {
-    assert.equal(codex.sessions().length, 2);
-    const HALF = '01a00000-0000-7000-8000-00000000000d', meta = JSON.stringify({ timestamp: new Date().toISOString(), type: 'session_meta', payload: { id: HALF, cwd: WORK, parent_thread_id: NEW } });
-    fs.writeFileSync(fileOf(HALF), meta.slice(0, 90)); const t = new Date(Date.now() + 5000); fs.utimesSync(fileOf(HALF), t, t);   // a file caught while its first line is being written
-    process.env.AGENT_STANDUP_CODEX = CX + path.sep; assert.equal(codex.sessions().length, 2);   // (another spelling of the folder: a fresh look at the files)
-    fs.writeFileSync(fileOf(HALF), meta + '\n'); process.env.AGENT_STANDUP_CODEX = CX; assert.equal(codex.sessions().length, 2); assert.equal(codex.inProject(HALF, WORK.replace(/[^a-zA-Z0-9]/g, '-')), true);   // read again once whole: still not a session (another thread started it), and its folder is known
-    fs.unlinkSync(fileOf(HALF));
-    process.env.AGENT_STANDUP_CODEX = 'off'; assert.equal(codex.home(), null); assert.deepEqual(codex.sessions(), []); assert.equal(codex.fileOf(NEW), null);
-    delete process.env.AGENT_STANDUP_CODEX; assert.equal(codex.home(), null);   // AGENT_STANDUP_PROJECTS is set (as in every other test file): the real ~/.codex is left alone
-  } finally { process.env.AGENT_STANDUP_CODEX = was; }
+  const { createCodex } = require('../codex.js'), { codexHomeFromEnv } = require('../core/config');
+  const look = () => createCodex({ home: CX, scanTtlMs: 0 });   // 0: the files are looked at again on every call, as a poll two seconds later would
+  const on = look();
+  assert.equal(on.sessions().length, 2);
+  const HALF = '01a00000-0000-7000-8000-00000000000d', meta = JSON.stringify({ timestamp: new Date().toISOString(), type: 'session_meta', payload: { id: HALF, cwd: WORK, parent_thread_id: NEW } });
+  fs.writeFileSync(fileOf(HALF), meta.slice(0, 90)); const t = new Date(Date.now() + 5000); fs.utimesSync(fileOf(HALF), t, t);   // a file caught while its first line is being written
+  assert.equal(on.sessions().length, 2);
+  fs.writeFileSync(fileOf(HALF), meta + '\n');
+  assert.equal(on.sessions().length, 2); assert.equal(on.inProject(HALF, WORK.replace(/[^a-zA-Z0-9]/g, '-')), true);   // read again once whole (the half line was not kept): still not a session (another thread started it), and its folder is known
+  fs.unlinkSync(fileOf(HALF));
+
+  const off = createCodex({ home: null });
+  assert.equal(off.home, null); assert.deepEqual(off.sessions(), []); assert.equal(off.fileOf(NEW), null);
+
+  // Which of the two the app makes is the environment's to say.
+  for (const v of ['off', 'OFF', '0', 'no', 'false', '', '  ']) assert.equal(codexHomeFromEnv({ AGENT_STANDUP_CODEX: v }), null, JSON.stringify(v));
+  assert.equal(codexHomeFromEnv({ AGENT_STANDUP_CODEX: CX }), CX);
+  assert.equal(codexHomeFromEnv({ AGENT_STANDUP_PROJECTS: '/x' }), null, 'pointed at one folder of Claude Code sessions: the real ~/.codex is left alone');
+  assert.equal(codexHomeFromEnv({ AGENT_STANDUP_PROJECTS: '/x', AGENT_STANDUP_CODEX: CX }), CX, '...unless Codex is asked for too');
+  assert.equal(codexHomeFromEnv({ CODEX_HOME: '/h' }), '/h');
+  assert.equal(codexHomeFromEnv({}), path.join(os.homedir(), '.codex'));
 });

@@ -9,32 +9,6 @@ const CHUNK_BYTES = 16 * 1024 * 1024;
 const FINGERPRINT_BYTES = 64;
 const NEWLINE = 10;
 
-// path → what has been read of that file so far:
-//   { agent, journal, gen, offset, mtime, fp, tail, raw[], toolName{}, msgUsage Map }
-//   offset  how many bytes were read      fp    the last bytes of them      tail  the half-written line after the last newline
-//   raw     the events made so far        toolName, msgUsage  what the record parser needs to remember between records
-// The record parser (claudeRecord.js, or Codex's) adds its own fields to it (lastTs, act, th, bg, prompt…).
-const fileStates = new Map();
-// Each time a transcript is read from its start it gets a new number, which is how the live feed knows its events were numbered again.
-let fileGen = 0;
-
-// Reads what was appended to `file` since the last call and returns its state, or null when the file is gone.
-// `record(state, parsedLine)` turns each new line into events: Claude Code's by default.
-function readNew(file, agent, journal, record = parseRecord) {
-  const stat = statOrNull(file);
-  if (!stat) { fileStates.delete(file); return null; }
-
-  let state = fileStates.get(file);
-  if (state && wasRewritten(file, state, stat)) state = null;
-  if (!state || stat.size < state.offset) {   // new, rewritten, or shorter than what was read: from the start
-    state = { agent, journal: !!journal, gen: ++fileGen, offset: 0, mtime: 0, fp: Buffer.alloc(0), tail: Buffer.alloc(0), raw: [], toolName: {}, msgUsage: new Map() };
-    fileStates.set(file, state);
-  }
-  state.mtime = stat.mtimeMs;
-  while (stat.size > state.offset) readChunk(file, state, stat.size, record);
-  return state;
-}
-
 const statOrNull = (file) => { try { return fs.statSync(file); } catch { return null; } };
 
 // Rewritten in place and not shorter. Checked only when the file was written to, with one small read.
@@ -79,4 +53,34 @@ function readChunk(file, state, size, record) {
   }
 }
 
-module.exports = { fileStates, readNew };
+// A reader of transcripts: what it has read of each file is kept in it and nowhere else.
+function createReader() {
+  // path → what has been read of that file so far:
+  //   { agent, journal, gen, offset, mtime, fp, tail, raw[], toolName{}, msgUsage Map }
+  //   offset  how many bytes were read      fp    the last bytes of them      tail  the half-written line after the last newline
+  //   raw     the events made so far        toolName, msgUsage  what the record parser needs to remember between records
+  // The record parser (claudeRecord.js, or Codex's) adds its own fields to it (lastTs, act, th, bg, prompt…).
+  const fileStates = new Map();
+  // Each time a transcript is read from its start it gets a new number, which is how the live feed knows its events were numbered again.
+  let fileGen = 0;
+
+  // Reads what was appended to `file` since the last call and returns its state, or null when the file is gone.
+  // `record(state, parsedLine)` turns each new line into events: Claude Code's by default.
+  function readNew(file, agent, journal, record = parseRecord) {
+    const stat = statOrNull(file);
+    if (!stat) { fileStates.delete(file); return null; }
+
+    let state = fileStates.get(file);
+    if (state && wasRewritten(file, state, stat)) state = null;
+    if (!state || stat.size < state.offset) {   // new, rewritten, or shorter than what was read: from the start
+      state = { agent, journal: !!journal, gen: ++fileGen, offset: 0, mtime: 0, fp: Buffer.alloc(0), tail: Buffer.alloc(0), raw: [], toolName: {}, msgUsage: new Map() };
+      fileStates.set(file, state);
+    }
+    state.mtime = stat.mtimeMs;
+    while (stat.size > state.offset) readChunk(file, state, stat.size, record);
+    return state;
+  }
+  return { fileStates, readNew };
+}
+
+module.exports = { createReader };
