@@ -20,7 +20,7 @@ const QUIET_MS = 4 * 60 * 1000;
 //   runByTool    Workflow tool_use id → the run it started (the run also learns who launched it, and with which call)
 function linkLaunches({ agents, states, runs }) {
   const childByTool = {};
-  for (const agent of Object.values(agents)) if (agent.toolUseId) childByTool[agent.toolUseId] = agent.id;
+  for (const agent of Object.values(agents)) if (agent.launchCallId) childByTool[agent.launchCallId] = agent.id;
 
   const runByTool = {};
   for (const state of states) {
@@ -52,10 +52,10 @@ function findFinished({ agents, states, runs }, { childByTool, runByTool }) {
   }
   for (const run of Object.values(runs)) for (const agentId of run.done) finished.add(agentId);
 
-  const subAgents = Object.values(agents).filter((agent) => agent.id !== 'main');
+  const subAgents = Object.values(agents).filter((agent) => !agent.isLead);
   let recentUntil = 0;
-  for (const agent of subAgents) if (agent.mtime && now - agent.mtime <= QUIET_MS) recentUntil = Math.max(recentUntil, agent.mtime + QUIET_MS + 1000);
-  for (const agent of subAgents) if (now - (agent.mtime || 0) > QUIET_MS) finished.add(agent.id);
+  for (const agent of subAgents) if (agent.lastActiveAt && now - agent.lastActiveAt <= QUIET_MS) recentUntil = Math.max(recentUntil, agent.lastActiveAt + QUIET_MS + 1000);
+  for (const agent of subAgents) if (now - (agent.lastActiveAt || 0) > QUIET_MS) finished.add(agent.id);
   return { finished, recentUntil };
 }
 
@@ -76,14 +76,14 @@ function collectEvents({ agents, states, runs }, { childByTool, runByTool }, fin
 
   for (const state of states) {
     if (!state) continue;
-    const agent = agents[state.agent], run = agent && agent.wf ? runs[agent.wf] : null;
+    const agent = agents[state.agent], run = agent && agent.workflow ? runs[agent.workflow] : null;
     const reportAt = state.agent !== 'main' && finished.has(state.agent) ? lastSayIndex(state) : -1;
 
     // The order a workflow gave is the first message of the agent's own file: shown as an order from whoever launched
     // the workflow (the lead when nothing says who), given in the background, when the agent started.
     if (run && state.prompt) {
       parent[state.agent] = run.by || 'main';
-      events.push(new Order({ timestamp: state.prompt.timestamp, agentId: parent[state.agent], recipientId: state.agent, callId: run.callId, background: true, workflow: agent.wf, text: state.prompt.text, title: agent.role, key: 'o/' + state.agent }));
+      events.push(new Order({ timestamp: state.prompt.timestamp, agentId: parent[state.agent], recipientId: state.agent, callId: run.callId, background: true, workflow: agent.workflow, text: state.prompt.text, title: agent.role, key: 'o/' + state.agent }));
     }
 
     state.raw.forEach((entry, index) => {

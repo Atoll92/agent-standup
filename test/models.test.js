@@ -120,3 +120,12 @@ test('the registry gives the class of each kind, and refuses a kind no class is 
   for (const SignalClass of SIGNAL_CLASSES) assert.throws(() => eventClassFor(SignalClass.kind), UnknownEventKind, 'a signal is not an event: ' + SignalClass.kind);
   assert.equal(new Set([...EVENT_CLASSES, ...SIGNAL_CLASSES].map((Model) => Model.kind)).size, EVENT_CLASSES.length + SIGNAL_CLASSES.length, 'no kind is both');
 });
+
+test('an agent is the lead or a sub-agent, with readable attributes', () => {
+  const { Agent } = require('../core/models');
+  const lead = Agent.lead({ name: 'Codex' });
+  assert.deepEqual([lead.id, lead.role, lead.type, lead.name, lead.isLead], ['main', 'Lead', 'main', 'Codex', true]);
+  const subAgent = new Agent({ id: 'a1', role: 'Look', type: 'general-purpose', launchCallId: 'toolu_1', lastActiveAt: 5 });
+  assert.deepEqual([subAgent.isLead, subAgent.launchCallId, subAgent.lastActiveAt, subAgent.workflow], [false, 'toolu_1', 5, undefined]);
+  assert.deepEqual(subAgent.translations, {});
+});

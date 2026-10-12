@@ -12,7 +12,7 @@ const { execFileSync } = require('child_process');
 
 const { blocks, resultImages } = require('./core/transcript');
 const { createCore, configFromEnv } = require('./core');
-const { serializeEvent, serializeTimeline } = require('./core/serializers/web');
+const { serializeEvent, serializeAgent, serializeTimeline } = require('./core/serializers/web');
 const { demoTimeline } = require('./core/demo');   // the core's models, in the names the page reads
 const core = createCore(configFromEnv());   // sessions → timeline, board and live feed (no web in there); read from the environment once, here
 const { root: ROOT, timelineEntry, feedSince, listSessions, boardRows, currentSession } = core;
@@ -314,10 +314,10 @@ function start(port = PORT) {
         res.writeHead(200, { 'content-type': 'application/json', ...(gz ? { 'content-encoding': 'gzip' } : {}), vary: 'accept-encoding' });
         return res.end(gz ? entry.gz : entry.json);
       }
-      if (ep == null) return json({ id: tl.id, agents: tl.agents, total: tl.events.length, events: wire(tl.events.slice(+after)) });   // a page loaded before 1.25.7 still asks by position
+      if (ep == null) return json({ id: tl.id, agents: tl.agents.map(serializeAgent), total: tl.events.length, events: wire(tl.events.slice(+after)) });   // a page loaded before 1.25.7 still asks by position
       const a = +after; if (ep !== tl.ep || !(a >= 0 && a <= tl.seq)) return json({ resync: true });   // not the feed this page was following (restart, session dropped from memory, transcript rewritten): it loads the session again
-      if (a === tl.seq) { if (!entry.idle) entry.idle = JSON.stringify({ id: tl.id, agents: tl.agents, ep: tl.ep, seq: tl.seq, events: [] }); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(entry.idle); }   // nothing new, which is the answer to nearly every poll: written once
-      return json({ id: tl.id, agents: tl.agents, ep: tl.ep, seq: tl.seq, events: wire(feedSince(entry, a)) });   // new events and changed ones alike, whole, under the key they always had
+      if (a === tl.seq) { if (!entry.idle) entry.idle = JSON.stringify({ id: tl.id, agents: tl.agents.map(serializeAgent), ep: tl.ep, seq: tl.seq, events: [] }); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(entry.idle); }   // nothing new, which is the answer to nearly every poll: written once
+      return json({ id: tl.id, agents: tl.agents.map(serializeAgent), ep: tl.ep, seq: tl.seq, events: wire(feedSince(entry, a)) });   // new events and changed ones alike, whole, under the key they always had
     }
     const pk = url.pathname.match(/^\/packs\/([a-z]+)\/(.*)$/);
     if (url.pathname.startsWith('/characters/') || (pk && packDir(pk[1]))) {   // only plain image files of the characters folder (or of a built-in pack), by exact name

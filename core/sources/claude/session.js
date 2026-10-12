@@ -3,6 +3,7 @@ const fs = require('fs'), path = require('path');
 const { parseRecord } = require('./record');
 const { mtimeOf } = require('./files');
 const { SessionNotFound } = require('../../errors');
+const { Agent } = require('../../models');
 
 function createClaudeSession({ root, files, reader }) {
   // Returns { agents, states, runs }:
@@ -14,7 +15,7 @@ function createClaudeSession({ root, files, reader }) {
     const mainFile = path.join(root, proj, id + '.jsonl');
     if (!fs.existsSync(mainFile)) throw new SessionNotFound();
 
-    const agents = { main: { id: 'main', role: 'Lead', type: 'main' } };
+    const agents = { [Agent.LEAD_ID]: Agent.lead() };
     const states = [reader.readNew(mainFile, 'main', false, parseRecord)];
     const subs = files.subFiles(proj, id);
     const runs = {};
@@ -24,7 +25,7 @@ function createClaudeSession({ root, files, reader }) {
       const meta = files.readMeta(sub.file.replace(/\.jsonl$/, '.meta.json'));
       const agent = agents[sub.aid] = describeSubAgent(sub, meta);
       if (sub.run) joinWorkflowRun(runs, sub, agent, meta);
-      agent.mtime = mtimeOf(sub.file) || undefined;
+      agent.lastActiveAt = mtimeOf(sub.file) || undefined;
       const state = reader.readNew(sub.file, sub.aid, false, parseRecord);
       if (state) states.push(state);
       touched.push(sub.file);
@@ -42,17 +43,17 @@ function createClaudeSession({ root, files, reader }) {
 }
 
 function describeSubAgent(sub, meta) {
-  return {
+  return new Agent({
     id: sub.aid,
     role: meta.description || meta.workflowPhase || meta.agentType || 'Agent',
     type: meta.agentType || 'agent',
-    toolUseId: meta.toolUseId,
-  };
+    launchCallId: meta.toolUseId,
+  });
 }
 
 // An agent launched by a workflow: no Agent call of the lead points at it.
 function joinWorkflowRun(runs, sub, agent, meta) {
-  agent.wf = sub.run;
+  agent.workflow = sub.run;
   if (meta.workflowPhase) agent.phase = meta.workflowPhase;
   const run = runs[sub.run] = runs[sub.run] || { agents: {}, done: new Set() };
   run.agents[sub.id0] = sub.aid;

@@ -4,7 +4,7 @@
 // Every event:  ts (timestamp), agent (agentId), kind, k (key), t (elapsed, in a timeline), th (thought, when there is one),
 //               end: 1 (it closed the turn), fr (its text in French, when it is known in advance: the demo)
 // And by kind, below: how each kind is written (`write`) and read back (`read`). Reading what was written gives the same event.
-const { eventClassFor } = require('../models');
+const { Agent, eventClassFor } = require('../models');
 const { UnknownEventKind } = require('../errors');
 
 const KINDS = {
@@ -98,8 +98,27 @@ function deserializeEvent(wire) {
   return event;
 }
 
-// A timeline as the page reads it: the same object, with its events serialized.
-const serializeTimeline = (timeline) => ({ ...timeline, events: timeline.events.map(serializeEvent) });
-const deserializeTimeline = (wire) => ({ ...wire, events: wire.events.map(deserializeEvent) });
+// An agent as the page reads it: toolUseId (launchCallId), wf (workflow), mtime (lastActiveAt), roleFr (its role in French).
+function serializeAgent(agent) {
+  return {
+    id: agent.id,
+    role: agent.role,
+    type: agent.type,
+    ...(agent.name ? { name: agent.name } : {}),
+    ...(agent.launchCallId !== undefined ? { toolUseId: agent.launchCallId } : {}),
+    ...(agent.workflow ? { wf: agent.workflow } : {}),
+    ...(agent.phase ? { phase: agent.phase } : {}),
+    ...(agent.lastActiveAt ? { mtime: agent.lastActiveAt } : {}),
+    ...(agent.translations.fr ? { roleFr: agent.translations.fr } : {}),
+  };
+}
+const deserializeAgent = (wire) => new Agent({
+  id: wire.id, role: wire.role, type: wire.type, name: wire.name, launchCallId: wire.toolUseId, workflow: wire.wf, phase: wire.phase, lastActiveAt: wire.mtime,
+  translations: wire.roleFr ? { fr: wire.roleFr } : undefined,
+});
 
-module.exports = { serializeEvent, deserializeEvent, serializeTimeline, deserializeTimeline };
+// A timeline as the page reads it: the same object, with its agents and its events serialized.
+const serializeTimeline = (timeline) => ({ ...timeline, agents: timeline.agents.map(serializeAgent), events: timeline.events.map(serializeEvent) });
+const deserializeTimeline = (wire) => ({ ...wire, agents: wire.agents.map(deserializeAgent), events: wire.events.map(deserializeEvent) });
+
+module.exports = { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline };

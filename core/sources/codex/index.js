@@ -5,6 +5,7 @@
 const fs = require('fs');
 const { Source } = require('../source');
 const { SessionNotFound } = require('../../errors');
+const { Agent } = require('../../models');
 const { PROJ, createCodexFiles } = require('./files');
 const { createCodexBoard } = require('./board');
 const { parser } = require('./record');
@@ -37,7 +38,7 @@ class CodexSource extends Source {
     if (!fs.existsSync(mainFile)) throw new SessionNotFound();
     touched.push(mainFile);
     return {
-      agents: { main: { id: 'main', role: 'Lead', type: 'main', name: 'Codex' } },
+      agents: { [Agent.LEAD_ID]: Agent.lead({ name: 'Codex' }) },
       states: [this.#reader.readNew(mainFile, 'main', false, this.#record)],
       runs: {},
     };

@@ -1,11 +1,14 @@
 // The core's models of what happens in a session.
 //
+// AGENTS (agent.js): who is in the call.
+//
 // EVENTS (events/, extending Event) are what a display shows:
 //   from the transcript   Say ('say'), ToolCall ('tool'), Results ('results'), UserMessage ('user'), Compact ('compact')
 //   made by the timeline  ToolBeat ('tools': consecutive ToolCalls), Order ('order'), Report ('report'), Finish ('finish'), Usage ('usage')
 // SIGNALS (signals/, extending Signal) are what the timeline reads to build them, and then drops:
 //   AgentCall ('agentcall'), AgentDone ('agentdone'), WorkflowRun ('wfrun'), WorkflowDone ('wfdone')
 const { UnknownEventKind } = require('../errors');
+const { Agent } = require('./agent');
 const { Event } = require('./event');
 const { Signal } = require('./signal');
 const { Say } = require('./events/say');
@@ -37,6 +40,7 @@ function eventClassFor(kind) {
 }
 
 module.exports = {
+  Agent,
   Event, Say, Report, ToolCall, ToolBeat, Results, UserMessage, Order, Finish, Usage, Compact,
   Signal, AgentCall, AgentDone, WorkflowRun, WorkflowDone,
   EVENT_CLASSES, SIGNAL_CLASSES, eventClassFor,
