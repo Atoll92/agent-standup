@@ -1,17 +1,9 @@
 // Turns one Claude Code transcript record into events. The incremental reader (reader.js) calls parseRecord for every new line of a file.
 //
-// The events pushed to state.raw are the raw material of the timeline (see timeline.js):
-//   say        { text, th?, end? }                what an agent says; end: it closed the lead's turn
-//   tool       { tool, th? }                      a tool call (tool = what transcript.toolLabel makes of it)
-//   agentcall  { toolId, bg, text, title }        the lead launching a sub-agent (Agent / Task tool)
-//   agentdone  { toolId }                         a sub-agent has finished
-//   results    { items: [{ id, err, out, img? }] } what tool calls returned
-//   user       { text }                           what the human typed
-//   compact    {}                                 Claude Code compacted the conversation
-//   wfrun      { toolId, run }                    a Workflow call named the run it started
-//   wfdone     { child }                          a workflow journal says an agent handed its result back
-// Every event also has { ts, agent, k }: k is its key in the live feed (see feed.js).
+// The events pushed to state.raw are the raw material of the timeline (see timeline.js); core/models says what each kind is.
+// An event's `k` is its key in the live feed (see feed.js).
 const { blocks, clip, toolLabel, resultText, resultImages, RESULT_MAX, NO_RESULT, HARNESS } = require('../../transcript');
+const { Say, ToolCall, AgentCall, AgentDone, Results, UserMessage, Compact, WorkflowRun, WorkflowDone } = require('../../models');
 
 // What the harness writes into a "user" message that the human did not type.
 const NOT_TYPED = /^<(system-reminder|command-|local-command|task-notification)/;
@@ -43,11 +35,11 @@ function parseRecord(state, record) {
 
 // A workflow's journal: one line when an agent starts, one when it hands its result back (no time on them).
 function readJournalRecord({ record, agent, push }) {
-  if (record.type === 'result' && record.agentId) push({ ts: 0, agent, kind: 'wfdone', child: String(record.agentId).replace(/[^\w.-]/g, '_') });
+  if (record.type === 'result' && record.agentId) push(new WorkflowDone({ agent, child: String(record.agentId).replace(/[^\w.-]/g, '_') }));
 }
 
 function readCompaction({ ts, agent, push }) {
-  push({ ts, agent, kind: 'compact' });
+  push(new Compact({ ts, agent }));
 }
 
 // How Claude Code reports that a background sub-agent has stopped.
@@ -56,7 +48,7 @@ const isTaskNotification = (record) => record.type === 'queue-operation' && type
 function readTaskNotification({ record, ts, agent, push }) {
   const toolId = (record.content.match(/<tool-use-id>([^<]+)<\/tool-use-id>/) || [])[1];
   const status = (record.content.match(/<status>([^<]+)<\/status>/) || [])[1];
-  if (toolId && status && status !== 'running') push({ ts, agent, kind: 'agentdone', toolId });
+  if (toolId && status && status !== 'running') push(new AgentDone({ ts, agent, toolId }));
 }
 
 // An order typed while the lead was working: Claude Code hands it over in the middle of the turn, as an attachment and not as a user message.
@@ -72,7 +64,7 @@ function readQueuedCommand({ state, record, ts, agent, push }) {
 
   // Its place in the call is when the lead got it, not when it was typed (minutes earlier, during a long command):
   // the call hears of it only now, and a line dated in the past looks "far behind" and was shown without a voice.
-  push({ ts: Math.max(ts, state.lastTs || 0), agent: 'user', kind: 'user', text });
+  push(new UserMessage({ ts: Math.max(ts, state.lastTs || 0), text }));
 }
 
 // A "user" record carries tool results (the real output that appeared on an agent's screen) and what the human typed.
@@ -83,13 +75,13 @@ function readUserRecord(ctx) {
 
   // The answer to a Workflow call names the run it started: its agents are in subagents/workflows/<run>/
   const run = record.toolUseResult && typeof record.toolUseResult === 'object' && typeof record.toolUseResult.runId === 'string' ? record.toolUseResult.runId : '';
-  if (run) for (const toolResult of toolResults) push({ ts, agent, kind: 'wfrun', toolId: toolResult.tool_use_id, run });
+  if (run) for (const toolResult of toolResults) push(new WorkflowRun({ ts, agent, toolId: toolResult.tool_use_id, run }));
 
   // A synchronous sub-agent call: the lead got the sub-agent's answer back, so it has finished
   // (async launches answer immediately and are not a completion).
   for (const toolResult of toolResults) {
     const background = state.bg && state.bg[toolResult.tool_use_id];
-    if (isSubAgentCall(toolName(toolResult)) && !background && !ASYNC_LAUNCH.test(resultText(toolResult.content))) push({ ts, agent, kind: 'agentdone', toolId: toolResult.tool_use_id });
+    if (isSubAgentCall(toolName(toolResult)) && !background && !ASYNC_LAUNCH.test(resultText(toolResult.content))) push(new AgentDone({ ts, agent, toolId: toolResult.tool_use_id }));
   }
 
   const items = [];
@@ -100,18 +92,18 @@ function readUserRecord(ctx) {
     const out = clip(resultText(toolResult.content).replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trimEnd(), RESULT_MAX[name] || (/^mcp__/.test(name) ? 900 : 600));
     items.push({ id: toolResult.tool_use_id, err: !!toolResult.is_error, out, ...(img ? { img } : {}) });
   }
-  if (items.length) push({ ts, agent, kind: 'results', items });
+  if (items.length) push(new Results({ ts, agent, items }));
 
   // What the human typed, without the blocks the harness wraps around it.
   const typed = blocks(record).filter((block) => block.type === 'text').map((block) => block.text).join('\n').replace(HARNESS, '');
   if (agent !== 'main') return rememberSubAgentOrder(ctx, typed);
 
   // Esc: the turn stops there, without the end_turn mark. The last thing the lead said or did closes it.
-  if (INTERRUPT.test(typed) && state.act >= 0) state.raw[state.act].end = 1;
+  if (INTERRUPT.test(typed) && state.act >= 0) state.raw[state.act].endTurn();
 
   const text = typed.replace(INTERRUPT_PREFIX, '').trim();
   // A compaction summary is not typed either: thousands of characters the human never wrote.
-  if (text && !NOT_TYPED.test(text) && !record.isMeta && !record.isCompactSummary) push({ ts, agent: 'user', kind: 'user', text });
+  if (text && !NOT_TYPED.test(text) && !record.isMeta && !record.isCompactSummary) push(new UserMessage({ ts, text }));
 }
 
 // A sub-agent's first user message is the order, emitted from the parent's side. It is kept here for the agents
@@ -130,7 +122,7 @@ function readAssistantRecord(ctx) {
     if (block.type === 'thinking' && typeof block.thinking === 'string' && block.thinking.trim()) {
       rememberThought(state, block.thinking);
     } else if (block.type === 'text' && typeof block.text === 'string' && block.text.trim()) {
-      said = push({ ts, agent, kind: 'say', text: block.text.trim(), ...takeThought(state) });
+      said = push(new Say({ ts, agent, text: block.text.trim(), thought: takeThought(state) }));
       state.act = state.raw.length - 1; state.sayOf = message.id; state.sayAt = state.act;
     } else if (block.type === 'tool_use') {
       readToolUse(ctx, block);
@@ -142,7 +134,7 @@ function readAssistantRecord(ctx) {
   if (agent === 'main' && message.stop_reason === 'end_turn') {
     // ...or on the line the same message brought in an earlier record.
     if (!said && message.id && state.sayOf === message.id) said = state.raw[state.sayAt];
-    if (said) said.end = 1;
+    if (said) said.endTurn();
   }
 }
 
@@ -163,7 +155,7 @@ function rememberThought(state, thinking) {
 }
 function takeThought(state) {
   const thought = state.th; state.th = '';
-  return thought ? { th: thought } : {};
+  return thought;
 }
 
 function readToolUse({ state, ts, agent, push }, toolUse) {
@@ -172,9 +164,9 @@ function readToolUse({ state, ts, agent, push }, toolUse) {
   if (input.run_in_background) (state.bg = state.bg || {})[toolUse.id] = true;
 
   if (isSubAgentCall(toolUse.name)) {
-    push({ ts, agent, kind: 'agentcall', toolId: toolUse.id, bg: !!input.run_in_background, text: input.prompt || '', title: input.description || '' });
+    push(new AgentCall({ ts, agent, toolId: toolUse.id, bg: !!input.run_in_background, text: input.prompt || '', title: input.description || '' }));
   } else {
-    push({ ts, agent, kind: 'tool', tool: toolLabel(toolUse, ts), ...takeThought(state) });
+    push(new ToolCall({ ts, agent, tool: toolLabel(toolUse, ts), thought: takeThought(state) }));
     state.act = state.raw.length - 1;
   }
 }

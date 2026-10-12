@@ -1,4 +1,5 @@
 const { typed, partsText } = require('./text');
+const { Say, ToolCall, Results, UserMessage, Compact } = require('../../models');
 
 // ---- one record of a rollout file → the events of the call
 // Two generations of the format are read. The current one (2026) writes an "item_completed" line for everything that happened: what was typed, what the agent said,
@@ -19,15 +20,15 @@ function parser({ toolLabel, clip, resultMax = {} }) {
     const agent = state.agent, payload = rolloutRecord.payload && typeof rolloutRecord.payload === 'object' ? rolloutRecord.payload : {}, context = state.cx || (state.cx = { items: false, model: '', n: 0, tot: null, last: 0, userAt: -1 });
     const ts = Math.max(Date.parse(rolloutRecord.timestamp) || 0, state.lastTs || 0); state.lastTs = ts;   // the lines of one file are in order; a line without a time takes the last one
     const push = (event) => { event.k = agent + ':' + state.raw.length; state.raw.push(event); if (event.ts > context.last) context.last = event.ts; return event; };
-    const takeThought = () => { const thought = state.th; state.th = ''; return thought ? { th: thought } : {}; };
-    const say = (text, final) => { const trimmed = String(text == null ? '' : text).trim(); if (!trimmed) return; const event = push({ ts, agent, kind: 'say', text: trimmed, ...takeThought() }); state.act = state.raw.length - 1; if (final && agent === 'main') event.end = 1; };
-    const user = (text) => { const typedText = typed(text); if (!typedText) return; push({ ts, agent: 'user', kind: 'user', text: typedText }); context.userAt = state.raw.length - 1; };
-    const call = (id, name, input, at) => { const when = Math.max(Math.min(at || ts, ts), context.last); state.toolName[id] = name; push({ ts: when, agent, kind: 'tool', tool: toolLabel({ id, name, input: input || {} }, when), ...takeThought() }); state.act = state.raw.length - 1; };   // a command is placed when it started, never before what the file already said
-    const result = (id, out, err) => { const toolName = state.toolName[id]; if (!toolName || NO_RESULT.has(toolName)) return; push({ ts, agent, kind: 'results', items: [{ id, err: !!err, out: clip(String(out == null ? '' : out).trimEnd(), resultMax[toolName] || (/^mcp__/.test(toolName) ? 900 : 600)) }] }); };
-    const endTurn = () => { if (agent === 'main' && state.act > context.userAt && state.raw[state.act]) state.raw[state.act].end = 1; };   // the turn is over (or was stopped): the last thing the lead said or did closes it
+    const takeThought = () => { const thought = state.th; state.th = ''; return thought; };
+    const say = (text, final) => { const trimmed = String(text == null ? '' : text).trim(); if (!trimmed) return; const event = push(new Say({ ts, agent, text: trimmed, thought: takeThought() })); state.act = state.raw.length - 1; if (final && agent === 'main') event.endTurn(); };
+    const user = (text) => { const typedText = typed(text); if (!typedText) return; push(new UserMessage({ ts, text: typedText })); context.userAt = state.raw.length - 1; };
+    const call = (id, name, input, at) => { const when = Math.max(Math.min(at || ts, ts), context.last); state.toolName[id] = name; push(new ToolCall({ ts: when, agent, tool: toolLabel({ id, name, input: input || {} }, when), thought: takeThought() })); state.act = state.raw.length - 1; };   // a command is placed when it started, never before what the file already said
+    const result = (id, out, err) => { const toolName = state.toolName[id]; if (!toolName || NO_RESULT.has(toolName)) return; push(new Results({ ts, agent, items: [{ id, err: !!err, out: clip(String(out == null ? '' : out).trimEnd(), resultMax[toolName] || (/^mcp__/.test(toolName) ? 900 : 600)) }] })); };
+    const endTurn = () => { if (agent === 'main' && state.act > context.userAt && state.raw[state.act]) state.raw[state.act].endTurn(); };   // the turn is over (or was stopped): the last thing the lead said or did closes it
 
     if (rolloutRecord.type === 'turn_context') { if (typeof payload.model === 'string') context.model = payload.model; return; }
-    if (rolloutRecord.type === 'compacted') { push({ ts, agent, kind: 'compact' }); return; }
+    if (rolloutRecord.type === 'compacted') { push(new Compact({ ts, agent })); return; }
     if (rolloutRecord.type === 'event_msg') {
       if (payload.type === 'item_completed' && payload.item && typeof payload.item === 'object') {
         const item = payload.item, id = String(item.id || 'cx' + state.raw.length), at = +payload.started_at_ms || 0; context.items = true;

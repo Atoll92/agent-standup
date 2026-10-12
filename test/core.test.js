@@ -136,13 +136,15 @@ test('every source gives the whole interface', () => {
 
 test('the timeline, the board and the session to follow work through the interface only: a made-up source is a source like any other', () => {
   const { createTimeline } = require('../core/timeline'), { createBoard } = require('../core/board'), { createCurrent } = require('../core/current');
+  const { Say } = require('../core/models');
   const at = Date.now() - 5000;
   const fake = {
     name: 'fake', owns: (proj) => proj === '_fake',
     readSession: (proj, id, touched) => {
       if (id !== 'one') throw new Error('session not found');
       touched.push('/fake/one');
-      const say = { ts: at, agent: 'main', kind: 'say', text: 'Hello from nowhere.', k: 'main:0' };
+      const say = new Say({ ts: at, agent: 'main', text: 'Hello from nowhere.' });
+      say.k = 'main:0';
       return { agents: { main: { id: 'main', role: 'Lead', type: 'main', name: 'Fake' } }, states: [{ agent: 'main', raw: [say], msgUsage: new Map(), lastTs: at }], runs: {} };
     },
     exists: (proj, id) => id === 'one', mtime: (proj, id) => (id === 'one' ? at : 0), stamp: () => 1, inProject: (proj, id, folder) => folder === '_fake',

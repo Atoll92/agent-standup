@@ -14,7 +14,7 @@ const { blocks, resultImages } = require('./core/transcript');
 const { createCore, configFromEnv } = require('./core');
 const core = createCore(configFromEnv());   // sessions → timeline, board and live feed (no web in there); read from the environment once, here
 const { root: ROOT, timelineEntry, feedSince, listSessions, boardRows, currentSession } = core;
-const { subFiles } = core.sources.claude;   // the pictures of a session are in the transcripts of its sub-agents
+const subFiles = (proj, id) => core.sources.claude.subFiles(proj, id);   // the pictures of a session are in the transcripts of its sub-agents
 
 const PORT = process.env.PORT || 4747;
 const PUBLIC = path.join(__dirname, 'public');

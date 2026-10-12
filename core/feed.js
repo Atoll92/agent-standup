@@ -3,7 +3,6 @@
 // timelineEntry(proj, id) gives the timeline of a session, rebuilt only when a file of the session changed.
 // feedSince(entry, after) gives what is new or different since a reader last looked: the live feed.
 const crypto = require('crypto');
-const { BOOKKEEPING } = require('./timeline');
 
 const MAX_CACHED_SESSIONS = 3;
 const MIN_REBUILD_GAP_MS = 250;
@@ -90,12 +89,12 @@ function numberEvents(feed, builtTimeline) {
   const events = builtTimeline.events, sequenceNumbers = new Uint32Array(events.length), nextSequence = feed.seq + 1, before = feed.known.size;
 
   // Time zero moved (something now comes before the first line): every `t` is different.
-  const zero = events.find((event) => !BOOKKEEPING.has(event.kind)), firstEventTime = zero ? zero.ts : 0, moved = feed.t0 !== firstEventTime;
+  const zero = events.find((event) => !event.bookkeeping), firstEventTime = zero ? zero.ts : 0, moved = feed.t0 !== firstEventTime;
   feed.t0 = firstEventTime;
 
   let hits = 0, changed = false;
   events.forEach((event, index) => {
-    const eventSignature = signature(event), knownEvent = feed.known.get(event.k);
+    const eventSignature = event.signature(), knownEvent = feed.known.get(event.k);
     if (!knownEvent) { feed.known.set(event.k, { s: eventSignature, q: nextSequence }); sequenceNumbers[index] = nextSequence; changed = true; return; }
     hits++;
     if (knownEvent.s !== eventSignature || moved) { knownEvent.s = eventSignature; knownEvent.q = nextSequence; changed = true; }
@@ -105,17 +104,6 @@ function numberEvents(feed, builtTimeline) {
   if (hits < before) return null;
   if (changed) feed.seq = nextSequence;
   return sequenceNumbers;
-}
-
-// Everything about an event that can differ from one build to the next. Its text, its tool calls, its results and its time never do:
-// they come from one transcript record (same key = same record). And `t` moves only when time zero does, which numberEvents looks at once for all.
-function signature(event) {
-  let detail = '';
-  if (event.kind === 'tools') detail = event.tools.length + ':' + event.tools[event.tools.length - 1].id;
-  else if (event.kind === 'usage') detail = `${event.u.i},${event.u.o},${event.u.r},${event.u.w},${event.model}`;
-  else if (event.kind === 'order') detail = `${event.toolId},${event.bg},${event.title}`;
-  else if (event.kind === 'finish') detail = event.ts;
-  return event.kind + '|' + event.agent + '|' + (event.to || '') + '|' + (event.end || '') + '|' + detail;
 }
 
 // The events that are new or different since sequence number `after`, in timeline order. Nothing to scan when the reader is up to date.

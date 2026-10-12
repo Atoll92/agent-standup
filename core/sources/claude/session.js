@@ -2,6 +2,7 @@
 const fs = require('fs'), path = require('path');
 const { parseRecord } = require('./record');
 const { mtimeOf } = require('./files');
+const { SessionNotFound } = require('../../errors');
 
 function createClaudeSession({ root, files, reader }) {
   // Returns { agents, states, runs }:
@@ -11,7 +12,7 @@ function createClaudeSession({ root, files, reader }) {
   // Every file read is added to `touched`, so the caller can tell when any of them changes.
   function readSession(proj, id, touched) {
     const mainFile = path.join(root, proj, id + '.jsonl');
-    if (!fs.existsSync(mainFile)) throw new Error('session not found');
+    if (!fs.existsSync(mainFile)) throw new SessionNotFound();
 
     const agents = { main: { id: 'main', role: 'Lead', type: 'main' } };
     const states = [reader.readNew(mainFile, 'main', false, parseRecord)];
