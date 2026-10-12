@@ -6,6 +6,8 @@ node_modules/
 docs/media/story*.mp4
 
 dist-cli/
+website/dist/
+.vercel
 dist-desktop/
 desktop/node_modules/
 desktop/core/

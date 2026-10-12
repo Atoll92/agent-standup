@@ -1,6 +1,7 @@
 // Reads one Claude Code session: its main transcript (the lead), one transcript per sub-agent, and for workflows a journal per run.
 const fs = require('fs'), path = require('path');
 const { parseRecord } = require('./record');
+const { nameAgents } = require('./agentNames');
 const { mtimeOf } = require('./files');
 const { SessionNotFound } = require('../../errors');
 const { Agent } = require('../../models');
@@ -36,6 +37,7 @@ function createClaudeSession({ root, files, reader }) {
       touched.push(journal.file);
       if (state && run) for (const entry of state.records) if (run.agents[entry.childId]) run.done.add(run.agents[entry.childId]);
     }
+    nameAgents(agents, states);
     return { agents, states, runs };
   }
 

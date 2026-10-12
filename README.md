@@ -8,7 +8,7 @@
 
 **Runs as a VS Code extension, a terminal command, or a desktop app.** Try it in 30 seconds, no install and no editor (Node 18+): `npx @double_geste/agent-standup --open`, then ⚙ → Source → Demo.
 
-**→ Website & download: https://atoll92.github.io/agent-standup/**
+**→ Website & download: https://agent-standup.com**
 
 ![Agent Standup: a team of AI agents in a call](https://atoll92.github.io/agent-standup/media/hero.gif)
 
@@ -105,12 +105,14 @@ The header shows how full the lead's context is (`ctx 62%`, orange then red, wit
 | **Neovim** *(not tested here)* | call `vim.fn.system('agent-standup status --here')` from a timer and show the result in your statusline plugin; `agent-standup status --json` gives machine-readable output. |
 | **JetBrains IDEs** *(not native yet)* | *Settings → Tools → External Tools → +*: program `npx`, arguments `-y @double_geste/agent-standup --open`, working directory `$ProjectFileDir$`. |
 
-Other agent tools than Claude Code (Codex CLI, Gemini CLI, OpenCode…) are researched in [ROADMAP.md](ROADMAP.md): their log formats are mostly undocumented, so no adapter is shipped yet.
+Codex CLI sessions are read as well (see [Codex sessions too](#codex-sessions-too)). Other agent tools (Gemini CLI, OpenCode…) are researched in [ROADMAP.md](ROADMAP.md): their log formats are mostly undocumented, so no adapter is shipped for them yet.
 
 ## Languages
 Pick one in ⚙ → Language: **English, Français, 繁體中文, 简体中文, Español, Deutsch, Dansk, Português (Brasil), 日本語, 한국어**. The interface (menus, chips, tooltips, recap) is translated; VS Code's command titles, setting descriptions and status bar follow VS Code's own display language. English and French are written by hand; the other languages are **AI-drafted and not yet reviewed by native speakers**, so corrections are very welcome: each language is one small JSON file (`public/locales/<code>.json`), see [public/locales/README.md](public/locales/README.md) to fix or add one (`npm run i18n` checks the files). The words the agents say stay in the language of your session (French translation of their lines is optional); the little banter lines and the demo exist in English and French.
 
 ## Your own characters
+**Your own agent names.** A sub-agent you defined yourself (`.claude/agents/code-reviewer.md`) or named when it was launched keeps that name on its tile, in the transcript and in the voices: "Code Reviewer" rather than a first name drawn from the list. Two of the same type become "Code Reviewer" and "Code Reviewer 2". The agent types Claude Code ships (general-purpose, Explore, Plan…) still get a first name. ⚙ → Characters → **Keep my agents’ own names** turns it off.
+
 A cat pack ships with the app: ⚙ → Characters → **Cat pack** (11 cats by a contributor) puts them on the call at once, and **Drawn characters** goes back to the default. **My folder** uses your own images below (picked by itself the first time if your folder already has images).
 
 Replace the drawn characters with your own pixel art. Drop PNG (or GIF/WebP) files, 300 KB at most each, into `~/.agent-standup/characters` (⚙ → Characters shows the folder, and in VS Code *Open folder* opens it; the `agentStandup.charactersPath` setting changes it):
@@ -136,7 +138,7 @@ Five styles in ⚙ (default: **Cartoon voices**, so everything stays understanda
 - **Simlish** — the same idea with flowing syllables, vowels and little consonant noises.
 - **Cartoon voices** — the real words read by your system voice, with a character per agent (chipmunk, deep, robot, wobbly, radio, monster, squeaky).
 - **Natural voices** — plain system voices.
-- **Very natural voices** — [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M), a small open speech model that runs on your machine. Optional: pick it in ⚙ and click Install (about 730 MB, one folder in your user cache, installed with npm; the model is fetched on first use). Until it is ready the system voices keep talking. Mostly English voices, one French voice.
+- **Very natural voices** — [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M), a small open speech model that runs on your machine. Optional: pick it in ⚙ and click Install (about 730 MB, one folder in your user cache, installed with npm; the model is fetched on first use). Until it is ready the system voices keep talking. Its voices are English: French lines are read by your system voices, each character keeping one of its own (see [Voice engines](#voice-engines-per-os) to install a better French voice).
 
 **Our tip:** once you are set up, switch to *Very natural voices*. It is a one-time install and the agents then sound like real people, which is the nicest way to follow a call.
 
@@ -148,7 +150,7 @@ Long lines are subtitled one sentence at a time, in step with the voice.
 - **Search** the transcript, **ambience volume**, and a compact layout when the panel is narrow (side bar): under about 300 px wide, one row per agent instead of tiles. In replay, speed presets (1×, 2×, 4×, 8×) and each session remembers where you stopped.
 
 ## Install
-Three ways in — pick one (details in [Works with your tools](#works-with-your-tools)): the **VS Code extension** (below), the **`agent-standup` command** (`npx @double_geste/agent-standup --open`), or the **desktop app** (macOS, from the release page). Cursor, Windsurf and VSCodium install the same `.vsix`.
+Four ways in — pick one (details in [Works with your tools](#works-with-your-tools)): the **VS Code extension** (below), the **`agent-standup` command** (`npx @double_geste/agent-standup --open`), the **desktop app** (macOS, from the release page), or the **[Claude Code plugin](#claude-code-plugin)**. Cursor, Windsurf and VSCodium install the same `.vsix`.
 
 ### VS Code
 
@@ -212,7 +214,7 @@ The first click on **Join** is required by browsers to allow sound.
 | **T** · **R** · **L** | tree/call · recap · transcript |
 | Esc | close recap / menu |
 
-In Replay, a slider and a speed control appear at the bottom, and clicking a transcript line jumps there.
+In Replay and in the demo, a slider and a speed control appear at the bottom, and clicking a transcript line jumps there.
 
 ## Office music
 
@@ -228,7 +230,7 @@ Voices are generated on your machine and played identically in the editor and in
 
 | OS | Engine | Notes |
 |---|---|---|
-| macOS | `say` | For nicer voices: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices → download a *Premium* / *Enhanced* voice |
+| macOS | `say` | For nicer voices: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices → download a *Premium* / *Enhanced* voice. French is always read by these voices, also in the *Very natural* style: an Enhanced French voice (Thomas, Audrey, Aurélie) is worth the download |
 | Windows | installed system voices (SAPI, via PowerShell) | For French: Settings → Time & language → Speech (or Language) → add French |
 | Linux | `espeak-ng` | Must be installed |
 
@@ -240,7 +242,7 @@ Agent messages are in the language of the session. With French selected, each li
 
 Optional speed-up: set `ANTHROPIC_API_KEY` in the environment of VS Code / the server and translation calls the Anthropic API directly (~1–2 s).
 
-**Privacy & security:** everything runs locally. The server listens on `127.0.0.1` only and rejects requests that do not come from `localhost` (other websites and DNS-rebinding attempts get a 403), so no web page can read your sessions. Translation and jokes send the shortened agent lines to Claude through your own Claude Code login (or your API key if you set one). With English selected and music off, nothing leaves your machine. (Office music connects your browser to `icecast.radiofrance.fr` while it is on.)
+**Privacy & security:** everything runs locally. The server listens on `127.0.0.1` only and rejects requests that do not come from `localhost` (other websites and DNS-rebinding attempts get a 403), so no web page can read your sessions. Translation and jokes send the shortened agent lines to Claude through your own Claude Code login (or your API key if you set one). With translation, jokes and music off, which is the default, nothing leaves your machine. (Office music connects your browser to `icecast.radiofrance.fr` while it is on.)
 
 ## Standalone (no VS Code)
 
@@ -258,7 +260,7 @@ Requires Node 18+.
 
 Claude Code writes every session to `~/.claude/projects/<project>/<session>.jsonl`, and each sub-agent to `<session>/subagents/agent-*.jsonl` (with a `.meta.json` linking it to the tool call that created it). Agent Standup merges these into one timeline: orders (the prompt a lead sends to a sub-agent), spoken text, tool calls (with their inputs), the **results** of those calls (matched by tool-call id, with real durations) and final reports. Each file is parsed once and then only the new lines are read, so even a very large session refreshes in a few milliseconds; responses are compressed. The page polls the server every 0.7 s and plays new events.
 
-The website counts visits anonymously (a 1-pixel file hosted on GitHub per channel: no cookies, no third-party tracker); the app itself has no telemetry.
+The website at agent-standup.com counts nothing. The earlier landing page on GitHub Pages counts visits anonymously (a 1-pixel file hosted on GitHub per channel: no cookies, no third-party tracker) and asks GitHub which release is the latest. The app itself has no telemetry. Details in the [privacy policy](PRIVACY.md).
 
 ## Troubleshooting
 
@@ -282,7 +284,7 @@ The website counts visits anonymously (a 1-pixel file hosted on GitHub per chann
 - "Hide code & file names in videos" does not mask what the agents say (speech bubbles, subtitles, voices).
 
 ## Credits
-Several ideas in 1.23 (settings kept in a file, session stickiness, subtitles that follow the voice, Kokoro voices) started in [neondragon's fork](https://github.com/neondragon/agent-standup) of this project. Thank you!  Their code was read and rewritten for this codebase. [rqwj](https://github.com/rqwj) made each sub-agent get its own character image (#1) and [KajetanCiunelis](https://github.com/KajetanCiunelis) drew the cat pack in `examples/cats` and suggested the laptop option (#2). The Traditional Chinese wording was polished with suggestions from a Taiwanese reader on Reddit. [jainefer](https://github.com/jainefer) added the Korean interface (#5). Unofficial: not affiliated with Anthropic.
+Several ideas in 1.23 (settings kept in a file, session stickiness, subtitles that follow the voice, Kokoro voices) started in [neondragon's fork](https://github.com/neondragon/agent-standup) of this project. Thank you!  Their code was read and rewritten for this codebase. [rqwj](https://github.com/rqwj) made each sub-agent get its own character image (#1) and [KajetanCiunelis](https://github.com/KajetanCiunelis) drew the cat pack in `examples/cats` and suggested the laptop option (#2). The Traditional Chinese wording was polished with suggestions from a Taiwanese reader on Reddit. [jainefer](https://github.com/jainefer) added the Korean interface (#5). Unofficial: not affiliated with Anthropic or OpenAI.
 
 ## License
 
@@ -297,6 +299,9 @@ Agent Standup is free and MIT licensed. I'm also available for work around AI ag
 ⚙ has sections that fold (and remember it), a search box, and a Display section. “Notify me when the agents finish” is on by default (change it in ⚙ → Sound). The **?** help also explains what each status means.
 
 Press **?** in the app for the full list. Highlights: **Space** pause, **M** mute, **T** tree view, **J / K** next agent that needs you, **Cmd/Ctrl+K** go to a session, and in replay **← / →** step, **N** next highlight.
+
+## Name and logo
+The code is MIT licensed: use it, change it, fork it. The name, the logo and the characters are how people recognise this project, and they are not there to brand something else. [TRADEMARKS.md](TRADEMARKS.md) says what is fine (writing about it, building on it, shipping it unmodified) and what needs asking first (releasing a fork under this name, using the logo or the characters for another product). The artwork and its colours are in [brand/](brand/).
 
 ## Security and what it reads
 The full [privacy policy](PRIVACY.md) says what is read, what is kept on your computer and what can leave it.

@@ -14,6 +14,11 @@ jobs:
       - name: Syntax
         run: |
           node --check server.js
+          for file in $(find core server -name '*.js'); do node --check "$file" || exit 1; done
+          node --check kokoro.js
+          node --check kokoro-worker.js
+          node --check demo.js
+          node --check desktop/main.js
           node --check extension.js
           node --check bin/agent-standup.js
           node -e "new Function('return async function(){' + require('fs').readFileSync('public/index.html','utf8').split('<script>')[1].split('</script>')[0] + '}')"
@@ -21,6 +26,7 @@ jobs:
         run: |
           v=$(node -p "require('./package.json').version")
           test "$v" = "$(node -p "require('./desktop/package.json').version")" || { echo "desktop/package.json is not at $v"; exit 1; }
+          test "$v" = "$(node -p "require('./desktop/package-lock.json').version")" || { echo "desktop/package-lock.json is not at $v"; exit 1; }
           grep -q "^## $v\$" CHANGELOG.md || { echo "CHANGELOG.md has no entry for $v"; exit 1; }
           node scripts/sync-plugin.js --check
       - name: Tests (the server, and the live call in a real browser)

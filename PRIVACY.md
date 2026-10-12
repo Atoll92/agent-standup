@@ -37,9 +37,11 @@ The following happen only if you turn them on or start them yourself:
 
 Each of these services sees your IP address, as any website does, and applies its own privacy policy.
 
-## The website
+## The websites
 
-The website is hosted by GitHub Pages. Each visit loads one tiny image from GitHub, named after where the visit came from (for example "reddit" or "direct"), so the project can count visits by source. It sets no cookie and carries no identifier. GitHub, as the host, sees your IP address.
+The website at https://agent-standup.com is hosted by Vercel. It sets no cookie, counts no visit and loads nothing from any other service: its fonts, pictures and videos are served from the site itself. Vercel, as the host, sees your IP address.
+
+The earlier landing page at https://atoll92.github.io/agent-standup/ is hosted by GitHub Pages. Each visit there loads one tiny image from GitHub, named after where the visit came from (for example "reddit" or "direct"), so the project can count visits by source. It also asks GitHub's public API which release is the latest, to show its version number and download links. It sets no cookie and carries no identifier. GitHub, as the host, sees your IP address.
 
 ## What the developer can see
 

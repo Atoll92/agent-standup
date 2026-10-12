@@ -1,0 +1,102 @@
+/* The website of Agent Standup. Colours and type come from brand/README.md: the lead's peach and gold on the teal of its room. No request leaves the site: fonts and media are served from it. */
+@font-face { font-family: Gabarito; src: url(fonts/gabarito.woff2) format('woff2'); font-weight: 400 900; font-display: swap }
+@font-face { font-family: Figtree; src: url(fonts/figtree.woff2) format('woff2'); font-weight: 300 900; font-display: swap }
+:root { --bg:#0e2328; --bg2:#122b31; --card:#163239; --line:#24474f; --ink:#f6f2ea; --dim:#a8c3c8; --soft:#cfe0e2; --peach:#e8845f; --gold:#f5c04a; --mint:#4fd1a5; --ink-dark:#2c2f40; --wide:1120px }
+* { box-sizing: border-box }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100% }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.6 Figtree, system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased }
+img, video { max-width: 100%; height: auto; display: block }
+a { color: inherit }
+.wrap { max-width: var(--wide); margin: 0 auto; padding: 0 24px }
+h1, h2, h3 { font-family: Gabarito, system-ui, sans-serif; font-weight: 800; letter-spacing: -.015em; margin: 0; text-wrap: balance }
+h1 { font-size: clamp(40px, 6.2vw, 72px); line-height: 1.02 }
+h2 { font-size: clamp(28px, 3.6vw, 42px); line-height: 1.08 }
+h3 { font-size: 21px; font-weight: 700; line-height: 1.2 }
+p { margin: 0 }
+.dim { color: var(--dim) }
+
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0 }
+.brand { display: flex; align-items: center; gap: 11px; text-decoration: none; font: 800 20px Gabarito, system-ui, sans-serif }
+.brand img { width: 36px; height: 36px; border-radius: 9px }
+nav { display: flex; align-items: center; gap: 22px; font-size: 15.5px; font-weight: 500 }
+nav a, nav button { color: var(--dim); text-decoration: none; background: none; border: 0; font: inherit; cursor: pointer; padding: 0 }
+nav a:hover, nav button:hover { color: var(--ink) }
+nav .lang { border: 1px solid var(--line); border-radius: 99px; padding: 3px 11px; color: var(--soft) }
+@media (max-width: 640px) { nav .hide { display: none } }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; font: 700 16.5px Figtree, system-ui, sans-serif; padding: 13px 22px; border-radius: 99px; text-decoration: none; border: 0; cursor: pointer; transition: transform .12s, background .12s }
+.btn:active { transform: translateY(1px) }
+.btn.primary { background: var(--peach); color: #1d1410 } .btn.primary:hover { background: #f0977a }
+.btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line) } .btn.ghost:hover { box-shadow: inset 0 0 0 1.5px var(--dim) }
+.btn small { font-weight: 500; opacity: .75; font-size: 13.5px }
+.btn.sm { font-size: 15px; padding: 9px 16px }
+
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 44px; align-items: center; padding: 36px 0 70px }
+@media (max-width: 920px) { .hero { grid-template-columns: 1fr; gap: 30px; padding-bottom: 50px } }
+.hero > * { min-width: 0 }
+.hero .lead { font-size: 20px; line-height: 1.5; color: var(--soft); margin: 20px 0 26px; max-width: 34em }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center }
+.cmd { margin-top: 18px; display: inline-flex; align-items: center; gap: 10px; max-width: 100%; background: #0a1a1f; border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px 9px 14px; font: 14.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--soft); cursor: pointer }
+.cmd code { min-width: 0; text-align: left }
+.cmd code i { font-style: normal; display: inline-block; max-width: 100%; overflow-wrap: anywhere; vertical-align: top }   /* a command is shown whole, never cut: it goes to a second line between two words, and inside a word only when the word alone is wider than the box */
+.cmd span { font: 600 12.5px Figtree, system-ui, sans-serif; color: var(--gold); flex: none }
+.fine { font-size: 14.5px; color: var(--dim); margin-top: 12px }
+.frame { border-radius: 20px; overflow: hidden; background: #0a1a1f; box-shadow: 0 0 0 3px var(--gold), 0 24px 60px rgba(0, 0, 0, .45) }   /* the gold border of whoever is speaking */
+.frame video, .frame img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover }
+.shot { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #0a1a1f; box-shadow: 0 16px 40px rgba(0, 0, 0, .35) }
+
+.shots { display: grid; gap: 14px }
+.with { border-block: 1px solid var(--line); background: var(--bg2) }
+.with .wrap { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; padding-block: 16px; font-size: 15px; color: var(--dim) }
+.chip { border: 1px solid var(--line); border-radius: 99px; padding: 3px 12px; color: var(--soft); background: var(--card); white-space: nowrap }
+
+section { padding: 84px 0 }
+@media (max-width: 700px) { section { padding: 56px 0 } }
+.kicker { font: 700 13.5px Figtree, system-ui, sans-serif; letter-spacing: .09em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px }
+.sub { color: var(--soft); font-size: 19px; margin-top: 14px; max-width: 40em }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 46px; align-items: center; margin-top: 64px }
+.row.flip > :first-child { order: 2 }
+@media (max-width: 860px) { .row { grid-template-columns: 1fr; gap: 22px; margin-top: 46px } .row.flip > :first-child { order: 0 } }
+.row p { color: var(--soft); margin-top: 12px }
+.row ul { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; color: var(--soft) }
+.row li { padding-left: 24px; position: relative }
+.row li::before { content: ''; position: absolute; left: 2px; top: .62em; width: 9px; height: 9px; border-radius: 3px; background: var(--peach) }
+
+.grid > *, .row > *, .two > * { min-width: 0 }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 40px }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px }
+.card p { color: var(--soft); font-size: 16px; margin-top: 8px }
+.card .btn { margin-top: 16px }
+.card code, .mono { font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #0a1a1f; border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px; color: var(--soft); overflow-wrap: anywhere }
+.card .cmd { margin-top: 14px; width: 100% }
+.card .cmd code { background: none; border: 0; padding: 0; flex: 1; font-size: 12.5px; line-height: 1.5 }
+#install .grid { grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)) }   /* three across: room for a command on one or two lines */
+.links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px } .links .btn { margin-top: 0 }
+
+.band { background: var(--bg2); border-block: 1px solid var(--line) }
+.cast { margin-top: 36px; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 14px 8px }
+.cast img { width: 100% }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 36px }
+.tip { border-left: 3px solid var(--gold); padding: 4px 0 4px 16px; color: var(--soft); margin-top: 26px; max-width: 46em }
+.wait { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; max-width: 560px }
+.wait input { flex: 1; min-width: 220px; font: inherit; padding: 13px 16px; border-radius: 99px; border: 1px solid var(--line); background: #0a1a1f; color: var(--ink) }
+.wait input:focus { outline: 2px solid var(--gold); outline-offset: 1px }
+
+footer { border-top: 1px solid var(--line); padding: 36px 0 56px; color: var(--dim); font-size: 15px }
+footer .cols { display: flex; flex-wrap: wrap; gap: 14px 40px; justify-content: space-between; align-items: flex-start }
+footer p { max-width: 46em; margin-top: 8px }
+footer nav { flex-wrap: wrap; gap: 8px 20px }
+footer a { color: var(--soft) }
+
+.doc { max-width: 760px; padding: 20px 0 80px }
+.doc h1 { font-size: clamp(34px, 5vw, 52px); margin-bottom: 18px }
+.doc h2 { font-size: 26px; margin: 44px 0 10px }
+.doc p, .doc li { color: var(--soft) } .doc p { margin: 0 0 14px }
+.doc ul { padding-left: 22px; margin: 0 0 14px } .doc li { margin: 6px 0 }
+.doc a { color: var(--gold) }
+.doc code { font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px }
+.tbl { overflow-x: auto; margin: 0 0 14px }
+.doc table { border-collapse: collapse; width: 100%; font-size: 15.5px }
+.doc th, .doc td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); color: var(--soft) }
+.doc th { color: var(--dim); font-weight: 600 }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto } .btn { transition: none } }

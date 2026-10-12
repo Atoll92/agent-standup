@@ -1,0 +1,19 @@
+# The website (see vercel.json) is built from a few folders only: nothing else of the repository is sent to the host.
+/*
+!/scripts
+!/website
+!/brand
+!/media
+!/public
+!/docs
+!/package.json
+!/PRIVACY.md
+!/TRADEMARKS.md
+!/vercel.json
+/public/*
+!/public/favicon.svg
+/docs/*
+!/docs/media
+/docs/media/*
+!/docs/media/social.jpg
+/website/dist

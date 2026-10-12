@@ -21,6 +21,7 @@
     "start": "node server.js",
     "package": "npx --yes @vscode/vsce package --allow-missing-repository --skip-license",
     "landing": "node scripts/build-landing.js",
+    "website": "node scripts/build-website.js",
     "brand": "node scripts/build-brand.js",
     "plugin": "node scripts/sync-plugin.js",
     "capture": "node scripts/capture-demo.js all",
@@ -142,7 +143,7 @@
     "type": "git",
     "url": "https://github.com/Atoll92/agent-standup.git"
   },
-  "homepage": "https://atoll92.github.io/agent-standup/",
+  "homepage": "https://agent-standup.com",
   "bugs": {
     "url": "https://github.com/Atoll92/agent-standup/issues"
   },

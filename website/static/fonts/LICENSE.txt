@@ -1,0 +1,3 @@
+Figtree (Copyright 2022 The Figtree Project Authors, https://github.com/erikdkennedy/figtree) and Gabarito (Copyright 2023 The Gabarito Project Authors, https://github.com/naipefoundry/gabarito)
+are licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
+The files here are the Latin subsets of the variable fonts, served from this site so that no visit goes through a font service.

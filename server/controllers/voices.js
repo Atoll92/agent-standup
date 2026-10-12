@@ -8,12 +8,13 @@ class VoicesController {
 
   // GET /api/voices[?engine=kokoro]
   index(exchange) {
-    exchange.json(exchange.param('engine') === 'kokoro' ? this.speech.kokoroVoices() : this.speech.systemVoices());
+    if (exchange.param('engine') === 'kokoro') return exchange.json(this.speech.kokoroVoices());
+    return this.speech.loadSystemVoices().then((voices) => exchange.json(voices));
   }
 
-  // GET /api/tts?text&voice&rate&engine
+  // GET /api/tts?text&voice&rate&engine&fb (fb: the system voice for when Kokoro cannot say it)
   speak(exchange) {
-    return this.speech.speak(exchange.param('text') || '', exchange.param('voice'), exchange.param('rate'), exchange.param('engine'))
+    return this.speech.speak(exchange.param('text') || '', exchange.param('voice'), exchange.param('rate'), exchange.param('engine'), exchange.param('fb'))
       .then((file) => exchange.sendFile(file, { 'content-type': 'audio/wav', 'cache-control': 'max-age=86400' }))
       .catch((error) => exchange.json({ error: String(error.message) }, 400));
   }

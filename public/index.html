@@ -18,7 +18,7 @@
   /* ---------- header ---------- */
   header { height:48px; flex:none; display:flex; align-items:center; gap:10px; padding:0 12px; border-bottom:1px solid var(--line); background:var(--bg) }
   .brand { display:flex; align-items:center; gap:9px; min-width:0; overflow:hidden } .brand .logo { flex:none } .brand > div { min-width:0 } .brand b { overflow:hidden; text-overflow:ellipsis }
-  header > * { flex-shrink:0 } header .brand { flex-shrink:100 } header #board { flex-shrink:50 } .tok, .ctxp { flex-shrink:2; min-width:0; overflow:hidden; text-overflow:ellipsis } #pill { flex-shrink:.05; min-width:0; overflow:hidden; text-overflow:ellipsis }   /* in a narrow window the buttons (the gear above all) stay whole: the name gives way first, then the counters */
+  header > * { flex-shrink:0 } header .brand { flex-shrink:100; min-width:26px } header #board { flex-shrink:.01 } .tok, .ctxp { flex-shrink:2; min-width:0; overflow:hidden; text-overflow:ellipsis } #pill { flex-shrink:.05; min-width:min-content; overflow:hidden; text-overflow:ellipsis }   /* in a narrow window the buttons (the gear above all) stay whole: the name gives way first (down to the logo), then the counters; the chips only when nothing else can (.01, not 0: the header must never overflow) */
   @media (max-width:720px) { .ctxp { display:none !important } } @media (max-width:620px) { .tok { display:none !important } } @media (max-width:560px) { #bCoffee { display:none !important } } @media (max-width:480px) { header { gap:6px; padding-left:8px; padding-right:8px } }   /* narrow: the coffee link stays in ⚙ › Tools */
   .logo { width:26px; height:26px; display:block; flex:none }
   .brand b { font:700 14px "Comic Sans MS","Chalkboard SE",system-ui,sans-serif; white-space:nowrap }
@@ -153,7 +153,7 @@
   /* the header's status chips are styled by id: "board" is also the class the Sessions view puts on <body>, and a rule on .board used to hide the whole page in a narrow window */
   #board { display:flex; gap:6px; font-size:11.5px; flex-wrap:nowrap; min-width:0; overflow:hidden } #board em { font-style:normal } #board span { flex:none; padding:2px 8px; border-radius:99px; background:var(--panel2); border:1px solid var(--line); white-space:nowrap }
   #board .working { color:var(--gold) } #board .waiting { color:#8fd3ff } #board .blocked { color:#fff; background:#c0392b; border-color:#c0392b } #board .stalled { color:#1b1d27; background:#ffb347; border-color:#ffb347 } #board .done { color:var(--ok) }
-  @media (max-width:1180px) { #board em { display:none } .meet { display:none } }
+  @media (max-width:1180px) { #board em { display:none } .meet { display:none } } #board.tight em { display:none }   /* tight: set by fitBoard when the chips do not all fit with their words */
   @media (max-width:640px) { #board { display:none } }
   /* what is said sits above everything else on the tile (badge, prop, ticker) and is never cut: a line longer than its tile grows over the tiles below */
   .bubble { display:none; position:absolute; z-index:6; top:6px; left:6px; width:max-content; max-width:calc(100% - 12px); background:#fff; color:#1b1d27; border-radius:11px; padding:6px 10px; font-size:12.5px; line-height:1.35; box-shadow:0 4px 14px rgba(0,0,0,.35); overflow-wrap:anywhere }
@@ -290,13 +290,14 @@
   <button class="mi" data-t="vanish"><span data-fr="Retirer les agents terminés (2 min)" data-en="Remove finished agents (2 min)">Retirer les agents terminés (2 min)</span><i class="sw"></i></button>
   <button class="mi" data-t="epi"><span data-fr="Réactions et blagues" data-en="Reactions & jokes">Réactions et blagues</span><i class="sw"></i></button>
   <h4 data-fr="Source" data-en="Source">Source</h4>
-  <div class="box"><div class="seg" style="width:100%" id="modeSeg"><button data-m="live" style="flex:1">Live</button><button data-m="replay" style="flex:1">Replay</button><button data-m="demo" style="flex:1">Demo</button></div>
+  <div class="box"><div class="seg" style="width:100%" id="modeSeg"><button data-m="live" style="flex:1" data-fr="Live" data-en="Live">Live</button><button data-m="replay" style="flex:1" data-fr="Replay" data-en="Replay">Replay</button><button data-m="demo" style="flex:1" data-fr="Démo" data-en="Demo">Demo</button></div>
     <select id="liveProj" style="display:none;margin-top:6px" title="Project to follow"></select>
     <select id="sessions" style="display:none"></select></div>
   <h4 data-fr="Personnages" data-en="Characters">Personnages</h4>
   <div class="box"><select id="charPack" aria-label="Characters"><option value="none" data-fr="Personnages dessinés" data-en="Drawn characters">Personnages dessinés</option><option value="folder" data-fr="Mon dossier" data-en="My folder">Mon dossier</option><option value="cats" data-fr="Pack de chats" data-en="Cat pack">Pack de chats</option></select></div>
   <div class="box"><div id="charInfo" class="dim" style="font-size:11.5px;line-height:1.5"></div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn" id="charReload" data-fr="Recharger" data-en="Reload">Recharger</button><button class="btn" id="charOpen" style="display:none" data-fr="Ouvrir le dossier" data-en="Open folder">Ouvrir le dossier</button></div></div>
   <button class="mi" data-t="customLaptop"><span data-fr="Ordinateur devant vos personnages" data-en="Laptop in front of your own characters">Ordinateur devant vos personnages</span><i class="sw"></i></button>
+  <button class="mi" data-t="ownNames"><span data-fr="Garder les noms de mes agents" data-en="Keep my agents’ own names">Garder les noms de mes agents</span><i class="sw"></i></button>
   <h4 data-fr="Outils" data-en="Tools">Outils</h4>
   <button class="mi" id="mCoffee" style="display:none"><span id="mCoffeeT"></span></button>
   <button class="mi" id="mKeys"><span data-fr="⌨ Raccourcis clavier (?)" data-en="⌨ Keyboard shortcuts (?)">⌨ Raccourcis clavier (?)</span></button>
@@ -344,7 +345,7 @@ const CID = Math.random().toString(36).slice(2, 12);   // identifies this window
 const Q = new URLSearchParams(location.search);
 const EMBED = Q.get('embed') === '1' || window.parent !== window;
 
-let prefs = { lang: 'en', voice: true, roster: true, banter: true, reactions: false, office: false, officeVol: 0.8, vstyle: 'cartoon', notify: false, epi: false, vanish: true, music: false, station: 'fip', musicVol: 0.35, view: 'call', hideCode: false };
+let prefs = { lang: 'en', voice: true, roster: true, banter: true, reactions: false, office: false, officeVol: 0.8, vstyle: 'cartoon', notify: false, epi: false, vanish: true, music: false, station: 'fip', musicVol: 0.35, view: 'call', hideCode: false, ownNames: true };
 { let loc = {}; try { loc = JSON.parse(localStorage.getItem('cc.prefs') || '{}') || {}; } catch {}   // the settings file (shared by every window) and this origin's copy: the more recent one wins
   const sv = window.SAVED_PREFS && typeof window.SAVED_PREFS === 'object' ? window.SAVED_PREFS : {}; Object.assign(prefs, (sv._t || 0) > (loc._t || 0) ? sv : loc); }
 if (prefs.vstyle === 'babble') prefs.vstyle = 'animal', prefs.vstyleChosen = true;
@@ -411,11 +412,16 @@ function renderCharInfo() {
   $('#charOpen').style.display = EMBED ? '' : 'none';
 }
 function persona(a) { const p = persona0(a); p.custom = customFor(a.id); return p; }
+const subName = (a, h) => (prefs.ownNames && a.own ? (nameBook[a.id] = a.own) : a.given || uniqueName(a.id, h));   // own: the name the person gave this agent (see ownName in server.js); otherwise a first name from the list
+function renameAll() {   // ⚙ → own names on or off: every sub-agent is named again, in the order it arrived
+  for (const k in nameBook) delete nameBook[k]; for (const p of Object.values(S.agents)) if (p.id !== 'main' && p.id !== 'user') p.name = subName(p, hash(p.id));
+  buildStage(); paintStatus(); renderLog(true); syncUI();
+}
 function persona0(a) {
-  const h = hash(a.id), base = { ...a };
+  const h = hash(a.id), base = { ...a, given: 'given' in a ? a.given : a.name };
   if (a.id === 'main') return { ...base, name: a.name || 'Claude', role: L('Chef', 'Lead'), shirt: '#e8845f', shape: 0, acc: 1, eye: 0, glasses: false, scene: 6, prop: 1, acc2: '#f5c04a', lead: true, vi: 0, gid: 'main' };
   if (a.id === 'user') return { ...base, name: L('Vous', 'You'), role: L('Humain', 'Human'), shirt: '#8a94c9', shape: 1, acc: 2, eye: 1, glasses: false, scene: 7, prop: 1, acc2: '#ff7a6b', vi: 3, gid: 'user' };
-  return { ...base, name: a.name || uniqueName(a.id, h), roleEn: a.roleEn || a.role, role: (FR() && a.roleFr) || a.roleEn || a.role, shirt: PAL[(h >>> 6) % 8], shape: (h >>> 3) % 5, acc: (h >>> 9) % 6, eye: (h >>> 12) % 3, glasses: ((h >>> 15) % 4) === 0,
+  return { ...base, name: subName(base, h), roleEn: a.roleEn || a.role, role: (FR() && a.roleFr) || a.roleEn || a.role, shirt: PAL[(h >>> 6) % 8], shape: (h >>> 3) % 5, acc: (h >>> 9) % 6, eye: (h >>> 12) % 3, glasses: ((h >>> 15) % 4) === 0,
            scene: (h >>> 18) % 6, prop: (h >>> 21) % 3, acc2: PAL[(h >>> 24) % 8], vi: h >>> 4, gid: h.toString(36) };
 }
 
@@ -756,33 +762,39 @@ const synth = window.speechSynthesis;
 const estMs = (text) => Math.min(9000, 900 + text.length * 42) / spd();
 
 const NOVELTY = /grandma|grandpa|rocko|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|albert|fred|junior|kathy|ralph|hysterical|deranged|pipe/i;
-const GOOD = /premium|enhanced|natural|siri|neural|améli|amelie|thomas|jacques|audrey|marie|eddy|flo\b|reed|sandy|shelley|samantha|daniel|karen|moira|serena|oliver|google|hortense|julie|paul|denise|henri|eloise|zira|david|hazel|mark|aria|guy/i;
-const voiceScore = (n) => (/premium|enhanced|natural|neural|siri/i.test(n) ? 100 : 0) + (GOOD.test(n) ? 30 : 0) - (NOVELTY.test(n) ? 200 : 0);
-function rankVoices(list) {   // list of names → best distinct voices first
-  const seen = new Set(), out = [];
-  [...list].sort((a, b) => voiceScore(b) - voiceScore(a)).forEach((n) => { const base = n.replace(/\s*\(.*$/, ''); if (voiceScore(n) > -100 && !seen.has(base)) { seen.add(base); out.push(n); } });
+const ROBOT = /^(eddy|flo|reed|sandy|shelley)\b/i;   /* Apple's synthetic voices: understandable, and plainly a machine. Kept for when nothing else is installed */
+const GOOD = /premium|enhanced|natural|siri|neural|améli|amelie|thomas|jacques|audrey|aurélie|aurelie|marie|samantha|daniel|karen|moira|serena|oliver|google|hortense|julie|paul|denise|henri|eloise|zira|david|hazel|mark|aria|guy/i;
+const voiceScore = (n) => (/premium|enhanced|natural|neural|siri/i.test(n) ? 100 : 0) + (GOOD.test(n) ? 30 : 0) - (ROBOT.test(n) ? 50 : 0) - (NOVELTY.test(n) ? 200 : 0);
+const frHome = () => [...(navigator.languages || []), navigator.language || ''].map((l) => String(l).replace('-', '_')).find((l) => /^fr_[A-Z]{2}$/.test(l)) || 'fr_FR';   /* French from France unless the computer itself is set to another French */
+function rankVoices(list, lang) {   // [{ name, locale }] → names, best distinct voices first. The synthetic ones only when fewer than two others exist
+  const home = lang === 'fr' ? frHome() : '', sc = (v) => voiceScore(v.name) + (home && v.locale === home ? 10 : 0), seen = new Set(), out = [];
+  [...list].sort((a, b) => sc(b) - sc(a)).forEach((v) => { const base = v.name.replace(/\s*\(.*$/, ''), x = sc(v); if (x > -100 && (x >= 0 || out.length < 2) && !seen.has(base)) { seen.add(base); out.push(v.name); } });
   return out.slice(0, 5);
 }
 const TTS = {
-  server: false, engine: 'system', platform: '', pool: { fr: [], en: [] }, cache: new Map(), made: new Map(), q: [], busy: false, now: 0,
+  server: false, engine: 'system', platform: '', pool: { fr: [], en: [] }, sys: { fr: [], en: [] }, kv: new Set(), cache: new Map(), made: new Map(), q: [], busy: false, now: 0,
   async init() {
-    this.engine = 'system'; this.server = false; this.pool = { fr: [], en: [] }; this.cache.clear(); this.made.clear(); this.q = [];
+    this.engine = 'system'; this.server = false; this.pool = { fr: [], en: [] }; this.sys = { fr: [], en: [] }; this.kv = new Set(); this.cache.clear(); this.made.clear(); this.q = [];
     try {
-      if (prefs.vstyle === 'kokoro') {   // natural voices installed on demand; until they are, the system voices stay in use
-        const k = await (await fetch('/api/voices?engine=kokoro')).json();
-        if (k.available && k.ready) { this.server = true; this.engine = 'kokoro'; this.platform = k.platform || ''; for (const l of ['fr', 'en']) this.pool[l] = k.voices.filter((v) => v.locale.startsWith(l + '_')).map((v) => v.name); return; }
+      let k = null; if (prefs.vstyle === 'kokoro') { try { k = await (await fetch('/api/voices?engine=kokoro')).json(); } catch {} if (!k || !k.available || !k.ready) k = null; }   // natural voices installed on demand; until they are, the system voices stay in use
+      let d = { available: false, voices: [] }; try { d = await (await fetch('/api/voices')).json(); } catch {}
+      this.platform = d.platform || (k && k.platform) || ''; const sys = {}; for (const l of ['fr', 'en']) sys[l] = d.available ? rankVoices(d.voices.filter((v) => v.locale.startsWith(l + '_')), l) : [];
+      if (k) {   // Kokoro speaks the languages it has voices for (English); the others are read by the system voices, each character keeping one of its own
+        this.server = true; this.engine = 'kokoro'; this.sys = sys;
+        for (const l of ['fr', 'en']) { const kv = k.voices.filter((v) => v.locale.startsWith(l + '_')).map((v) => v.name); kv.forEach((v) => this.kv.add(v)); this.pool[l] = kv.length ? kv : sys[l]; }
+        return;
       }
-      const d = await (await fetch('/api/voices')).json(); this.platform = d.platform || ''; if (!d.available) return; this.server = true;
-      for (const l of ['fr', 'en']) this.pool[l] = rankVoices(d.voices.filter((v) => v.locale.startsWith(l + '_')).map((v) => v.name)); } catch {}
+      if (!d.available) return; this.server = true; this.pool = sys; } catch {}
   },
   voiceFor(p, fr = FR()) { const pool = this.pool[fr ? 'fr' : 'en']; return pool.length ? (p.id === 'main' ? pool[0] : pool[(p.vi >>> 2) % pool.length]) : null; },
   rate() { return Math.round(Math.max(120, Math.min(330, 178 * (S.live ? 1.12 * lagFactor() * (S.boost > 1 ? 1.25 : 1) : +$('#speed').value))) / 10) * 10; },
   rateAt(k, boost) { const i = S.idx, b = S.boost; S.idx = k; S.boost = boost; const r = this.rate(); S.idx = i; S.boost = b; return r; },   // the rate rate() will give once playback is at event k
   buf(text, voice, rate, ahead) {   // ahead: made in advance (see warmTTS); otherwise the line is wanted now
-    const vt = this.engine + '|' + voice + '|' + text, K = (r) => this.engine + '|' + voice + '|' + r + '|' + text, key = K(rate), got = this.made.get(vt) || [];   // got: the rates at which this text is ready in this voice
+    const eng = this.kv.has(voice) ? 'kokoro' : 'system', fb = eng === 'kokoro' && this.sys.en.length ? this.sys.en[Math.max(0, this.pool.en.indexOf(voice)) % this.sys.en.length] : '';   /* fb: the system voice that reads the line if Kokoro cannot */
+    const vt = eng + '|' + voice + '|' + text, K = (r) => eng + '|' + voice + '|' + r + '|' + text, key = K(rate), got = this.made.get(vt) || [];   // got: the rates at which this text is ready in this voice
     if (!ahead && S.live && !got.includes(rate)) { const r = got.find((x) => Math.abs(x - rate) <= rate * 0.2 && this.cache.has(K(x))); if (r) return this.cache.get(K(r)); }   // made ahead at the rate of a moment ago (the call fell behind or caught up since): played as it is, a second of silence is worse than a slightly different pace
     if (!this.cache.has(key)) {
-      this.cache.set(key, fetch(`/api/tts?engine=${this.engine}&voice=${encodeURIComponent(voice)}&rate=${rate}&text=${encodeURIComponent(text)}`).then((r) => { if (!r.ok) throw new Error('tts'); return r.arrayBuffer(); }).then((b) => AUD.ctx.decodeAudioData(b)));
+      this.cache.set(key, fetch(`/api/tts?engine=${eng}&voice=${encodeURIComponent(voice)}&rate=${rate}${fb ? '&fb=' + encodeURIComponent(fb) : ''}&text=${encodeURIComponent(text)}`).then((r) => { if (!r.ok) throw new Error('tts'); return r.arrayBuffer(); }).then((b) => AUD.ctx.decodeAudioData(b)));
       if (this.cache.size > 60) this.cache.delete(this.cache.keys().next().value);
       this.cache.get(key).then(() => { this.made.set(vt, [...(this.made.get(vt) || []), rate]); if (this.made.size > 120) this.made.delete(this.made.keys().next().value); }, () => this.cache.delete(key));
       if (!ahead) { this.now++; const end = () => { this.now--; this.pump(); }; this.cache.get(key).then(end, end); }   // a line wanted now never waits behind the ones made ahead: they stop being started until it is ready
@@ -902,7 +914,7 @@ async function speakServer(text, p, gain, token, fr = FR()) {
 function speakBrowser(text, p, token, fr = FR()) {   // fallback where no server voice exists (Windows/Linux)
   return new Promise((resolve) => {
     const vs = synth.getVoices().filter((v) => v.lang.toLowerCase().startsWith(fr ? 'fr' : 'en')); if (!vs.length) return resolve(false);
-    const ranked = rankVoices(vs.map((v) => v.name)), voice = vs.find((v) => v.name === (p.id === 'main' ? ranked[0] : ranked[(p.vi >>> 2) % ranked.length])) || vs[0];
+    const ranked = rankVoices(vs.map((v) => ({ name: v.name, locale: v.lang.replace('-', '_') })), fr ? 'fr' : 'en'), voice = vs.find((v) => v.name === (p.id === 'main' ? ranked[0] : ranked[(p.vi >>> 2) % ranked.length])) || vs[0];
     const parts = speakable(text).match(/[^.!?;:]+[.!?;:]*/g) || [text]; synth.cancel(); let i = 0, done = false, started = false, t0 = 0, said = 0; const all = parts.reduce((n, x) => n + x.length, 0);
     const fin = (ok) => { if (!done) { done = true; resolve(ok); } };
     setTimeout(() => { if (!started && !done) { synth.cancel(); fin(false); } }, 2500);   // engine never started (e.g. inside a webview)
@@ -1032,7 +1044,7 @@ function paintStatus() {
   const prev = $('.row.now'); if (prev) prev.classList.remove('now');
   const now = $(`.row[data-i="${S.idx}"]`); if (now) { now.classList.add('now'); if (document.body.classList.contains('log')) now.scrollIntoView({ block: 'nearest' }); }
   later('detail', renderDetail); later('tree', renderTree); later('meet', renderMeet, 400); drawGantt();
-  $('#seek').value = S.idx; $('#pos').textContent = `${Math.min(S.idx + 1, S.events.length)} / ${S.events.length}`;
+  const sk = $('#seek'); sk.max = Math.max(0, S.events.length - 1); sk.value = S.idx; $('#pos').textContent = `${Math.min(S.idx + 1, S.events.length)} / ${S.events.length}`;
 }
 const applyStatus = (ev) => {
   if (ev.kind === 'order') { (S.waitOn[ev.agent] = S.waitOn[ev.agent] || new Set()).add(ev.to); S.orderTs[ev.to] = ev.ts || 0; S.status[ev.to] = 'working'; delete S.doneAt[ev.to]; S.gone.delete(ev.to); S.leaving.delete(ev.to); if (!ev.bg && ev.toolId) S.run[ev.agent] = { id: ev.toolId, ts: ev.ts, start: performance.now(), name: 'Agent' }; const t = $('#t-' + ev.to); if (t) t.classList.remove('vanishing'); }
@@ -1141,8 +1153,14 @@ function paintStates() {
   paintPill();
   const b = $('#board'), parts = [['working', '⚙', L('au travail', 'working')], ['waiting', '🔗', L('en attente', 'waiting')], ['blocked', '✋', L('vous attendent', 'need you')], ['stalled', '⚠', L('bloqués', 'stalled')], ['done', '✓', L('terminés', 'done')]]
     .filter(([k]) => n[k] && !S.pillSess).map(([k, i, l]) => `<span class="${k}" title="${n[k]} ${l}">${i} ${n[k]}<em> ${l}</em></span>`).join('');
-  if (b.innerHTML !== parts) b.innerHTML = parts; S.nBlocked = n.blocked + n.stalled; S.attn = attn; paintRoster(ros); return n;
+  if (b.innerHTML !== parts) b.innerHTML = parts; fitBoard(); S.nBlocked = n.blocked + n.stalled; S.attn = attn; paintRoster(ros); return n;
 }
+function fitBoard(force) {   // the chips lose their words when they do not all fit (a long language, a narrower window): a chip is never cut mid-word. Tried again with the words only when the window or the texts around have changed
+  const b = $('#board'), key = innerWidth + '|' + b.textContent.length + '|' + $('#pill').textContent.length + '|' + $('#subtitle').textContent.length;
+  if (b.classList.contains('tight')) { if (!force && key === fitBoard.key) return; b.classList.remove('tight'); }
+  fitBoard.key = key; if (b.scrollWidth > b.clientWidth + 1) b.classList.add('tight');
+}
+addEventListener('resize', () => fitBoard(true)); new ResizeObserver(() => requestAnimationFrame(() => fitBoard(true))).observe($('#board'));   /* the room the chips have also changes when the texts beside them do (a title, a longer status) */
 const RORDER = { blocked: 0, stalled: 1, working: 2, waiting: 3, idle: 4, done: 5 };
 function paintRoster(ros) {   // a fixed list beside the call: who is doing what, urgent first, readable even with dozens of agents
   const box = $('#roster'); if (!box || !document.body.classList.contains('rost')) return;
@@ -2189,7 +2207,7 @@ function menuInit() {
     $('#menuNone').style.display = q && !secs.some((sc) => sc.items.some((e) => !e.classList.contains('mhide'))) ? '' : 'none';
   };
 }
-$('#menu').onclick = (e) => { const b = e.target.closest('.mi[data-t]'); if (!b) return; prefs[b.dataset.t] = !prefs[b.dataset.t]; savePrefs(); if (prefs[b.dataset.t] && ['voice', 'office', 'music', 'notify'].includes(b.dataset.t)) claimAudio(); b.querySelector('.sw').classList.toggle('on', prefs[b.dataset.t]); AUD.apply(); if (b.dataset.t === 'office') $('#officeBox').style.display = prefs.office ? '' : 'none'; if (b.dataset.t === 'customLaptop') { for (const k in imgCache) delete imgCache[k]; buildStage(); paintStatus(); } if (b.dataset.t === 'reactions') document.body.classList.toggle('react', prefs.reactions); if (b.dataset.t === 'roster') { document.body.classList.toggle('rost', prefs.roster); paintStates(); } if (b.dataset.t === 'notify') { prefs.notifyChosen = true; savePrefs(); } if (b.dataset.t === 'notify' && prefs.notify) askNotify(); if (b.dataset.t === 'vanish' && !prefs.vanish) { S.gone.clear(); paintStatus(); }
+$('#menu').onclick = (e) => { const b = e.target.closest('.mi[data-t]'); if (!b) return; prefs[b.dataset.t] = !prefs[b.dataset.t]; savePrefs(); if (prefs[b.dataset.t] && ['voice', 'office', 'music', 'notify'].includes(b.dataset.t)) claimAudio(); b.querySelector('.sw').classList.toggle('on', prefs[b.dataset.t]); AUD.apply(); if (b.dataset.t === 'office') $('#officeBox').style.display = prefs.office ? '' : 'none'; if (b.dataset.t === 'customLaptop') { for (const k in imgCache) delete imgCache[k]; buildStage(); paintStatus(); } if (b.dataset.t === 'ownNames') renameAll(); if (b.dataset.t === 'reactions') document.body.classList.toggle('react', prefs.reactions); if (b.dataset.t === 'roster') { document.body.classList.toggle('rost', prefs.roster); paintStates(); } if (b.dataset.t === 'notify') { prefs.notifyChosen = true; savePrefs(); } if (b.dataset.t === 'notify' && prefs.notify) askNotify(); if (b.dataset.t === 'vanish' && !prefs.vanish) { S.gone.clear(); paintStatus(); }
   if (b.dataset.t === 'music') { $('#musicBox').style.display = prefs.music ? '' : 'none'; if (prefs.music) { AUD.init(); AUD.apply(); } } };
 $('#station').innerHTML = STATIONS.map((s) => `<option value="${s.id}">📻 ${s.name}</option>`).join('');
 $('#station').value = prefs.station; $('#musicVol').value = prefs.musicVol; $('#musicBox').style.display = prefs.music ? '' : 'none';
@@ -2205,8 +2223,8 @@ async function kokoroUI() {
   b.disabled = st.installing || !st.npm; b.textContent = st.installing ? L('Installation…', 'Installing…') : L(`Installer (${st.sizeMb} Mo)`, `Install (${st.sizeMb} MB)`);
   h.textContent = st.installing ? L('Téléchargement en cours, vous pouvez continuer : les voix du système servent en attendant.', 'Downloading, you can carry on: system voices are used meanwhile.')
     : st.error ? st.error : !st.npm && !st.installed ? L('npm est introuvable : installez Node.js pour activer cette option.', 'npm not found: install Node.js to enable this option.')
-    : st.installed ? (st.gaveUp ? L('Le moteur s’est arrêté : les voix du système servent à la place.', 'The engine stopped: system voices are used instead.') : st.ready ? L('Voix prêtes.', 'Voices ready.') : L('Chargement du modèle (téléchargé au premier usage, environ 305 Mo)…', 'Loading the model (downloaded on first use, about 305 MB)…'))
-    : L('Voix locales de bonne qualité, en anglais surtout (une seule voix française). Gratuit, rien n’est envoyé nulle part.', 'Good-quality local voices, mostly English (one French voice). Free, nothing leaves your machine.');
+    : st.installed ? (st.gaveUp ? L('Le moteur s’est arrêté : les voix du système servent à la place.', 'The engine stopped: system voices are used instead.') : st.ready ? L('Voix prêtes.', 'Voices ready.') + ' ' + L('Le français est lu par les voix de votre système : en installer une « améliorée » ou « premium » change tout.', 'French is read by your system voices: installing an “enhanced” or “premium” one makes a big difference.') : L('Chargement du modèle (téléchargé au premier usage, environ 305 Mo)…', 'Loading the model (downloaded on first use, about 305 MB)…'))
+    : L('Voix locales de bonne qualité, en anglais (le français passe par les voix de votre système). Gratuit, rien n’est envoyé nulle part.', 'Good-quality local voices, in English (French lines use your system voices). Free, nothing leaves your machine.');
   if ((st.installing || (st.installed && !st.ready && !st.gaveUp)) && !kokoroTimer) kokoroTimer = setInterval(async () => { await kokoroUI(); }, 2500);
   if (!st.installing && (st.ready || st.gaveUp || !st.installed) && kokoroTimer) { clearInterval(kokoroTimer); kokoroTimer = null; if (st.ready && TTS.engine !== 'kokoro') TTS.init(); }
 }
@@ -2255,7 +2273,7 @@ function lastWord() {   // the last sentence the lead said: a closing question (
 function paintPill() {
   const pill = $('#pill'), now = Date.now(); let cls = '', txt = '', to = '', tip = '', sess = false;
   if (S.offline) { cls = 'off'; txt = '⚠ ' + L('HORS LIGNE', 'OFFLINE'); }
-  else if (!S.live) txt = 'REPLAY';
+  else if (!S.live) txt = L('REPLAY', 'REPLAY');
   else if (!S.cur) txt = L('En attente d’une session', 'Waiting for a session');
   else if (S.locked) txt = L('PRÊT', 'READY');
   else if (!S.playing) txt = L('PAUSE', 'PAUSED');

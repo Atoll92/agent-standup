@@ -2,32 +2,32 @@
 //   the system's voices: macOS `say`, Windows System.Speech (SAPI) through PowerShell, Linux espeak-ng;
 //   or Kokoro's natural voices, once the person installed them (see kokoro.js).
 const fs = require('fs'), os = require('os'), path = require('path'), crypto = require('crypto');
-const { spawn, execFileSync } = require('child_process');
+const { spawn, execFile, execFileSync } = require('child_process');
 
 const WINDOWS = process.platform === 'win32', MAC = process.platform === 'darwin';
 const POWERSHELL = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command'];
 const CACHE_DAYS_MS = 864e5;
 const MAX_TEXT = { system: 700, kokoro: 1500 };
 
-// The voices of the system, by name and locale ('fr_FR').
-function systemVoices() {
+// The command that lists the system's voices: [program, arguments, timeout in ms].
+const LIST_VOICES = MAC ? ['say', ['-v', '?'], 5000]
+  : WINDOWS ? ['powershell.exe', [...POWERSHELL, "Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name + '|' + $_.VoiceInfo.Culture.Name }"], 20000]
+  : ['espeak-ng', ['--voices'], 5000];
+
+// What that command printed → { available, voices: [{ name, locale ('fr_FR') }], platform }
+function parseVoices(output) {
   const voices = [];
-  try {
-    if (MAC) {
-      const output = execFileSync('say', ['-v', '?'], { encoding: 'utf8', timeout: 5000 });
-      for (const line of output.split('\n')) { const match = line.match(/^(.+?)\s{2,}([a-z]{2}_[A-Z]{2})\s+#/); if (match) voices.push({ name: match[1].trim(), locale: match[2] }); }
-    } else if (WINDOWS) {
-      const output = execFileSync('powershell.exe', [...POWERSHELL, "Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name + '|' + $_.VoiceInfo.Culture.Name }"], { encoding: 'utf8', timeout: 20000, windowsHide: true });
-      for (const line of output.split(/\r?\n/)) { const [name, locale] = line.trim().split('|'); if (name && locale) voices.push({ name, locale: locale.replace('-', '_') }); }
-    } else {
-      const output = execFileSync('espeak-ng', ['--voices'], { encoding: 'utf8', timeout: 5000 });
-      for (const line of output.split('\n').slice(1)) {
-        const columns = line.trim().split(/\s+/);
-        if (columns[1] && /^(fr|en)/.test(columns[1])) voices.push({ name: columns[1], locale: columns[1].replace('-', '_').replace(/^(\w{2})$/, (language) => language + '_' + language.toUpperCase()) });
-      }
+  if (MAC) {
+    for (const line of output.split('\n')) { const match = line.match(/^(.+?)\s{2,}([a-z]{2}_[A-Z]{2})\s+#/); if (match) voices.push({ name: match[1].trim(), locale: match[2] }); }
+  } else if (WINDOWS) {
+    for (const line of output.split(/\r?\n/)) { const [name, locale] = line.trim().split('|'); if (name && locale) voices.push({ name, locale: locale.replace('-', '_') }); }
+  } else {
+    for (const line of output.split('\n').slice(1)) {
+      const columns = line.trim().split(/\s+/);
+      if (columns[1] && /^(fr|en)/.test(columns[1])) voices.push({ name: columns[1], locale: columns[1].replace('-', '_').replace(/^(\w{2})$/, (language) => language + '_' + language.toUpperCase()) });
     }
-  } catch {}
-  return voices;
+  }
+  return { available: voices.length > 0, voices, platform: process.platform };
 }
 
 // One line, spoken by a system voice at `wordsPerMinute`, into the wav file `out`.
@@ -50,6 +50,7 @@ function speakWithSystem(voice, wordsPerMinute, text, out) {
 
 class Speech {
   #systemVoices = null;
+  #listingVoices = null;   // the system being asked for its voices, while it answers
   #jobs = new Map();   // cache key → the speech being made for it
 
   // Makes the cache folder (private to the person) and drops what is older than a day.
@@ -60,10 +61,22 @@ class Speech {
     try { for (const name of fs.readdirSync(dir)) { const file = path.join(dir, name); if (Date.now() - fs.statSync(file).mtimeMs > CACHE_DAYS_MS) fs.unlinkSync(file); } } catch {}
   }
 
-  // { available, voices: [{ name, locale }], platform }, asked of the system once.
+  // { available, voices: [{ name, locale }], platform }, asked of the system once, waiting for its answer.
   systemVoices() {
-    if (!this.#systemVoices) { const voices = systemVoices(); this.#systemVoices = { available: voices.length > 0, voices, platform: process.platform }; }
-    return this.#systemVoices;
+    if (this.#systemVoices) return this.#systemVoices;
+    let output = '';
+    try { output = execFileSync(LIST_VOICES[0], LIST_VOICES[1], { encoding: 'utf8', timeout: LIST_VOICES[2], windowsHide: true }); } catch {}
+    return (this.#systemVoices = parseVoices(output));
+  }
+
+  // The same, without holding the server up: the system's first answer takes a second or more, and the session the page asks for
+  // at the same moment must not wait behind it.
+  loadSystemVoices() {
+    if (this.#systemVoices) return Promise.resolve(this.#systemVoices);
+    return this.#listingVoices || (this.#listingVoices = new Promise((resolve) => {
+      const keep = (output) => resolve(this.#systemVoices || (this.#systemVoices = parseVoices(output)));
+      try { execFile(LIST_VOICES[0], LIST_VOICES[1], { encoding: 'utf8', timeout: LIST_VOICES[2], windowsHide: true }, (error, output) => keep(error ? '' : String(output))); } catch { keep(''); }
+    }));
   }
 
   // Kokoro's voices, and whether they can be used now; asking warms Kokoro up.
@@ -74,7 +87,8 @@ class Speech {
   }
 
   // The wav file of `text` said by `voice` at `rate` words per minute; engine 'kokoro' or the system's.
-  speak(text, voice, rate, engine) {
+  // fallbackVoice: the system voice to use when Kokoro cannot say it (the page's best system voice for that character).
+  speak(text, voice, rate, engine, fallbackVoice) {
     const isKokoro = engine === 'kokoro';
     if (isKokoro) { if (!this.kokoro.hasVoice(voice)) return Promise.reject(new Error('unknown voice')); }
     else { const system = this.systemVoices(); if (!system.available || !system.voices.some((known) => known.name === voice)) return Promise.reject(new Error('unknown voice')); }
@@ -87,17 +101,17 @@ class Speech {
     if (this.#jobs.has(key)) return this.#jobs.get(key);
     fs.mkdirSync(this.dir, { recursive: true });
     const partial = file + '.part.wav';
-    const job = (isKokoro ? this.#speakWithKokoro(text, voice, rate, partial) : speakWithSystem(voice, rate, text, partial))
+    const job = (isKokoro ? this.#speakWithKokoro(text, voice, rate, partial, fallbackVoice) : speakWithSystem(voice, rate, text, partial))
       .then(() => { fs.renameSync(partial, file); return file; })
       .finally(() => this.#jobs.delete(key));
     this.#jobs.set(key, job);
     return job;
   }
 
-  // A line Kokoro cannot make goes to a system voice of the same language instead of being dropped.
-  #speakWithKokoro(text, voice, rate, out) {
+  // A line Kokoro cannot make goes to a system voice instead of being dropped: the one the page names, or else the first English one.
+  #speakWithKokoro(text, voice, rate, out, fallbackVoice) {
     return this.kokoro.synth(text, voice, this.kokoro.speedFor(rate), out).catch((error) => {
-      const language = voice.startsWith('ff_') ? 'fr' : 'en', fallback = this.systemVoices().voices.find((known) => known.locale.startsWith(language + '_'));
+      const voices = this.systemVoices().voices, fallback = voices.find((known) => known.name === fallbackVoice) || voices.find((known) => known.locale.startsWith('en_'));
       if (!fallback) throw error;
       return speakWithSystem(fallback.name, rate, text, out);
     });

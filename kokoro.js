@@ -7,8 +7,8 @@ const DIR = process.env.AGENT_STANDUP_KOKORO_DIR || (WIN ? path.join(process.env
 const PKG = 'kokoro-js@1.2.1', DTYPE = 'q4', SIZE_MB = 730, MAX_RESTARTS = 3;
 const WORKER = process.env.AGENT_STANDUP_KOKORO_WORKER || path.join(__dirname, 'kokoro-worker.js'), LOG = path.join(DIR, 'install.log');
 
-// In the order agents get them (the lead takes the first), so successive agents sound distinct. French has a single voice in Kokoro.
-const VOICES = [['af_heart', 'Heart', 'en_US'], ['am_fenrir', 'Fenrir', 'en_US'], ['bf_emma', 'Emma', 'en_GB'], ['am_michael', 'Michael', 'en_US'], ['af_bella', 'Bella', 'en_US'], ['bm_george', 'George', 'en_GB'], ['af_sarah', 'Sarah', 'en_US'], ['am_puck', 'Puck', 'en_US'], ['ff_siwis', 'Siwis', 'fr_FR']].map(([name, label, locale]) => ({ name, label, locale }));
+// In the order agents get them (the lead takes the first), so successive agents sound distinct. English only: kokoro-js has no French voice (it refuses ff_siwis), so French lines are read by the system voices.
+const VOICES = [['af_heart', 'Heart', 'en_US'], ['am_fenrir', 'Fenrir', 'en_US'], ['bf_emma', 'Emma', 'en_GB'], ['am_michael', 'Michael', 'en_US'], ['af_bella', 'Bella', 'en_US'], ['bm_george', 'George', 'en_GB'], ['af_sarah', 'Sarah', 'en_US'], ['am_puck', 'Puck', 'en_US']].map(([name, label, locale]) => ({ name, label, locale }));
 const voices = () => VOICES, hasVoice = (n) => VOICES.some((v) => v.name === n);
 const speedFor = (wpm) => Math.max(0.5, Math.min(2, Math.round((wpm / 178) * 20) / 20));   // 178 words a minute is about Kokoro's natural pace
 const exists = (f) => { try { fs.statSync(f); return true; } catch { return false; } };

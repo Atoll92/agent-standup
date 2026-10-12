@@ -164,7 +164,8 @@ function readToolUse({ state, timestamp, agentId, push }, toolUse) {
   if (input.run_in_background) (state.backgroundCalls = state.backgroundCalls || {})[toolUse.id] = true;
 
   if (isSubAgentCall(toolUse.name)) {
-    push(new AgentCall({ timestamp, agentId, callId: toolUse.id, background: !!input.run_in_background, text: input.prompt || '', title: input.description || '' }));
+    const name = typeof input.name === 'string' && input.name.trim() ? input.name.trim() : undefined;
+    push(new AgentCall({ timestamp, agentId, callId: toolUse.id, background: !!input.run_in_background, text: input.prompt || '', title: input.description || '', name }));
   } else {
     push(new ToolCall({ timestamp, agentId, tool: toolLabel(toolUse, timestamp), thought: takeThought(state) }));
     state.lastActionIndex = state.records.length - 1;

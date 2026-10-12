@@ -98,7 +98,7 @@ function deserializeEvent(wire) {
   return event;
 }
 
-// An agent as the page reads it: toolUseId (launchCallId), wf (workflow), mtime (lastActiveAt), roleFr (its role in French).
+// An agent as the page reads it: toolUseId (launchCallId), wf (workflow), mtime (lastActiveAt), own (ownName), roleFr (its role in French).
 function serializeAgent(agent) {
   return {
     id: agent.id,
@@ -109,11 +109,12 @@ function serializeAgent(agent) {
     ...(agent.workflow ? { wf: agent.workflow } : {}),
     ...(agent.phase ? { phase: agent.phase } : {}),
     ...(agent.lastActiveAt ? { mtime: agent.lastActiveAt } : {}),
+    ...(agent.ownName ? { own: agent.ownName } : {}),
     ...(agent.translations.fr ? { roleFr: agent.translations.fr } : {}),
   };
 }
 const deserializeAgent = (wire) => new Agent({
-  id: wire.id, role: wire.role, type: wire.type, name: wire.name, launchCallId: wire.toolUseId, workflow: wire.wf, phase: wire.phase, lastActiveAt: wire.mtime,
+  id: wire.id, role: wire.role, type: wire.type, name: wire.name, ownName: wire.own, launchCallId: wire.toolUseId, workflow: wire.wf, phase: wire.phase, lastActiveAt: wire.mtime,
   translations: wire.roleFr ? { fr: wire.roleFr } : undefined,
 });
 

@@ -33,6 +33,8 @@ Gabarito ExtraBold for the name and headings, Figtree for text. Both are open fo
 
 ## Using the logo
 
+The conditions for the name, the logo and the characters are in [TRADEMARKS.md](../TRADEMARKS.md). In short:
+
 - Keep the drawing as it is: no recolouring, no stretching, no added accessories.
 - Leave a quarter of the mark's width clear all round.
 - Agent Standup is an unofficial community project. Do not use the logo in a way that suggests it comes from Anthropic, or that Anthropic endorses something.

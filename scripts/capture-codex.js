@@ -1,6 +1,6 @@
 // Records the short video for Codex users (about 40 s, captioned, with original synthesised music).
 //   node scripts/capture-codex.js     → docs/media/promo-codex.mp4          (needs puppeteer-core, Chrome and ffmpeg, like capture-promo.js)
-// What is on screen is the real app: a made-up Codex session is written in Codex's own file format into a temporary folder and read by the real server (codex.js),
+// What is on screen is the real app: a made-up Codex session is written in Codex's own file format into a temporary folder and read by the real server (core/sources/codex),
 // then played as a call; then the board (made-up rows through a request interception); then a few seconds of the built-in fictional team; then the banner.
 // Nothing here reads your real sessions or settings: every folder the server looks at is a temporary one, and the drawn characters are used.
 const fs = require('fs'), path = require('path'), os = require('os'), { execFileSync } = require('child_process');

@@ -4,6 +4,10 @@ docs/**
 landing/**
 brand/**
 plugin/**
+website/**
+vercel.json
+.vercelignore
+.vercel/**
 .claude-plugin/**
 media/tray*.png
 scripts/**
@@ -19,6 +23,7 @@ dist-desktop/**
 dist-release/**
 ROADMAP.md
 PRIVACY.md
+TRADEMARKS.md
 dist-release-*/**
 test/**
 node_modules/**

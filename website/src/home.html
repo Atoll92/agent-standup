@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Standup — your AI agents, in a stand-up call</title>
+<meta name="description" content="Agent Standup turns your Claude Code and Codex sessions into a live team call: see who is working, who waits on whom and who needs you. Free and open source. VS Code, Cursor, any terminal, or a desktop app.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Agent Standup">
+<meta property="og:description" content="Your AI agents, in a stand-up call. See who is working, waiting or blocked. Free and open source.">
+<meta property="og:url" content="__SITE__">
+<meta property="og:image" content="__SITE__brand/social.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0e2328">
+<link rel="canonical" href="__SITE__">
+<link rel="icon" href="brand/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="brand/icon.png">
+<link rel="preload" href="fonts/gabarito.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="./"><img src="brand/icon.png" alt="" width="36" height="36"> Agent Standup</a>
+    <nav>
+      <a class="hide" href="#see" data-en="What you see" data-fr="Ce que vous voyez">What you see</a>
+      <a class="hide" href="#install" data-en="Install" data-fr="Installer">Install</a>
+      <a href="https://github.com/Atoll92/agent-standup" rel="noopener">GitHub</a>
+      <button class="lang" id="lang" aria-label="Language">FR</button>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <h1 data-en="Your AI agents,<br>in a stand-up call." data-fr="Vos agents IA,<br>en réunion d’équipe.">Your AI agents,<br>in a stand-up call.</h1>
+      <p class="lead" data-en="Agent Standup turns your Claude Code and Codex sessions into a live team call. See who is working, who waits on whom, and who needs you." data-fr="Agent Standup transforme vos sessions Claude Code et Codex en réunion d’équipe en direct. Voyez qui travaille, qui attend qui, et qui a besoin de vous.">Agent Standup turns your Claude Code and Codex sessions into a live team call. See who is working, who waits on whom, and who needs you.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://marketplace.visualstudio.com/items?itemName=DoubleGeste.agent-standup" rel="noopener"><span data-en="Install in VS Code" data-fr="Installer dans VS Code">Install in VS Code</span> <small>v__VERSION__</small></a>
+        <a class="btn ghost" href="#install" data-en="Other ways to run it" data-fr="Les autres façons">Other ways to run it</a>
+      </div>
+      <button class="cmd" type="button" data-copy="npx @double_geste/agent-standup --open"><code><i>npx</i> <i>@double_geste/agent-standup</i> <i>--open</i></code><span data-en="copy" data-fr="copier">copy</span></button>
+      <p class="fine" data-en="Free and open source. Runs on your machine, costs no tokens." data-fr="Gratuit et open source. Tourne sur votre machine, ne consomme aucun token.">Free and open source. Runs on your machine, costs no tokens.</p>
+    </div>
+    <div class="frame"><video src="media/promo.mp4" data-en-src="media/promo.mp4" data-fr-src="media/promo-fr.mp4" poster="media/hero.jpg" controls loop muted playsinline preload="metadata"></video></div>
+  </div>
+</div>
+
+<div class="with"><div class="wrap">
+  <span data-en="Works with" data-fr="Fonctionne avec">Works with</span>
+  <span class="chip">Claude Code</span><span class="chip">Codex</span><span class="chip">VS Code</span><span class="chip">Cursor</span><span class="chip">Windsurf</span><span class="chip" data-en="any terminal" data-fr="tout terminal">any terminal</span><span class="chip">macOS · Windows · Linux</span>
+</div></div>
+
+<section id="see"><div class="wrap">
+  <p class="kicker" data-en="What you see" data-fr="Ce que vous voyez">What you see</p>
+  <h2 data-en="Reading logs is work. Watching a call is not." data-fr="Lire des journaux, c’est du travail. Regarder un appel, non.">Reading logs is work. Watching a call is not.</h2>
+  <p class="sub" data-en="It reads the session files your agents already write and plays them as a meeting, live or as a replay of any past session." data-fr="Il lit les fichiers de session que vos agents écrivent déjà et les joue comme une réunion, en direct ou en rejouant une session passée.">It reads the session files your agents already write and plays them as a meeting, live or as a replay of any past session.</p>
+
+  <div class="row">
+    <div>
+      <h3 data-en="Every agent has a desk" data-fr="Chaque agent a son bureau">Every agent has a desk</h3>
+      <p data-en="The lead gives orders. Sub-agents join the call when they get a task and leave when they are done. Whoever speaks gets the spotlight, with a voice and a moving mouth." data-fr="Le chef donne ses ordres. Les sous-agents rejoignent l’appel quand on leur confie une tâche et le quittent une fois finis. Celui qui parle passe au premier plan, avec une voix et une bouche qui bouge.">The lead gives orders. Sub-agents join the call when they get a task and leave when they are done. Whoever speaks gets the spotlight, with a voice and a moving mouth.</p>
+      <ul>
+        <li data-en="One status per agent: working, waiting on someone, needs you, done" data-fr="Un statut par agent : au travail, en attente de quelqu’un, besoin de vous, terminé">One status per agent: working, waiting on someone, needs you, done</li>
+        <li data-en="Their reasoning shows up as small thought bubbles" data-fr="Leur raisonnement apparaît en petites bulles de pensée">Their reasoning shows up as small thought bubbles</li>
+        <li data-en="Tokens per agent, and a context gauge before compaction" data-fr="Les tokens par agent, et une jauge de contexte avant le compactage">Tokens per agent, and a context gauge before compaction</li>
+      </ul>
+    </div>
+    <div class="shot"><img src="media/hero.jpg" data-en-src="media/hero.jpg" data-fr-src="media/hero-fr.jpg" width="1920" height="1080" loading="lazy" alt="A call with five agents at their desks; the one speaking is enlarged"></div>
+  </div>
+
+  <div class="row flip">
+    <div>
+      <h3 data-en="They share their screen" data-fr="Ils partagent leur écran">They share their screen</h3>
+      <p data-en="When an agent runs a command, you see the command and its real output. When it changes a file, you see the diff. Failed commands are marked, so the first error is easy to find." data-fr="Quand un agent lance une commande, vous voyez la commande et sa vraie sortie. Quand il modifie un fichier, vous voyez le diff. Les commandes en échec sont marquées : la première erreur se trouve tout de suite.">When an agent runs a command, you see the command and its real output. When it changes a file, you see the diff. Failed commands are marked, so the first error is easy to find.</p>
+    </div>
+    <div class="shots"><div class="shot"><img src="media/terminal-output.jpg" width="1920" height="1080" loading="lazy" alt="An agent sharing its terminal with the output of a command"></div><div class="shot"><img src="media/editor-diff.jpg" width="1920" height="1080" loading="lazy" alt="An agent sharing its editor with the change it is making to a file"></div></div>
+  </div>
+
+  <div class="row">
+    <div>
+      <h3 data-en="Replay it, and get the recap" data-fr="Rejouez, et lisez le récap">Replay it, and get the recap</h3>
+      <p data-en="Pick any past session and scrub through it. Jump to the first error, the longest wait or a loop. At the end, a recap lists the agents, the commands, the errors, the tokens and the files that changed." data-fr="Choisissez une session passée et parcourez-la. Sautez à la première erreur, à la plus longue attente ou à une boucle. À la fin, un récap liste les agents, les commandes, les erreurs, les tokens et les fichiers modifiés.">Pick any past session and scrub through it. Jump to the first error, the longest wait or a loop. At the end, a recap lists the agents, the commands, the errors, the tokens and the files that changed.</p>
+      <ul>
+        <li data-en="A tree of who asked whom" data-fr="Un arbre de qui a demandé quoi à qui">A tree of who asked whom</li>
+        <li data-en="A board of every session, across projects" data-fr="Un tableau de toutes vos sessions, tous projets confondus">A board of every session, across projects</li>
+        <li data-en="Export the call as a video" data-fr="Exportez l’appel en vidéo">Export the call as a video</li>
+      </ul>
+    </div>
+    <div class="shot"><img src="media/recap.jpg" width="1920" height="1080" loading="lazy" alt="The recap of a session: agents, tool calls, commands, errors, tokens, files changed"></div>
+  </div>
+</div></section>
+
+<section class="band" id="codex"><div class="wrap">
+  <div class="row" style="margin-top:0">
+    <div>
+      <p class="kicker" data-en="New" data-fr="Nouveau">New</p>
+      <h2 data-en="Codex sessions too" data-fr="Les sessions Codex aussi">Codex sessions too</h2>
+      <p data-en="Sessions of OpenAI’s Codex, from the desktop app or the command line, appear next to your Claude Code sessions: in the list, on the board and in the live call. Nothing to set up." data-fr="Les sessions de Codex (OpenAI), depuis l’application de bureau ou la ligne de commande, apparaissent à côté de vos sessions Claude Code : dans la liste, sur le tableau et dans l’appel en direct. Rien à configurer.">Sessions of OpenAI’s Codex, from the desktop app or the command line, appear next to your Claude Code sessions: in the list, on the board and in the live call. Nothing to set up.</p>
+      <p class="dim" data-en="With Codex the call is the lead and you: its sub-agents are not shown yet." data-fr="Avec Codex, l’appel réunit le chef et vous : ses sous-agents ne sont pas encore affichés.">With Codex the call is the lead and you: its sub-agents are not shown yet.</p>
+    </div>
+    <div class="shot"><video src="media/promo-codex.mp4" controls loop muted playsinline preload="none" poster="media/codex-poster.jpg"></video></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <p class="kicker" data-en="The cast" data-fr="La troupe">The cast</p>
+  <h2 data-en="A bit silly. Weirdly useful." data-fr="Un peu idiot. Étonnamment utile.">A bit silly. Weirdly useful.</h2>
+  <p class="sub" data-en="When eight sub-agents work at once, seeing who does what, and what is on their screen, beats scrolling through a log." data-fr="Quand huit sous-agents travaillent en même temps, voir qui fait quoi, et ce qu’il y a sur leur écran, vaut mieux que faire défiler un journal.">When eight sub-agents work at once, seeing who does what, and what is on their screen, beats scrolling through a log.</p>
+  <div class="cast"><img src="brand/team-strip.svg" width="1280" height="200" loading="lazy" alt="Eight of the characters: the lead with its headset, and seven sub-agents"></div>
+  <div class="grid">
+    <div class="card"><h3 data-en="Voices" data-fr="Des voix">Voices</h3><p data-en="Cartoon, Animal Crossing, Simlish or very natural, with lip-sync. Agents chat about what really happened, as little or as much as you like." data-fr="Cartoon, Animal Crossing, Simlish ou très naturelles, avec synchronisation labiale. Les agents discutent de ce qui s’est vraiment passé, autant ou aussi peu que vous voulez.">Cartoon, Animal Crossing, Simlish or very natural, with lip-sync. Agents chat about what really happened, as little or as much as you like.</p></div>
+    <div class="card"><h3 data-en="Your own characters" data-fr="Vos propres personnages">Your own characters</h3><p data-en="Drop images in a folder and your own character joins the call. A cat pack from a contributor is built in." data-fr="Déposez des images dans un dossier et votre personnage rejoint l’appel. Un pack de chats offert par un contributeur est intégré.">Drop images in a folder and your own character joins the call. A cat pack from a contributor is built in.</p></div>
+    <div class="card"><h3 data-en="10 languages" data-fr="10 langues">10 languages</h3><p>English, Français, 繁體中文, 简体中文, Español, Deutsch, Dansk, Português, 日本語, 한국어.</p></div>
+    <div class="card"><h3 data-en="Nothing leaves your machine" data-fr="Rien ne quitte votre machine">Nothing leaves your machine</h3><p><span data-en="It only reads local files and sends nothing by default." data-fr="Il ne lit que des fichiers locaux et n’envoie rien par défaut.">It only reads local files and sends nothing by default.</span> <a href="privacy/" data-en="Privacy" data-fr="Confidentialité">Privacy</a></p></div>
+  </div>
+  <p class="tip" data-en="<b>Our tip:</b> once you are set up, switch to the very natural voices (⚙ → Voice style, a one-time install). The agents then sound like real people." data-fr="<b>Notre conseil :</b> passez ensuite aux voix très naturelles (⚙ → Style des voix, une installation unique). Les agents parlent alors comme de vraies personnes, surtout en anglais."><b>Our tip:</b> once you are set up, switch to the very natural voices.</p>
+</div></section>
+
+<section class="band" id="install"><div class="wrap">
+  <p class="kicker" data-en="Install" data-fr="Installer">Install</p>
+  <h2 data-en="Use it where you work" data-fr="Utilisez-le là où vous travaillez">Use it where you work</h2>
+  <p class="sub" data-en="One small local server, several ways in. You need to have used Claude Code or Codex on this machine at least once." data-fr="Un petit serveur local, plusieurs façons d’y accéder. Il faut avoir utilisé Claude Code ou Codex au moins une fois sur cette machine.">One small local server, several ways in. You need to have used Claude Code or Codex on this machine at least once.</p>
+  <div class="grid">
+    <div class="card"><h3>VS Code</h3><p data-en="A panel and a side bar, plus live counts in the status bar that turn red when an agent may need you." data-fr="Un panneau et une barre latérale, plus des compteurs dans la barre d’état qui passent au rouge quand un agent a peut-être besoin de vous.">A panel and a side bar, plus live counts in the status bar that turn red when an agent may need you.</p><a class="btn primary sm" href="https://marketplace.visualstudio.com/items?itemName=DoubleGeste.agent-standup" rel="noopener" data-en="Open in the Marketplace" data-fr="Ouvrir le Marketplace">Open in the Marketplace</a></div>
+    <div class="card"><h3>Cursor · Windsurf · VSCodium</h3><p data-en="The same extension, from Open VSX or from the file." data-fr="La même extension, depuis Open VSX ou depuis le fichier.">The same extension, from Open VSX or from the file.</p><div class="links"><a class="btn primary sm" href="https://open-vsx.org/extension/DoubleGeste/agent-standup" rel="noopener">Open VSX</a><a class="btn ghost sm" href="https://github.com/Atoll92/agent-standup/releases/latest/download/agent-standup.vsix" rel="noopener" data-en="Download the .vsix" data-fr="Télécharger le .vsix">Download the .vsix</a></div></div>
+    <div class="card"><h3 data-en="Any terminal" data-fr="Tout terminal">Any terminal</h3><p data-en="No editor needed: it opens the call in your browser. Node 18 or later." data-fr="Sans éditeur : l’appel s’ouvre dans votre navigateur. Node 18 ou plus récent.">No editor needed: it opens the call in your browser. Node 18 or later.</p><button class="cmd" type="button" data-copy="npx @double_geste/agent-standup --open"><code><i>npx</i> <i>@double_geste/agent-standup</i> <i>--open</i></code><span data-en="copy" data-fr="copier">copy</span></button></div>
+    <div class="card"><h3 data-en="Desktop app" data-fr="Application de bureau">Desktop app</h3><p data-en="Its own window and a menu bar indicator, with a notification when an agent may need you. Not signed: the first time on a Mac, right-click the app, then Open." data-fr="Sa propre fenêtre et un indicateur dans la barre de menus, avec une notification quand un agent a peut-être besoin de vous. Non signée : la première fois sur Mac, clic droit sur l’app, puis Ouvrir.">Its own window and a menu bar indicator, with a notification when an agent may need you. Not signed: the first time on a Mac, right-click the app, then Open.</p><div class="links"><a class="btn primary sm" href="https://github.com/Atoll92/agent-standup/releases/download/v__VERSION__/Agent-Standup-__VERSION__-mac-apple-silicon.zip" rel="noopener">macOS · Apple Silicon</a><a class="btn ghost sm" href="https://github.com/Atoll92/agent-standup/releases/download/v__VERSION__/Agent-Standup-__VERSION__-mac-intel.zip" rel="noopener">macOS · Intel</a><a class="btn ghost sm" href="https://github.com/Atoll92/agent-standup/releases/latest" rel="noopener">Windows · Linux</a></div></div>
+    <div class="card"><h3 data-en="Inside Claude Code" data-fr="Dans Claude Code">Inside Claude Code</h3><p data-en="A plugin with two commands: open the call, and a one-line status of who is working and who needs you." data-fr="Un plugin avec deux commandes : ouvrir l’appel, et un statut d’une ligne sur qui travaille et qui a besoin de vous.">A plugin with two commands: open the call, and a one-line status of who is working and who needs you.</p><button class="cmd" type="button" data-copy="/plugin install agent-standup --marketplace Atoll92/agent-standup"><code><i>/plugin</i> <i>install</i> <i>agent-standup</i> <i>--marketplace</i> <i>Atoll92/agent-standup</i></code><span data-en="copy" data-fr="copier">copy</span></button></div>
+    <div class="card"><h3 data-en="Status bars" data-fr="Barres d’état">Status bars</h3><p data-en="One short line for the Claude Code status line, tmux or anything else: how many agents are working, and whether one needs you." data-fr="Une ligne courte pour la barre d’état de Claude Code, tmux ou autre : combien d’agents travaillent, et si l’un a besoin de vous.">One short line for the Claude Code status line, tmux or anything else: how many agents are working, and whether one needs you.</p><button class="cmd" type="button" data-copy="npm i -g @double_geste/agent-standup"><code><i>npm</i> <i>i</i> <i>-g</i> <i>@double_geste/agent-standup</i></code><span data-en="copy" data-fr="copier">copy</span></button></div>
+  </div>
+</div></section>
+
+<!--WAITLIST-->
+<section id="teams"><div class="wrap">
+  <p class="kicker" data-en="For teams" data-fr="Pour les équipes">For teams</p>
+  <h2 data-en="Everyone’s agents on one board?" data-fr="Les agents de toute l’équipe sur un même tableau ?">Everyone’s agents on one board?</h2>
+  <p class="sub" data-en="A team edition is being considered: a shared board, cost per agent and per week, an alert in your chat when an agent is blocked. Leave your email to hear about it and to say what you would need. One message when it exists, nothing else." data-fr="Une édition pour les équipes est à l’étude : un tableau partagé, le coût par agent et par semaine, une alerte dans votre messagerie quand un agent est bloqué. Laissez votre e-mail pour être prévenu et dire ce qu’il vous faudrait. Un seul message quand elle existera, rien d’autre.">A team edition is being considered.</p>
+  <form class="wait" action="__WAITLIST__" method="post" target="_blank"><input type="email" name="email" required placeholder="you@company.com" aria-label="Email"><button class="btn primary" type="submit" data-en="Tell me when it exists" data-fr="Prévenez-moi">Tell me when it exists</button></form>
+</div></section>
+<!--/WAITLIST-->
+
+<footer><div class="wrap">
+  <div class="cols">
+    <div>
+      <a class="brand" href="./"><img src="brand/icon.png" alt="" width="36" height="36"> Agent Standup</a>
+      <p data-en="The code is MIT licensed; the name and the logo are not (see <a href='name-and-logo/'>Name and logo</a>). Unofficial: not affiliated with Anthropic or OpenAI." data-fr="Le code est sous licence MIT ; le nom et le logo ne le sont pas (voir <a href='name-and-logo/'>Nom et logo</a>). Non officiel : sans lien avec Anthropic ni OpenAI.">The code is MIT licensed. Unofficial: not affiliated with Anthropic or OpenAI.</p>
+      <p data-en="This site sets no cookie, counts no visit and loads nothing from anyone else." data-fr="Ce site ne pose aucun cookie, ne compte aucune visite et ne charge rien venant d’ailleurs.">This site sets no cookie, counts no visit and loads nothing from anyone else.</p>
+    </div>
+    <nav>
+      <a href="https://github.com/Atoll92/agent-standup" rel="noopener">GitHub</a>
+      <a href="https://github.com/Atoll92/agent-standup/blob/main/CHANGELOG.md" rel="noopener" data-en="Changelog" data-fr="Nouveautés">Changelog</a>
+      <a href="https://github.com/Atoll92/agent-standup/tree/main/brand" rel="noopener" data-en="Logo and colours" data-fr="Logo et couleurs">Logo and colours</a>
+      <a href="privacy/" data-en="Privacy" data-fr="Confidentialité">Privacy</a>
+      <a href="name-and-logo/" data-en="Name and logo" data-fr="Nom et logo">Name and logo</a>
+      <a href="https://github.com/Atoll92/agent-standup/issues" rel="noopener" data-en="Report a bug" data-fr="Signaler un bug">Report a bug</a>
+    </nav>
+  </div>
+</div></footer>
+
+<script>
+// English or French: the saved choice, else the browser's language. Texts carry both versions in data-en / data-fr.
+let LANG = 'en'; try { LANG = localStorage.getItem('as.site.lang') || ((navigator.language || '').toLowerCase().startsWith('fr') ? 'fr' : 'en'); } catch {}
+function applyLang() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-en]').forEach((el) => { el.innerHTML = LANG === 'fr' ? el.dataset.fr : el.dataset.en; });
+  document.querySelectorAll('[data-en-src]').forEach((el) => { const src = LANG === 'fr' ? el.dataset.frSrc : el.dataset.enSrc; if (el.getAttribute('src') !== src) el.setAttribute('src', src); });
+  document.getElementById('lang').textContent = LANG === 'fr' ? 'EN' : 'FR';
+}
+document.getElementById('lang').onclick = () => { LANG = LANG === 'fr' ? 'en' : 'fr'; try { localStorage.setItem('as.site.lang', LANG); } catch {} applyLang(); };
+applyLang();
+// the command boxes copy their command
+document.querySelectorAll('[data-copy]').forEach((b) => { b.onclick = async () => { const tag = b.querySelector('span'); try { await navigator.clipboard.writeText(b.dataset.copy); tag.textContent = LANG === 'fr' ? 'copié' : 'copied'; } catch { tag.textContent = LANG === 'fr' ? 'sélectionnez le texte' : 'select the text'; } setTimeout(() => { tag.textContent = LANG === 'fr' ? 'copier' : 'copy'; }, 1600); }; });
+</script>
+</body>
+</html>

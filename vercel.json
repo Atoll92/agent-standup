@@ -1,0 +1,21 @@
+{
+  "buildCommand": "node scripts/build-website.js",
+  "outputDirectory": "website/dist",
+  "installCommand": "",
+  "framework": null,
+  "cleanUrls": true,
+  "trailingSlash": true,
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.agent-standup.com"
+        }
+      ],
+      "destination": "https://agent-standup.com/$1",
+      "permanent": true
+    }
+  ]
+}
