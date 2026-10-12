@@ -229,4 +229,4 @@ function mergeToolBeats(events) {
   return merged;
 }
 
-module.exports = { buildTimeline };
+module.exports = { buildTimeline, BOOKKEEPING };
