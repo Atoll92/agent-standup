@@ -5,7 +5,7 @@ const HOUR_MS = 3600e3;
 const SESSION_WINDOW_MS = 12 * HOUR_MS;   // sessions older than this are not on the board
 
 // Newest first. Two sessions from different tools written to at the very same millisecond keep the order of the sources.
-const byRecency = (a, b) => b.mtime - a.mtime;
+const byRecency = (first, second) => second.mtime - first.mtime;
 
 function createBoard({ sources }) {
   let sessionsMemo = { at: 0, rows: [] };

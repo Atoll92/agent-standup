@@ -10,7 +10,7 @@ const MIN_REBUILD_GAP_MS = 250;
 
 // The cache of timelines is kept in the feed that is created here, and nowhere else.
 function createFeed({ sourceOf, reader, buildTimeline }) {
-  // "proj/id" → { st (file stamp), tl, at (when built), ms (how long it took), files[], feed, sq, recentUntil, json?, gz?, idle? }
+  // "proj/id" → { stamp (of the files), tl, at (when built), ms (how long it took), files[], feed, sq, recentUntil, json?, gz?, idle? }
   const timelines = new Map();
 
   function timelineEntry(proj, id) {
@@ -21,8 +21,8 @@ function createFeed({ sourceOf, reader, buildTimeline }) {
     }
 
     const started = Date.now(), files = [];
-    const tl = buildTimeline(proj, id, files), feed = feedStep(cached && cached.feed, tl, files);
-    const entry = { st: stamp, tl, at: Date.now(), ms: Date.now() - started, files, feed, sq: feed.sq, recentUntil: tl.recentUntil || 0 };
+    const builtTimeline = buildTimeline(proj, id, files), feed = feedStep(cached && cached.feed, builtTimeline, files);
+    const entry = { stamp, tl: builtTimeline, at: Date.now(), ms: Date.now() - started, files, feed, sq: feed.sq, recentUntil: builtTimeline.recentUntil || 0 };
     timelines.delete(key); timelines.set(key, entry);
     dropOldSessions();
     return entry;
@@ -41,19 +41,19 @@ function createFeed({ sourceOf, reader, buildTimeline }) {
   const generationOf = (file) => (reader.fileStates.get(file) || {}).gen;
 
   // Numbers the events of a fresh build against the previous feed (if it is still valid), and returns the feed to keep.
-  function feedStep(previous, tl, files) {
+  function feedStep(previous, builtTimeline, files) {
     let feed = previous && filesNotRewritten(previous, files) ? previous : null;
-    let sq = feed && numberEvents(feed, tl);
-    if (!sq) { feed = newFeed(); sq = numberEvents(feed, tl); }
+    let sequenceNumbers = feed && numberEvents(feed, builtTimeline);
+    if (!sequenceNumbers) { feed = newFeed(); sequenceNumbers = numberEvents(feed, builtTimeline); }
 
     for (const file of files) feed.gens.set(file, generationOf(file));
-    feed.sq = sq; tl.ep = feed.ep; tl.seq = feed.seq;
+    feed.sq = sequenceNumbers; builtTimeline.ep = feed.ep; builtTimeline.seq = feed.seq;
     return feed;
   }
 
   // A transcript read again from its start numbers its events again: the keys no longer mean the same thing.
   function filesNotRewritten(feed, files) {
-    return files.every((file) => { const was = feed.gens.get(file); return was === undefined || was === generationOf(file); });
+    return files.every((file) => { const previousGeneration = feed.gens.get(file); return previousGeneration === undefined || previousGeneration === generationOf(file); });
   }
 
   const timeline = (proj, id) => timelineEntry(proj, id).tl;
@@ -64,7 +64,7 @@ function createFeed({ sourceOf, reader, buildTimeline }) {
 // Nothing was written (a sub-agent's 4-minute silence rule can flip without any file change, hence recentUntil);
 // or a very big session, which is not rebuilt on every poll: not before twice the time a build took.
 function isStillGood(cached, stamp, now) {
-  const unchanged = cached.st === stamp && !(cached.recentUntil && now > cached.recentUntil);
+  const unchanged = cached.stamp === stamp && !(cached.recentUntil && now > cached.recentUntil);
   const builtJustNow = now - cached.at < Math.max(MIN_REBUILD_GAP_MS, cached.ms * 2);
   return unchanged || builtJustNow;
 }
@@ -86,42 +86,42 @@ const newFeed = () => ({ ep: crypto.randomBytes(6).toString('hex'), seq: 0, know
 // Gives each event the sequence number at which it last changed, and moves the feed on if anything did.
 // Returns that list of numbers (one per event), or null when an event the reader may hold no longer exists:
 // nothing can tell it to drop it, so the caller starts a new feed.
-function numberEvents(feed, tl) {
-  const events = tl.events, sq = new Uint32Array(events.length), seq = feed.seq + 1, before = feed.known.size;
+function numberEvents(feed, builtTimeline) {
+  const events = builtTimeline.events, sequenceNumbers = new Uint32Array(events.length), nextSequence = feed.seq + 1, before = feed.known.size;
 
   // Time zero moved (something now comes before the first line): every `t` is different.
-  const zero = events.find((e) => !BOOKKEEPING.has(e.kind)), t0 = zero ? zero.ts : 0, moved = feed.t0 !== t0;
-  feed.t0 = t0;
+  const zero = events.find((event) => !BOOKKEEPING.has(event.kind)), firstEventTime = zero ? zero.ts : 0, moved = feed.t0 !== firstEventTime;
+  feed.t0 = firstEventTime;
 
   let hits = 0, changed = false;
-  events.forEach((e, i) => {
-    const s = signature(e), was = feed.known.get(e.k);
-    if (!was) { feed.known.set(e.k, { s, q: seq }); sq[i] = seq; changed = true; return; }
+  events.forEach((event, index) => {
+    const eventSignature = signature(event), knownEvent = feed.known.get(event.k);
+    if (!knownEvent) { feed.known.set(event.k, { s: eventSignature, q: nextSequence }); sequenceNumbers[index] = nextSequence; changed = true; return; }
     hits++;
-    if (was.s !== s || moved) { was.s = s; was.q = seq; changed = true; }
-    sq[i] = was.q;
+    if (knownEvent.s !== eventSignature || moved) { knownEvent.s = eventSignature; knownEvent.q = nextSequence; changed = true; }
+    sequenceNumbers[index] = knownEvent.q;
   });
 
   if (hits < before) return null;
-  if (changed) feed.seq = seq;
-  return sq;
+  if (changed) feed.seq = nextSequence;
+  return sequenceNumbers;
 }
 
 // Everything about an event that can differ from one build to the next. Its text, its tool calls, its results and its time never do:
 // they come from one transcript record (same key = same record). And `t` moves only when time zero does, which numberEvents looks at once for all.
-function signature(e) {
+function signature(event) {
   let detail = '';
-  if (e.kind === 'tools') detail = e.tools.length + ':' + e.tools[e.tools.length - 1].id;
-  else if (e.kind === 'usage') detail = `${e.u.i},${e.u.o},${e.u.r},${e.u.w},${e.model}`;
-  else if (e.kind === 'order') detail = `${e.toolId},${e.bg},${e.title}`;
-  else if (e.kind === 'finish') detail = e.ts;
-  return e.kind + '|' + e.agent + '|' + (e.to || '') + '|' + (e.end || '') + '|' + detail;
+  if (event.kind === 'tools') detail = event.tools.length + ':' + event.tools[event.tools.length - 1].id;
+  else if (event.kind === 'usage') detail = `${event.u.i},${event.u.o},${event.u.r},${event.u.w},${event.model}`;
+  else if (event.kind === 'order') detail = `${event.toolId},${event.bg},${event.title}`;
+  else if (event.kind === 'finish') detail = event.ts;
+  return event.kind + '|' + event.agent + '|' + (event.to || '') + '|' + (event.end || '') + '|' + detail;
 }
 
 // The events that are new or different since sequence number `after`, in timeline order. Nothing to scan when the reader is up to date.
 function feedSince(entry, after) {
-  const events = entry.tl.events, sq = entry.sq, out = [];
-  if (after < entry.tl.seq) for (let i = 0; i < events.length; i++) if ((sq ? sq[i] : 1) > after) out.push(events[i]);
+  const events = entry.tl.events, sequenceNumbers = entry.sq, out = [];
+  if (after < entry.tl.seq) for (let index = 0; index < events.length; index++) if ((sequenceNumbers ? sequenceNumbers[index] : 1) > after) out.push(events[index]);
   return out;
 }
 

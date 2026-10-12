@@ -12,8 +12,8 @@ function claudeProjectsRoot(env = process.env) {
 // When AGENT_STANDUP_PROJECTS points the app at one folder of Claude Code sessions (--projects, the tests), Codex is only read if it is asked for too.
 // null: Codex sessions are off.
 function codexHomeFromEnv(env = process.env) {
-  const v = env.AGENT_STANDUP_CODEX;
-  if (v != null) return /^(0|off|no|false)?$/i.test(v.trim()) ? null : v;
+  const value = env.AGENT_STANDUP_CODEX;
+  if (value != null) return /^(0|off|no|false)?$/i.test(value.trim()) ? null : value;
   if (env.AGENT_STANDUP_PROJECTS) return null;
   return env.CODEX_HOME || path.join(os.homedir(), '.codex');
 }

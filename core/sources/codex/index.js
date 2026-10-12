@@ -27,7 +27,7 @@ function createCodexSource({ home = null, scanTtlMs, reader }) {
   }
 
   function stamp(proj, id) {
-    try { const s = fs.statSync(codex.fileOf(id) || ''); return s.mtimeMs + s.size; } catch { return 0; }
+    try { const stat = fs.statSync(codex.fileOf(id) || ''); return stat.mtimeMs + stat.size; } catch { return 0; }
   }
 
   return {
@@ -41,7 +41,7 @@ function createCodexSource({ home = null, scanTtlMs, reader }) {
     mtime: (proj, id) => { const row = codex.row(id); return row ? row.mtime : 0; },
     // A Codex session counts for a project when it was started in that folder.
     inProject: (proj, id, folder) => codex.inProject(id, folder),
-    recent: (projFilter) => codex.sessions().filter((r) => !projFilter || codex.inProject(r.id, projFilter)).map((r) => ({ proj: PROJ, id: r.id, mtime: r.mtime })),
+    recent: (projFilter) => codex.sessions().filter((rollout) => !projFilter || codex.inProject(rollout.id, projFilter)).map((rollout) => ({ proj: PROJ, id: rollout.id, mtime: rollout.mtime })),
 
     listSessions: board.listSessions,
     boardRows: board.boardRows,

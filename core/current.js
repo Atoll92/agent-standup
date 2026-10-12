@@ -3,7 +3,7 @@
 // A session written to in the last 90 s keeps the call, so another session writing elsewhere does not steal it mid-line.
 const STICK_MS = 90000;
 
-const isSafeName = (x) => typeof x === 'string' && /^[\w.\-]+$/.test(x) && x !== '..';
+const isSafeName = (name) => typeof name === 'string' && /^[\w.\-]+$/.test(name) && name !== '..';
 
 // `sources` are all the sources, `sourceOf(proj)` gives the one a project belongs to.
 function createCurrent({ sources, sourceOf }) {

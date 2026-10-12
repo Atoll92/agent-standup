@@ -9,13 +9,13 @@ const dirKey = (cwd) => String(cwd || '').replace(/[^a-zA-Z0-9]/g, '-');   // th
 const NAME = /^rollout-.*?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/i;
 // ---- helpers that need no state
 function firstLine(file, max = 1024 * 1024) {
-  let fd; try {
-    fd = fs.openSync(file, 'r'); const parts = []; let pos = 0;
-    while (pos < max) { const buf = Buffer.alloc(64 * 1024), n = fs.readSync(fd, buf, 0, buf.length, pos); if (!n) break; const nl = buf.subarray(0, n).indexOf(10); if (nl >= 0) { parts.push(buf.subarray(0, nl)); return { text: Buffer.concat(parts).toString('utf8'), whole: true }; } parts.push(buf.subarray(0, n)); pos += n; }
+  let fileDescriptor; try {
+    fileDescriptor = fs.openSync(file, 'r'); const parts = []; let pos = 0;
+    while (pos < max) { const buf = Buffer.alloc(64 * 1024), bytesRead = fs.readSync(fileDescriptor, buf, 0, buf.length, pos); if (!bytesRead) break; const newlineAt = buf.subarray(0, bytesRead).indexOf(10); if (newlineAt >= 0) { parts.push(buf.subarray(0, newlineAt)); return { text: Buffer.concat(parts).toString('utf8'), whole: true }; } parts.push(buf.subarray(0, bytesRead)); pos += bytesRead; }
     return { text: Buffer.concat(parts).toString('utf8'), whole: false, capped: pos >= max };
-  } catch { return { text: '', whole: false }; } finally { if (fd != null) fs.closeSync(fd); }
+  } catch { return { text: '', whole: false }; } finally { if (fileDescriptor != null) fs.closeSync(fileDescriptor); }
 }
-const projectLabel = (cwd) => { const h = os.homedir(), rel = cwd && cwd.startsWith(h + path.sep) ? cwd.slice(h.length + 1) : cwd; return 'Codex' + (rel ? ' · ' + rel.split(path.sep).join('/') : ''); };
+const projectLabel = (cwd) => { const homeDirectory = os.homedir(), rel = cwd && cwd.startsWith(homeDirectory + path.sep) ? cwd.slice(homeDirectory.length + 1) : cwd; return 'Codex' + (rel ? ' · ' + rel.split(path.sep).join('/') : ''); };
 
 
 // ---- the reader
@@ -29,20 +29,20 @@ function createCodexFiles({ home = null, scanTtlMs = 2000 } = {}) {
     const rows = [], byId = new Map();
     const walk = (dir, depth) => {
       let names; try { names = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
-      for (const e of names) {
-        const fp = path.join(dir, e.name);
-        if (e.isDirectory()) { if (depth < 4) walk(fp, depth + 1); continue; }
-        const m = NAME.exec(e.name); if (!m) continue;
-        let st; try { st = fs.statSync(fp); } catch { continue; }
-        const row = { id: m[1].toLowerCase(), file: fp, mtime: st.mtimeMs, size: st.size }; rows.push(row); byId.set(row.id, row);
+      for (const entry of names) {
+        const entryPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) { if (depth < 4) walk(entryPath, depth + 1); continue; }
+        const match = NAME.exec(entry.name); if (!match) continue;
+        let stat; try { stat = fs.statSync(entryPath); } catch { continue; }
+        const row = { id: match[1].toLowerCase(), file: entryPath, mtime: stat.mtimeMs, size: stat.size }; rows.push(row); byId.set(row.id, row);
       }
     };
     if (home) walk(path.join(home, 'sessions'), 0);
-    rows.sort((a, b) => b.mtime - a.mtime);
+    rows.sort((first, second) => second.mtime - first.mtime);
     memo = { at: now, rows, byId }; return memo;
   }
   const row = (id) => scan().byId.get(String(id).toLowerCase()) || null;
-  const fileOf = (id) => { const r = row(id); return r ? r.file : null; };
+  const fileOf = (id) => { const rollout = row(id); return rollout ? rollout.file : null; };
 
   // ---- the first line of a file says what the thread is: its folder, and whether another thread started it
   const headCache = new Map();   // file → { ok, cwd, dir, child } (the first line never changes)
@@ -50,11 +50,11 @@ function createCodexFiles({ home = null, scanTtlMs = 2000 } = {}) {
     const hit = headCache.get(file); if (hit) return hit;
     const { text, whole, capped } = firstLine(file); let out = { ok: false, cwd: '', dir: '', child: false };
     if (!text) return out;   // not written yet: looked at again next time
-    let p = null; try { const r = JSON.parse(text); if (r && r.type === 'session_meta' && r.payload && typeof r.payload === 'object') p = r.payload; } catch {}
-    if (p) out = { ok: true, cwd: typeof p.cwd === 'string' ? p.cwd : '', child: !!p.parent_thread_id || !!(p.source && typeof p.source === 'object' && p.source.subagent) };
+    let payload = null; try { const firstRecord = JSON.parse(text); if (firstRecord && firstRecord.type === 'session_meta' && firstRecord.payload && typeof firstRecord.payload === 'object') payload = firstRecord.payload; } catch {}
+    if (payload) out = { ok: true, cwd: typeof payload.cwd === 'string' ? payload.cwd : '', child: !!payload.parent_thread_id || !!(payload.source && typeof payload.source === 'object' && payload.source.subagent) };
     else if (capped && /^\{"timestamp":"[^"]*","(?:ordinal":\d+,")?type":"session_meta"/.test(text)) {   // a first line longer than what was read: the two facts, without the rest
-      const cwd = text.match(/"cwd":"((?:[^"\\]|\\.)*)"/); let c = ''; try { c = cwd ? JSON.parse('"' + cwd[1] + '"') : ''; } catch {}
-      out = { ok: true, cwd: c, child: /"parent_thread_id":"[^"]+"/.test(text) || /"source":\{"subagent"/.test(text) };
+      const cwdMatch = text.match(/"cwd":"((?:[^"\\]|\\.)*)"/); let cwd = ''; try { cwd = cwdMatch ? JSON.parse('"' + cwdMatch[1] + '"') : ''; } catch {}
+      out = { ok: true, cwd: cwd, child: /"parent_thread_id":"[^"]+"/.test(text) || /"source":\{"subagent"/.test(text) };
     }
     out.dir = dirKey(out.cwd);
     if (whole || capped) { if (headCache.size > 5000) headCache.clear(); headCache.set(file, out); }   // a first line still being written is read again next time
@@ -62,10 +62,10 @@ function createCodexFiles({ home = null, scanTtlMs = 2000 } = {}) {
   }
   // The threads a person started, newest first. A thread started by another thread (Codex's review of a command before it runs, a sub-agent) is not a session of its own.
   function sessions(limit = 80) {
-    const out = []; for (const r of scan().rows) { const h = head(r.file); if (!h.ok || h.child) continue; out.push({ ...r, cwd: h.cwd, dir: h.dir }); if (out.length >= limit) break; }
+    const out = []; for (const rollout of scan().rows) { const thread = head(rollout.file); if (!thread.ok || thread.child) continue; out.push({ ...rollout, cwd: thread.cwd, dir: thread.dir }); if (out.length >= limit) break; }
     return out;
   }
-  const inProject = (id, key) => { const r = row(id); if (!r || !key) return false; if (key === PROJ) return true; const d = head(r.file).dir; return d === key || d.startsWith(key + '-'); };
+  const inProject = (id, key) => { const rollout = row(id); if (!rollout || !key) return false; if (key === PROJ) return true; const folder = head(rollout.file).dir; return folder === key || folder.startsWith(key + '-'); };
   return { home, sessions, row, fileOf, inProject };
 }
 

@@ -22,7 +22,7 @@ function createClaudeSource({ root, reader }) {
     let latest = mtimeOf(mainFile(proj, id));
     if (!latest) return 0;
     const subs = files.subFiles(proj, id);
-    for (const x of subs) latest = Math.max(latest, mtimeOf(x.file));
+    for (const subAgent of subs) latest = Math.max(latest, mtimeOf(subAgent.file));
     for (const dir of subs.dirs) latest = Math.max(latest, mtimeOf(dir));
     return latest;
   }
@@ -30,14 +30,14 @@ function createClaudeSource({ root, reader }) {
   // A number that changes when anything in the session's files changes: the transcripts and the folders they are in
   // (a folder changes when a file appears in it, e.g. an agent's meta file), not every file around them.
   function stamp(proj, id) {
-    let n = 0;
-    const add = (file) => { try { const s = fs.statSync(file); n += s.mtimeMs + s.size; } catch {} };
+    let total = 0;
+    const add = (file) => { try { const stat = fs.statSync(file); total += stat.mtimeMs + stat.size; } catch {} };
     add(mainFile(proj, id));
     const subs = files.subFiles(proj, id);
-    for (const x of subs) add(x.file);
-    for (const x of subs.journals) add(x.file);
-    for (const dir of subs.dirs) n += mtimeOf(dir);
-    return n;
+    for (const subAgent of subs) add(subAgent.file);
+    for (const journal of subs.journals) add(journal.file);
+    for (const dir of subs.dirs) total += mtimeOf(dir);
+    return total;
   }
 
   // The sessions of the project asked for (all of them without one), each with when it was last active.

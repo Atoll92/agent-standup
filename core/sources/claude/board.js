@@ -12,44 +12,44 @@ const TITLE_SEARCH_BYTES = 256 * 1024;
 const MAX_CACHED_TAILS = 200;
 
 const readTail = (file, bytes) => {
-  const fd = fs.openSync(file, 'r');
+  const fileDescriptor = fs.openSync(file, 'r');
   try {
-    const size = fs.fstatSync(fd).size, n = Math.min(bytes, size), buf = Buffer.alloc(n);
-    fs.readSync(fd, buf, 0, n, size - n);
+    const size = fs.fstatSync(fileDescriptor).size, byteCount = Math.min(bytes, size), buf = Buffer.alloc(byteCount);
+    fs.readSync(fileDescriptor, buf, 0, byteCount, size - byteCount);
     return { text: buf.toString('utf8'), cut: size > bytes };
-  } finally { fs.closeSync(fd); }
+  } finally { fs.closeSync(fileDescriptor); }
 };
 const readHead = (file, bytes) => {
-  const fd = fs.openSync(file, 'r');
+  const fileDescriptor = fs.openSync(file, 'r');
   try {
-    const n = Math.min(bytes, fs.fstatSync(fd).size), buf = Buffer.alloc(n);
-    fs.readSync(fd, buf, 0, n, 0);
+    const byteCount = Math.min(bytes, fs.fstatSync(fileDescriptor).size), buf = Buffer.alloc(byteCount);
+    fs.readSync(fileDescriptor, buf, 0, byteCount, 0);
     return buf.toString('utf8');
-  } finally { fs.closeSync(fd); }
+  } finally { fs.closeSync(fileDescriptor); }
 };
 
 // First look at a file: a little further back than the lines read above, and without needing whole lines.
-function titlesFurtherBack(file, ai) {
+function titlesFurtherBack(file, aiTitle) {
   const text = readTail(file, TITLE_SEARCH_BYTES).text;
-  const last = (re) => {
-    const m = [...text.matchAll(re)].pop();
-    try { return m ? JSON.parse('"' + m[1] + '"') : null; } catch { return null; }
+  const last = (pattern) => {
+    const match = [...text.matchAll(pattern)].pop();
+    try { return match ? JSON.parse('"' + match[1] + '"') : null; } catch { return null; }
   };
   const custom = last(/"type":"custom-title","customTitle":"((?:[^"\\]|\\.)*)"/g);
-  return { custom, ai: ai || last(/"type":"ai-title","aiTitle":"((?:[^"\\]|\\.)*)"/g) };
+  return { custom, ai: aiTitle || last(/"type":"ai-title","aiTitle":"((?:[^"\\]|\\.)*)"/g) };
 }
 
 // The first thing the person typed, read record by record: a pattern over the raw text ran from a user record into the assistant's
 // first answer and took that as the title.
 function firstPrompt(file) {
-  const oneLine = (t) => t.replace(/\s+/g, ' ').trim().slice(0, 90);
+  const oneLine = (text) => text.replace(/\s+/g, ' ').trim().slice(0, 90);
   for (const line of readHead(file, 64 * 1024).split('\n')) {
     if (!line) continue;
-    let r;
-    try { r = JSON.parse(line); } catch { r = null; }
-    if (r) {
-      if (r.type !== 'user' || r.isMeta || r.isCompactSummary) continue;
-      const text = oneLine(blocks(r).filter((b) => b && b.type === 'text' && typeof b.text === 'string').map((b) => b.text).join('\n').replace(HARNESS, ''));
+    let record;
+    try { record = JSON.parse(line); } catch { record = null; }
+    if (record) {
+      if (record.type !== 'user' || record.isMeta || record.isCompactSummary) continue;
+      const text = oneLine(blocks(record).filter((block) => block && block.type === 'text' && typeof block.text === 'string').map((block) => block.text).join('\n').replace(HARNESS, ''));
       if (text && text[0] !== '<' && !/^\[Request interrupted/i.test(text)) return text;
       continue;
     }
@@ -82,12 +82,12 @@ const MAX_LISTED = 60;       // sessions in the list to pick from
 //   blocked  it needs the person (a question, or an edit waiting for permission: a heuristic, Claude Code does not record permission prompts)
 //   turn     the lead answered, it is the person's turn          idle  nothing for a while
 // `tool` is the call that has no result yet, and `ageMs` how long it has been pending (or since the file was written).
-function sessionState(tail, st, now) {
-  const age = now - st.mtimeMs, pending = tail.pending || [], lastCall = pending[pending.length - 1];
+function sessionState(tail, stat, now) {
+  const age = now - stat.mtimeMs, pending = tail.pending || [], lastCall = pending[pending.length - 1];
   if (age >= LIVE_MS) return { state: 'idle', tool: '', ageMs: age };
 
   if (lastCall) {
-    const ageMs = now - (lastCall.ts || st.mtimeMs);
+    const ageMs = now - (lastCall.ts || stat.mtimeMs);
     const needsPerson = (ASKS.test(lastCall.name) && ageMs > ASK_GRACE_MS) || (APPROVAL.test(lastCall.name) && ageMs > APPROVAL_GRACE_MS);
     const state = SUBTOOL.test(lastCall.name) ? 'waiting' : needsPerson ? 'blocked' : 'working';
     return { state, tool: lastCall.name, ageMs };
@@ -102,22 +102,22 @@ function createClaudeBoard({ root, files }) {
   function listSessions() {
     const rows = [];
     for (const { proj, id, stat } of files.transcripts()) rows.push({ proj, id, mtime: stat.mtimeMs, size: stat.size });
-    rows.sort((a, b) => b.mtime - a.mtime);
+    rows.sort((first, second) => second.mtime - first.mtime);
 
-    return rows.slice(0, MAX_LISTED).map((r) => {
+    return rows.slice(0, MAX_LISTED).map((row) => {
       // Titles come from the cached tail read (custom title, then AI title, then first prompt): no whole-file reads.
       let title = null;
-      try { const file = path.join(root, r.proj, r.id + '.jsonl'); title = parseTail(file, fs.statSync(file)).title; } catch {}
-      return { ...r, agents: files.subFiles(r.proj, r.id).length, title: title || r.id, project: r.proj.replace(/^-Users-[^-]+-/, '').replace(/-/g, '/') };
+      try { const file = path.join(root, row.proj, row.id + '.jsonl'); title = parseTail(file, fs.statSync(file)).title; } catch {}
+      return { ...row, agents: files.subFiles(row.proj, row.id).length, title: title || row.id, project: row.proj.replace(/^-Users-[^-]+-/, '').replace(/-/g, '/') };
     });
   }
 
   // One row per session written to in the last `windowMs`, newest first: { proj, id, title, mtime, state, tool, ageMs, subActive, subTotal }.
   function boardRows({ now, windowMs }) {
     const recent = [];
-    for (const { proj, id, stat } of files.transcripts()) if (now - stat.mtimeMs < windowMs) recent.push({ proj, id, st: stat });
-    recent.sort((a, b) => b.st.mtimeMs - a.st.mtimeMs);
-    return recent.slice(0, MAX_BOARD_ROWS).map(({ proj, id, st }) => claudeRow(proj, id, st, now));
+    for (const { proj, id, stat } of files.transcripts()) if (now - stat.mtimeMs < windowMs) recent.push({ proj, id, stat });
+    recent.sort((first, second) => second.stat.mtimeMs - first.stat.mtimeMs);
+    return recent.slice(0, MAX_BOARD_ROWS).map(({ proj, id, stat }) => claudeRow(proj, id, stat, now));
   }
 
   const boardCache = new Map();   // file → what parseTail found, valid while the file has the same mtime and size
@@ -126,55 +126,55 @@ function createClaudeBoard({ root, files }) {
   //   { sig, title, custom, ai, first, lastType, lastTool, lastTs, pending }
   //   lastType  'assistant' or 'user': who wrote the last message      lastTool  whether that message has a tool call
   //   pending   tool calls with no result yet: [{ name, ts }]          title     what to call the session (see pickTitle)
-  function parseTail(file, st) {
-    const sig = st.mtimeMs + ':' + st.size, cached = boardCache.get(file);
+  function parseTail(file, stat) {
+    const sig = stat.mtimeMs + ':' + stat.size, cached = boardCache.get(file);
     if (cached && cached.sig === sig) return cached;
 
-    const { text, cut } = readTail(file, TAIL_BYTES), lines = text.split('\n');
-    if (cut) lines.shift();   // the first line of a cut tail is not whole
+    const { text, cut: truncated } = readTail(file, TAIL_BYTES), lines = text.split('\n');
+    if (truncated) lines.shift();   // the first line of a cut tail is not whole
 
     const pending = new Map();   // tool call id → { name, ts }
     let lastType = null, lastTool = false, lastTs = 0;
-    let custom = (cached && cached.custom) || null, ai = (cached && cached.ai) || null, first = cached ? cached.first : undefined;
+    let custom = (cached && cached.custom) || null, aiTitle = (cached && cached.ai) || null, first = cached ? cached.first : undefined;
     for (const line of lines) {
       if (!line) continue;
-      let r;
-      try { r = JSON.parse(line); } catch { continue; }
+      let record;
+      try { record = JSON.parse(line); } catch { continue; }
       // A session is renamed, or named, long after its row was first shown: the latest one read wins.
-      if (r.type === 'custom-title' && typeof r.customTitle === 'string') custom = r.customTitle;
-      else if (r.type === 'ai-title' && typeof r.aiTitle === 'string') ai = r.aiTitle;
+      if (record.type === 'custom-title' && typeof record.customTitle === 'string') custom = record.customTitle;
+      else if (record.type === 'ai-title' && typeof record.aiTitle === 'string') aiTitle = record.aiTitle;
 
-      const ts = Date.parse(r.timestamp) || 0, content = blocks(r);
-      if (r.type === 'assistant' || r.type === 'user') {
-        lastType = r.type;
-        lastTool = content.some((b) => b.type === 'tool_use');
+      const ts = Date.parse(record.timestamp) || 0, content = blocks(record);
+      if (record.type === 'assistant' || record.type === 'user') {
+        lastType = record.type;
+        lastTool = content.some((block) => block.type === 'tool_use');
         if (ts) lastTs = ts;
       }
-      for (const b of content) {
-        if (b.type === 'tool_use') pending.set(b.id, { name: b.name, ts });
-        else if (b.type === 'tool_result') pending.delete(b.tool_use_id);
+      for (const block of content) {
+        if (block.type === 'tool_use') pending.set(block.id, { name: block.name, ts });
+        else if (block.type === 'tool_result') pending.delete(block.tool_use_id);
       }
     }
 
-    if (!cached && !custom) ({ custom, ai } = titlesFurtherBack(file, ai));
-    if (!custom && !ai && first == null) first = firstPrompt(file) || (st.size > 64 * 1024 ? '' : null);   // '' = looked for and not there; a file that has just been created is looked at again
+    if (!cached && !custom) ({ custom, ai: aiTitle } = titlesFurtherBack(file, aiTitle));
+    if (!custom && !aiTitle && first == null) first = firstPrompt(file) || (stat.size > 64 * 1024 ? '' : null);   // '' = looked for and not there; a file that has just been created is looked at again
 
     // A title the person typed wins over the generated one, and both over the first prompt.
-    const out = { sig, title: custom || ai || first || null, custom, ai, first, lastType, lastTool, lastTs, pending: [...pending.values()] };
+    const out = { sig, title: custom || aiTitle || first || null, custom, ai: aiTitle, first, lastType, lastTool, lastTs, pending: [...pending.values()] };
     boardCache.set(file, out);
     if (boardCache.size > MAX_CACHED_TAILS) boardCache.delete(boardCache.keys().next().value);
     return out;
   }
 
   // { proj, id, title, mtime, state, tool, ageMs, subActive, subTotal }
-  function claudeRow(proj, id, st, now) {
+  function claudeRow(proj, id, stat, now) {
     let tail;
-    try { tail = parseTail(path.join(root, proj, id + '.jsonl'), st); } catch { tail = { pending: [] }; }
-    const { state, tool, ageMs } = sessionState(tail, st, now);
+    try { tail = parseTail(path.join(root, proj, id + '.jsonl'), stat); } catch { tail = { pending: [] }; }
+    const { state, tool, ageMs } = sessionState(tail, stat, now);
 
     let subActive = 0, subTotal = 0;
     for (const sub of files.subFiles(proj, id)) { subTotal++; if (now - mtimeOf(sub.file) < SUB_ACTIVE_MS) subActive++; }
-    return { proj, id, title: tail.title || id, mtime: st.mtimeMs, state, tool, ageMs, subActive, subTotal };
+    return { proj, id, title: tail.title || id, mtime: stat.mtimeMs, state, tool, ageMs, subActive, subTotal };
   }
 
   return { listSessions, boardRows, parseTail };

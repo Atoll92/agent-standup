@@ -17,22 +17,22 @@ function wasRewritten(file, state, stat) {
 
 // Are the last bytes we read still where we read them? If not, the file was rewritten and not appended to.
 function sameBytes(file, state) {
-  let fd;
+  let fileDescriptor;
   try {
-    fd = fs.openSync(file, 'r');
+    fileDescriptor = fs.openSync(file, 'r');
     const bytes = Buffer.alloc(state.fp.length);
-    fs.readSync(fd, bytes, 0, bytes.length, state.offset - bytes.length);
+    fs.readSync(fileDescriptor, bytes, 0, bytes.length, state.offset - bytes.length);
     return bytes.equals(state.fp);
-  } catch { return false; } finally { if (fd != null) fs.closeSync(fd); }
+  } catch { return false; } finally { if (fileDescriptor != null) fs.closeSync(fileDescriptor); }
 }
 
 function readChunk(file, state, size, record) {
-  const fd = fs.openSync(file, 'r');
+  const fileDescriptor = fs.openSync(file, 'r');
   let bytes;
   try {
     bytes = Buffer.alloc(Math.min(CHUNK_BYTES, size - state.offset));
-    fs.readSync(fd, bytes, 0, bytes.length, state.offset);
-  } finally { fs.closeSync(fd); }
+    fs.readSync(fileDescriptor, bytes, 0, bytes.length, state.offset);
+  } finally { fs.closeSync(fileDescriptor); }
   state.offset += bytes.length;
   // A copy: a view would keep the whole chunk in memory.
   state.fp = Buffer.from(bytes.length >= FINGERPRINT_BYTES ? bytes.subarray(bytes.length - FINGERPRINT_BYTES) : Buffer.concat([state.fp, bytes]).subarray(-FINGERPRINT_BYTES));
