@@ -1,0 +1,16 @@
+{
+  "extension.description": "Claude Code나 Codex 세션을 애니메이션이 있는 실시간 팀 통화로 지켜보세요. 메인 에이전트가 지시하면 서브에이전트가 참가해 화면을 공유하고 보고합니다. 음성, 서브에이전트 트리, 타임라인, 요약, 동영상 내보내기를 지원합니다.",
+  "command.open.title": "Agent Standup: 실시간 통화 열기",
+  "command.openInBrowser.title": "Agent Standup: 브라우저에서 열기 (음성 + 소리)",
+  "command.focus.title": "Agent Standup: 사이드바 표시",
+  "command.openCharacters.title": "Agent Standup: 캐릭터 폴더 열기 (직접 만든 픽셀 아트)",
+  "view.name": "실시간 통화",
+  "config.port.description": "Agent Standup 서버의 로컬 포트입니다. 0(기본값)이면 VS Code 창마다 빈 포트를 자동으로 고릅니다.",
+  "config.autoOpen.description": "VS Code가 시작될 때 실시간 통화를 자동으로 엽니다.",
+  "config.onlyThisWorkspace.description": "현재 작업 영역 폴더에서 시작된 Claude Code 세션만 따라갑니다.",
+  "config.statusBar.description": "이 작업 영역의 상황(작업 중인 에이전트, 응답 필요, 내 차례)을 상태 표시줄에 실시간으로 보여 줍니다. 에이전트가 기다리고 있을 수 있으면 항목이 빨간색으로 바뀝니다.",
+  "config.shareUsage.description": "활성 설치 수 집계에 도움을 주세요. 하루에 한 번 GitHub의 1픽셀 파일로 빈 요청을 하나 보냅니다(식별자 없음, 내용 없음. 일반 다운로드처럼 GitHub에는 IP 주소가 보입니다). 기본값은 꺼짐이며, VS Code 원격 분석이 꺼져 있으면 무시됩니다.",
+  "config.codex.description": "Codex 세션도 표시합니다(~/.codex/sessions 또는 $CODEX_HOME에서 읽음). 끄면 Claude Code 세션만 표시합니다.",
+  "config.claudePath.description": "자동으로 찾지 못할 경우 Claude Code 실행 파일의 전체 경로입니다(프랑스어 번역에 사용).",
+  "config.charactersPath.description": "직접 만든 캐릭터 이미지(PNG, GIF, WebP, 각 300 KB 이하) 폴더입니다. 비워 두면 ~/.agent-standup/characters를 사용합니다. lead.png는 메인 에이전트, you.png는 나, 그 밖의 이미지는 서브에이전트이며, name-talk.png는 입을 벌린 프레임(선택)입니다."
+}
