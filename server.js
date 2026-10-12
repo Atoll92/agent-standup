@@ -12,10 +12,12 @@ const { execFileSync } = require('child_process');
 
 const { blocks, resultImages } = require('./core/transcript');
 const { createCore, configFromEnv } = require('./core');
-const { serializeEvent, serializeAgent, serializeTimeline, serializeFeed } = require('./core/serializers/web');
+const { serializeEvent, serializeAgent, serializeTimeline, serializeFeed, serializeSessionStatus } = require('./core/serializers/web');
 const { demoTimeline } = require('./core/demo');   // the core's models, in the names the page reads
 const core = createCore(configFromEnv());   // sessions → timeline, board and live feed (no web in there); read from the environment once, here
-const { root: ROOT, timelineEntry, feedSince, listSessions, boardRows, currentSession } = core;
+const { root: ROOT, timelineEntry, feedSince, listSessions, currentSession } = core;
+// The board in the names the page reads, and the command line, the editor extension and the desktop app (which call this module's boardRows).
+const boardRows = () => core.boardRows().map(serializeSessionStatus);
 const subFiles = (proj, id) => core.sources.claude.subFiles(proj, id);   // the pictures of a session are in the transcripts of its sub-agents
 
 const PORT = process.env.PORT || 4747;

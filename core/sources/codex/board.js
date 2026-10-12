@@ -2,6 +2,7 @@
 const fs = require('fs'), path = require('path');
 const { PROJ, projectLabel } = require('./files');
 const { typed, partsText } = require('./text');
+const { SessionStatus } = require('../../models');
 
 const MAX_BOARD_ROWS = 20;   // rows on the board
 const MAX_LISTED = 30;       // sessions in the list to pick from
@@ -46,7 +47,7 @@ function createCodexBoard({ files }) {
       if (tailCache.size > 200) tailCache.delete(tailCache.keys().next().value); tailCache.set(rollout.file, tail);
     }
     const age = now - rollout.mtime, state = age >= 30 * 60e3 ? 'idle' : tail.turn === 'closed' ? 'turn' : age < 10 * 60e3 ? 'working' : 'idle';
-    return { proj: PROJ, id: rollout.id, title: title(rollout), mtime: rollout.mtime, state, tool: '', ageMs: age, subActive: 0, subTotal: 0, dir: rollout.dir, source: 'codex' };
+    return new SessionStatus({ project: PROJ, sessionId: rollout.id, source: 'codex', title: title(rollout), lastActiveAt: rollout.mtime, state, stateAgeMs: age, folderKey: rollout.dir });
   }
 
   // The most recent sessions, newest first, to pick from: { proj, id, mtime, size, agents, title, project, source }.

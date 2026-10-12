@@ -139,3 +139,16 @@ test('a timeline finds its agents', () => {
   assert.equal(timeline.agent('nobody'), null);
   assert.deepEqual([timeline.feedId, timeline.sequence], [undefined, undefined], 'the live feed numbers it, not its builder');
 });
+
+test('a session status says what the session is doing, and refuses a state that is not one', () => {
+  const { SessionStatus } = require('../core/models');
+  const status = (state) => new SessionStatus({ project: '-p', sessionId: 's', source: 'claude', title: 't', lastActiveAt: 1, state, stateAgeMs: 0 });
+  const truth = (s) => [s.isWorking, s.isWaitingOnSubAgent, s.needsYou, s.isYourTurn, s.isIdle];
+  assert.deepEqual(truth(status('working')), [true, false, false, false, false]);
+  assert.deepEqual(truth(status('waiting')), [false, true, false, false, false]);
+  assert.deepEqual(truth(status('blocked')), [false, false, true, false, false]);
+  assert.deepEqual(truth(status('turn')), [false, false, false, true, false]);
+  assert.deepEqual(truth(status('idle')), [false, false, false, false, true]);
+  assert.deepEqual([status('idle').pendingTool, status('idle').subAgents, status('idle').activeSubAgents], ['', 0, 0]);
+  assert.throws(() => status('busy'), /cannot be "busy"/);
+});

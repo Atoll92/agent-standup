@@ -76,11 +76,14 @@ test('the board tells working, waiting, blocked, turn and idle from the tail of 
   for (const [name, records] of Object.entries(sessions)) write(path.join(dir(name), 's.jsonl'), records);
   write(path.join(dir('idle'), 's.jsonl'), [rec.say('Old.', ago(7200))]); setAge(path.join(dir('idle'), 's.jsonl'), 3600);
 
-  const rows = Object.fromEntries(core.boardRows().map((r) => [r.proj, r]));
-  assert.deepEqual(Object.fromEntries(Object.entries(rows).map(([k, r]) => [k, r.state])),
+  const rows = Object.fromEntries(core.boardRows().map((status) => [status.project, status]));
+  assert.deepEqual(Object.fromEntries(Object.entries(rows).map(([project, status]) => [project, status.state])),
     { working: 'working', editJustNow: 'working', editWaiting: 'blocked', question: 'blocked', subAgent: 'waiting', turn: 'turn', idle: 'idle' });
-  assert.equal(rows.working.tool, 'Bash');
+  assert.ok(rows.editWaiting.needsYou && rows.question.needsYou && !rows.editJustNow.needsYou);
+  assert.ok(rows.turn.isYourTurn && rows.subAgent.isWaitingOnSubAgent && rows.working.isWorking && rows.idle.isIdle);
+  assert.equal(rows.working.pendingTool, 'Bash');
   assert.equal(rows.turn.title, 'hi', 'a session with no title is named by what the person first typed');
+  assert.ok(Object.values(rows).every((status) => status.source === 'claude'));
 });
 
 test('the live feed gives only what is new, under the same memory', async () => {
@@ -120,8 +123,8 @@ test('two cores over two folders do not share anything, and a core needs its fol
   const one = newCore(), two = newCore();
   write(path.join(one.dir('-only-one'), 's.jsonl'), [rec.say('hi', ago(5))]);
   write(path.join(two.dir('-only-two'), 's.jsonl'), [rec.say('hi', ago(5))]);
-  assert.deepEqual(one.core.boardRows().map((r) => r.proj), ['-only-one']);
-  assert.deepEqual(two.core.boardRows().map((r) => r.proj), ['-only-two']);
+  assert.deepEqual(one.core.boardRows().map((status) => status.project), ['-only-one']);
+  assert.deepEqual(two.core.boardRows().map((status) => status.project), ['-only-two']);
   assert.throws(() => one.core.timeline('-only-two', 's'), /session not found/);
   assert.equal(one.core.sources.codex.home, null, 'Codex is left out unless a folder is given');
   assert.throws(() => createCore({}), /root/);
@@ -136,7 +139,7 @@ test('every source gives the whole interface', () => {
 
 test('the timeline, the board and the session to follow work through the interface only: a made-up source is a source like any other', () => {
   const { createTimeline } = require('../core/timeline'), { createBoard } = require('../core/board'), { createCurrent } = require('../core/current');
-  const { Say } = require('../core/models');
+  const { Say, SessionStatus } = require('../core/models');
   const at = Date.now() - 5000;
   const fake = {
     name: 'fake', owns: (proj) => proj === '_fake',
@@ -149,7 +152,7 @@ test('the timeline, the board and the session to follow work through the interfa
     exists: (proj, id) => id === 'one', mtime: (proj, id) => (id === 'one' ? at : 0), stamp: () => 1, inProject: (proj, id, folder) => folder === '_fake',
     recent: () => [{ proj: '_fake', id: 'one', mtime: at }],
     listSessions: () => [{ proj: '_fake', id: 'one', mtime: at, title: 'One' }],
-    boardRows: () => [{ proj: '_fake', id: 'one', mtime: at, state: 'working' }],
+    boardRows: () => [new SessionStatus({ project: '_fake', sessionId: 'one', source: 'fake', title: 'One', lastActiveAt: at, state: 'working' })],
   };
   const sourceOf = () => fake, read = [];
 

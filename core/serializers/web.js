@@ -135,7 +135,23 @@ const deserializeTimeline = (wire) => new Timeline({
   durationMs: wire.durationMs, recentUntil: wire.recentUntil, feedId: wire.ep, sequence: wire.seq,
 });
 
+// A row of the board as the page, the command line and the editors read it: proj, id, mtime, tool, ageMs, subActive, subTotal,
+// dir (the folder a Codex session was started in), and source only for a session that is not Claude Code's.
+const serializeSessionStatus = (status) => ({
+  proj: status.project,
+  id: status.sessionId,
+  title: status.title,
+  mtime: status.lastActiveAt,
+  state: status.state,
+  tool: status.pendingTool,
+  ageMs: status.stateAgeMs,
+  subActive: status.activeSubAgents,
+  subTotal: status.subAgents,
+  ...(status.folderKey ? { dir: status.folderKey } : {}),
+  ...(status.source !== 'claude' ? { source: status.source } : {}),
+});
+
 // What the page gets when it follows a session live: the session's agents, where the feed is, and the events new or different since it last asked.
 const serializeFeed = (timeline, events) => ({ id: timeline.sessionId, agents: timeline.agents.map(serializeAgent), ep: timeline.feedId, seq: timeline.sequence, events: events.map(serializeEvent) });
 
-module.exports = { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline, serializeFeed };
+module.exports = { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline, serializeFeed, serializeSessionStatus };

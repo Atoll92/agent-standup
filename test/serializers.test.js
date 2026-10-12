@@ -1,7 +1,7 @@
 // test/serializers.test.js: the format the page reads (core/serializers/web.js). It must not change: public/index.html reads these names.
 const test = require('node:test'), assert = require('node:assert');
 const { Say, Report, ToolBeat, ToolCall, Results, UserMessage, Order, Finish, Usage, Compact, AgentCall, AgentDone, WorkflowRun, WorkflowDone } = require('../core/models');
-const { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline, serializeFeed } = require('../core/serializers/web');
+const { serializeEvent, deserializeEvent, serializeAgent, deserializeAgent, serializeTimeline, deserializeTimeline, serializeFeed, serializeSessionStatus } = require('../core/serializers/web');
 const { Event, Agent, Timeline } = require('../core/models');
 const { UnknownEventKind } = require('../core/errors');
 const { demoTimeline } = require('../core/demo');
@@ -107,4 +107,12 @@ test('agents in the names the page reads, and read back the same', () => {
   const back = deserializeAgent(wire);
   assert.ok(back instanceof Agent);
   assert.deepEqual(serializeAgent(back), wire);
+});
+
+test('a row of the board in the names the page and the command line read', () => {
+  const { SessionStatus } = require('../core/models');
+  const claude = new SessionStatus({ project: '-p', sessionId: 's', source: 'claude', title: 'Fix it', lastActiveAt: 10, state: 'blocked', pendingTool: 'Edit', stateAgeMs: 20000, activeSubAgents: 1, subAgents: 2 });
+  assert.deepEqual(serializeSessionStatus(claude), { proj: '-p', id: 's', title: 'Fix it', mtime: 10, state: 'blocked', tool: 'Edit', ageMs: 20000, subActive: 1, subTotal: 2 });
+  const codex = new SessionStatus({ project: '_codex', sessionId: 'c', source: 'codex', title: 'T', lastActiveAt: 10, state: 'turn', stateAgeMs: 5, folderKey: '-Users-me-work' });
+  assert.deepEqual(serializeSessionStatus(codex), { proj: '_codex', id: 'c', title: 'T', mtime: 10, state: 'turn', tool: '', ageMs: 5, subActive: 0, subTotal: 0, dir: '-Users-me-work', source: 'codex' });
 });

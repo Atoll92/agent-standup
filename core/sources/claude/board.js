@@ -2,6 +2,7 @@
 const fs = require('fs'), path = require('path');
 const { blocks, HARNESS } = require('../../transcript');
 const { mtimeOf } = require('./files');
+const { SessionStatus } = require('../../models');
 
 const MINUTE_MS = 60e3;
 
@@ -174,7 +175,7 @@ function createClaudeBoard({ root, files }) {
 
     let subActive = 0, subTotal = 0;
     for (const sub of files.subFiles(proj, id)) { subTotal++; if (now - mtimeOf(sub.file) < SUB_ACTIVE_MS) subActive++; }
-    return { proj, id, title: tail.title || id, mtime: stat.mtimeMs, state, tool, ageMs, subActive, subTotal };
+    return new SessionStatus({ project: proj, sessionId: id, source: 'claude', title: tail.title || id, lastActiveAt: stat.mtimeMs, state, pendingTool: tool, stateAgeMs: ageMs, activeSubAgents: subActive, subAgents: subTotal });
   }
 
   return { listSessions, boardRows, parseTail };
