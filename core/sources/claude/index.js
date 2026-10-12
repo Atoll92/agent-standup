@@ -74,7 +74,7 @@ class ClaudeSource extends Source {
   listSessions() { return this.#board.listSessions(); }
   boardRows(options) { return this.#board.boardRows(options); }
 
-  // The transcripts of a session's sub-agents. Not part of what a source is: the pictures of a session are found through it (see server.js).
+  // The transcripts of a session's sub-agents. Not part of what a source is: the pictures of a session are found through it (see server/services/pictures.js).
   subFiles(proj, id) { return this.#files.subFiles(proj, id); }
 
   #mainFile(proj, id) { return path.join(this.#root, proj, id + '.jsonl'); }

@@ -8,6 +8,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 fs.rmSync(core, { recursive: true, force: true }); fs.mkdirSync(path.join(core, 'media'), { recursive: true });
 for (const f of ['server.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'LICENSE']) fs.copyFileSync(path.join(root, f), path.join(core, f));
 fs.cpSync(path.join(root, 'core'), path.join(core, 'core'), { recursive: true });
+fs.cpSync(path.join(root, 'server'), path.join(core, 'server'), { recursive: true });
 fs.cpSync(path.join(root, 'public'), path.join(core, 'public'), { recursive: true }); for (const e of ['cats']) fs.cpSync(path.join(root, 'examples', e), path.join(core, 'examples', e), { recursive: true }); for (const f of ['icon.png', 'tray.png', 'tray@2x.png']) fs.copyFileSync(path.join(root, 'media', f), path.join(core, 'media', f));
 if (!fs.existsSync(path.join(d, 'node_modules/electron'))) execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install', '--no-audit', '--no-fund'], { cwd: d, stdio: 'inherit', shell: process.platform === 'win32' });
 const appName = process.platform === 'win32' ? '"Agent Standup"' : 'Agent Standup';   // quoted on Windows, where the command goes through a shell and would split the name
