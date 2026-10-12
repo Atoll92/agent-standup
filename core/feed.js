@@ -38,7 +38,7 @@ function createFeed({ sourceOf, reader, buildTimeline }) {
     }
   }
 
-  const generationOf = (file) => (reader.fileStates.get(file) || {}).gen;
+  const generationOf = (file) => (reader.fileStates.get(file) || {}).generation;
 
   // Numbers the events of a fresh build against the previous feed (if it is still valid), and returns the feed to keep.
   function feedStep(previous, timeline, files) {

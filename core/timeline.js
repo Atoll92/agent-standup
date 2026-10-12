@@ -25,7 +25,7 @@ function linkLaunches({ agents, states, runs }) {
   const runByTool = {};
   for (const state of states) {
     if (!state) continue;
-    for (const entry of state.raw) {
+    for (const entry of state.records) {
       const run = entry instanceof WorkflowRun ? runs[entry.run] : null;
       if (!run || run.by) continue;
       run.by = entry.agentId; run.callId = entry.callId;
@@ -44,7 +44,7 @@ function findFinished({ agents, states, runs }, { childByTool, runByTool }) {
 
   for (const state of states) {
     if (!state) continue;
-    for (const entry of state.raw) {
+    for (const entry of state.records) {
       if (!(entry instanceof AgentDone)) continue;
       if (childByTool[entry.callId]) finished.add(childByTool[entry.callId]);
       else if (runByTool[entry.callId]) for (const agentId of Object.values(runByTool[entry.callId].agents)) finished.add(agentId);   // a run that stopped: so did every agent in it
@@ -65,7 +65,7 @@ function findFinished({ agents, states, runs }, { childByTool, runByTool }) {
 // the reports (the last thing a finished sub-agent says), the finishes, and the token usage.
 function collectEvents({ agents, states, runs }, { childByTool, runByTool }, finished) {
   const events = [], parent = {}, finishedSeen = new Set(), lastTs = {};
-  for (const state of states) if (state) lastTs[state.agent] = state.lastTs || 0;
+  for (const state of states) if (state) lastTs[state.agentId] = state.lastTimestamp || 0;
 
   // One finish per agent, whichever record says it first: the key is the agent, not the record.
   const finish = (agentId, timestamp, reportsTo) => {
@@ -76,17 +76,17 @@ function collectEvents({ agents, states, runs }, { childByTool, runByTool }, fin
 
   for (const state of states) {
     if (!state) continue;
-    const agent = agents[state.agent], run = agent && agent.workflow ? runs[agent.workflow] : null;
-    const reportAt = state.agent !== 'main' && finished.has(state.agent) ? lastSayIndex(state) : -1;
+    const agent = agents[state.agentId], run = agent && agent.workflow ? runs[agent.workflow] : null;
+    const reportAt = state.agentId !== 'main' && finished.has(state.agentId) ? lastSayIndex(state) : -1;
 
     // The order a workflow gave is the first message of the agent's own file: shown as an order from whoever launched
     // the workflow (the lead when nothing says who), given in the background, when the agent started.
-    if (run && state.prompt) {
-      parent[state.agent] = run.by || 'main';
-      events.push(new Order({ timestamp: state.prompt.timestamp, agentId: parent[state.agent], recipientId: state.agent, callId: run.callId, background: true, workflow: agent.workflow, text: state.prompt.text, title: agent.role, key: 'o/' + state.agent }));
+    if (run && state.order) {
+      parent[state.agentId] = run.by || 'main';
+      events.push(new Order({ timestamp: state.order.timestamp, agentId: parent[state.agentId], recipientId: state.agentId, callId: run.callId, background: true, workflow: agent.workflow, text: state.order.text, title: agent.role, key: 'o/' + state.agentId }));
     }
 
-    state.raw.forEach((entry, index) => {
+    state.records.forEach((entry, index) => {
       if (entry instanceof AgentDone) {
         const child = childByTool[entry.callId], workflow = runByTool[entry.callId];
         if (child) finish(child, entry.timestamp, entry.agentId);
@@ -106,10 +106,10 @@ function collectEvents({ agents, states, runs }, { childByTool, runByTool }, fin
     });
 
     // The journal has no times: the agent finished when it last wrote.
-    if (run && run.done.has(state.agent) && state.lastTs) finish(state.agent, state.lastTs, parent[state.agent] || 'main');
+    if (run && run.done.has(state.agentId) && state.lastTimestamp) finish(state.agentId, state.lastTimestamp, parent[state.agentId] || 'main');
 
-    for (const [messageId, usage] of state.msgUsage) {
-      events.push(new Usage({ timestamp: usage.timestamp, agentId: state.agent, tokens: usage.tokens, model: usage.model, contextWindow: usage.contextWindow, key: 'u/' + state.agent + '/' + messageId }));
+    for (const [messageId, usage] of state.usageByMessage) {
+      events.push(new Usage({ timestamp: usage.timestamp, agentId: state.agentId, tokens: usage.tokens, model: usage.model, contextWindow: usage.contextWindow, key: 'u/' + state.agentId + '/' + messageId }));
     }
   }
 
@@ -119,7 +119,7 @@ function collectEvents({ agents, states, runs }, { childByTool, runByTool }, fin
 
 // The last thing a sub-agent says is its report back to the lead.
 function lastSayIndex(state) {
-  for (let index = state.raw.length - 1; index >= 0; index--) if (state.raw[index] instanceof Say) return index;
+  for (let index = state.records.length - 1; index >= 0; index--) if (state.records[index] instanceof Say) return index;
   return -1;
 }
 

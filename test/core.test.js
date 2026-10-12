@@ -147,7 +147,7 @@ test('the timeline, the board and the session to follow work through the interfa
       if (id !== 'one') throw new Error('session not found');
       touched.push('/fake/one');
       const say = new Say({ timestamp: at, agentId: 'main', text: 'Hello from nowhere.', key: 'main:0' });
-      return { agents: { main: { id: 'main', role: 'Lead', type: 'main', name: 'Fake' } }, states: [{ agent: 'main', raw: [say], msgUsage: new Map(), lastTs: at }], runs: {} };
+      return { agents: { main: { id: 'main', role: 'Lead', type: 'main', name: 'Fake' } }, states: [{ agentId: 'main', records: [say], usageByMessage: new Map(), lastTimestamp: at }], runs: {} };
     },
     exists: (proj, id) => id === 'one', mtime: (proj, id) => (id === 'one' ? at : 0), stamp: () => 1, inProject: (proj, id, folder) => folder === '_fake',
     recent: () => [{ proj: '_fake', id: 'one', mtime: at }],
