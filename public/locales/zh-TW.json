@@ -319,5 +319,7 @@
  "the session": "該工作階段",
  "tmux unreachable": "無法連線 tmux",
  "To ": "傳給 ",
- "working, your message goes after": "正在工作，你的訊息會在之後處理"
+ "Claude is working: you can write when it is done": "Claude 正在工作：等它完成後你就可以輸入",
+ "The session changed while sending: the text stayed in the terminal, without Enter": "傳送時工作階段發生了變化：文字留在終端機中，未按 Enter",
+ "Refused: only the user who started Agent Standup can write": "已拒絕：只有啟動 Agent Standup 的使用者才能輸入"
 }

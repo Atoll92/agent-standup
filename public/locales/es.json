@@ -319,5 +319,7 @@
  "the session": "la sesión",
  "tmux unreachable": "tmux inaccesible",
  "To ": "A ",
- "working, your message goes after": "trabajando, tu mensaje irá después"
+ "Claude is working: you can write when it is done": "Claude está trabajando: podrás escribir cuando termine",
+ "The session changed while sending: the text stayed in the terminal, without Enter": "La sesión cambió durante el envío: el texto quedó en el terminal, sin Enter",
+ "Refused: only the user who started Agent Standup can write": "Rechazado: solo el usuario que inició Agent Standup puede escribir"
 }

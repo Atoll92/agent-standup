@@ -318,5 +318,7 @@
  "the session": "sessionen",
  "tmux unreachable": "tmux kan ikke nås",
  "To ": "Til ",
- "working, your message goes after": "arbejder, din besked kommer bagefter"
+ "Claude is working: you can write when it is done": "Claude arbejder: du kan skrive, når han er færdig",
+ "The session changed while sending: the text stayed in the terminal, without Enter": "Sessionen ændrede sig under afsendelsen: teksten blev i terminalen, uden Enter",
+ "Refused: only the user who started Agent Standup can write": "Afvist: kun den bruger, der startede Agent Standup, kan skrive"
 }

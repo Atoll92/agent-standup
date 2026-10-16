@@ -319,5 +319,7 @@
  "the session": "세션",
  "tmux unreachable": "tmux에 연결할 수 없습니다",
  "To ": "받는 사람: ",
- "working, your message goes after": "작업 중이라 메시지는 나중에 처리됩니다"
+ "Claude is working: you can write when it is done": "Claude가 작업 중입니다: 끝나면 작성할 수 있습니다",
+ "The session changed while sending: the text stayed in the terminal, without Enter": "전송 중에 세션이 바뀌었습니다: 텍스트는 Enter 없이 터미널에 남아 있습니다",
+ "Refused: only the user who started Agent Standup can write": "거부됨: Agent Standup을 실행한 사용자만 작성할 수 있습니다"
 }

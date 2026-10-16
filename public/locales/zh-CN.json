@@ -319,5 +319,7 @@
  "the session": "该会话",
  "tmux unreachable": "无法连接 tmux",
  "To ": "发给 ",
- "working, your message goes after": "正在工作，你的消息会在之后处理"
+ "Claude is working: you can write when it is done": "Claude 正在工作：等它完成后你就可以输入",
+ "The session changed while sending: the text stayed in the terminal, without Enter": "发送时会话发生了变化：文本留在终端中，未按 Enter",
+ "Refused: only the user who started Agent Standup can write": "已拒绝：只有启动 Agent Standup 的用户才能输入"
 }
