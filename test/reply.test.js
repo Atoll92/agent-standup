@@ -31,12 +31,13 @@ test('send types the text but not Enter when the session starts working meanwhil
 
 test('uidIn finds the owner of the client end of a loopback connection', () => {
   const T = `  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   9: 0100007F:D431 0100007F:128B 06 00000000:00000000 03:00000000 00000000     0        0 0 3 0000000000000000
    0: 0100007F:128B 00000000:0000 0A 00000000:00000000 00:00000000 00000000  1000        0 1 1 0000000000000000 100 0 0 10 0
    1: 0100007F:128B 0100007F:D431 01 00000000:00000000 00:00000000 00000000  1000        0 2 1 0000000000000000 20 4 30 10 -1
    2: 0100007F:D431 0100007F:128B 01 00000000:00000000 00:00000000 00000000  1001        0 3 1 0000000000000000 20 4 30 10 -1`;
   assert.equal(reply.tcpKey('127.0.0.1', 54321), '0100007F:D431');
   assert.equal(reply.tcpKey('127.0.0.1', 4747, true), '0000000000000000FFFF00000100007F:128B');   // v4-mapped, as /proc/net/tcp6 writes it
-  assert.equal(reply.uidIn(T, '0100007F:D431', '0100007F:128B'), 1001);   // the client row, not the server row of the same connection
+  assert.equal(reply.uidIn(T, '0100007F:D431', '0100007F:128B'), 1001);   // the client row, not the server row of the same connection nor the TIME_WAIT row (uid 0) of an older one
   assert.equal(reply.uidIn(T, '0100007F:D432', '0100007F:128B'), null);
   assert.equal(reply.peerUid({ remoteAddress: undefined }), null);
 });

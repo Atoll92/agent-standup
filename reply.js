@@ -37,7 +37,7 @@ async function send(id, text) {
 }
 // Who is calling: the uid owning the client end of the loopback connection, from /proc/net/tcp (Linux). null when not found: refused.
 const tcpKey = (ip, port, v6) => (v6 ? '0000000000000000FFFF0000' : '') + ip.split('.').reverse().map((n) => (+n).toString(16).padStart(2, '0')).join('').toUpperCase() + ':' + port.toString(16).toUpperCase().padStart(4, '0');   // each 32-bit word little-endian, the port big-endian
-const uidIn = (table, local, rem) => { for (const l of table.split('\n').slice(1)) { const c = l.trim().split(/\s+/); if (c[1] === local && c[2] === rem && /^\d+$/.test(c[7])) return +c[7]; } return null; };
+const uidIn = (table, local, rem) => { for (const l of table.split('\n').slice(1)) { const c = l.trim().split(/\s+/); if (c[1] === local && c[2] === rem && c[3] === '01' && /^\d+$/.test(c[7])) return +c[7]; } return null; };   // 01: ESTABLISHED; a TIME_WAIT row (06) of a former connection on the same ports is owned by uid 0
 function peerUid(sock) {   // ponytail: IPv4 only, the server listens on 127.0.0.1; a pure IPv6 peer (::1) would need the tcp6 address expanded
   const v4 = (a) => String(a || '').replace(/^::ffff:/i, ''), ra = v4(sock.remoteAddress), la = v4(sock.localAddress);
   if (process.platform !== 'linux' || !net.isIPv4(ra) || !net.isIPv4(la)) return null;

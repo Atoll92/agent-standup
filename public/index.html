@@ -1430,9 +1430,9 @@ $('#say').onsubmit = async (ev) => {
   if (SAY.draft && SAY.draft !== S.cur.id) { SAY.draft = S.cur.id; sayStatus(L('Destinataire changé : ', 'Recipient changed: ') + (SAY.name || L('la session', 'the session')) + L('. Appuie encore sur Entrée pour lui envoyer.', '. Press Enter again to send it there.'), true); return; }   // the draft was started for another session: asked once before it goes to this one
   const id = S.cur.id, name = SAY.name; b.disabled = true; b.classList.add('busy'); let r;
   try { r = await (await fetch('/api/reply', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, text, token: window.REPLY_TOKEN }) })).json(); } catch { r = { error: 'net' }; }
-  b.classList.remove('busy'); if (!S.cur || S.cur.id !== id) { if (r && r.ok && f.value.trim() === text) { f.value = ''; SAY.draft = ''; sayGrow(); } sayCheck(); return; }   // the call moved to another session meanwhile: sayCheck owns its state (button, status), the draft stays
+  b.classList.remove('busy'); if (!S.cur || S.cur.id !== id) { if (r && (r.ok || r.error === 'changed') && f.value.trim() === text) { f.value = ''; SAY.draft = ''; sayGrow(); } sayCheck(); return; }   // the call moved to another session meanwhile: sayCheck owns its state (button, status), the draft stays
   b.disabled = false;
-  if (r && r.ok) { if (f.value.trim() === text) { f.value = ''; SAY.draft = ''; sayGrow(); } sayStatus(L('Envoyé à ', 'Sent to ') + name, false); } else sayStatus(sayWhy(r && r.error), true);   // the typed text stays when it failed
+  if (r && r.ok) { if (f.value.trim() === text) { f.value = ''; SAY.draft = ''; sayGrow(); } sayStatus(L('Envoyé à ', 'Sent to ') + name, false); } else { if (r && r.error === 'changed' && f.value.trim() === text) { f.value = ''; SAY.draft = ''; sayGrow(); } sayStatus(sayWhy(r && r.error), true); }   // the typed text stays when it failed, except after changed: it is in the terminal prompt now, a second Send would type it again
   f.focus(); sayCheck();
 };
 $('#sayT').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#say').requestSubmit(); } };   // Shift+Enter: a new line, flattened by the server
