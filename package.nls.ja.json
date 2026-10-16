@@ -12,6 +12,7 @@
   "config.shareUsage.description": "利用者数の集計にご協力ください。エディター起動時に1日1回、通話を開いたときに週1回まで、GitHub 上の1ピクセルのファイルに空のリクエストを1件送ります（識別子・内容なし。通常のダウンロードと同様、GitHub には IP アドレスが見えます）。同意するまではオフです（初めて通話を開いたときに一度だけ確認します）。VS Code のテレメトリがオフの場合は無視されます。",
   "config.codex.description": "Codex のセッションも表示します（~/.codex/sessions または $CODEX_HOME から読み込み）。オフにすると Claude Code のセッションのみを表示します。",
   "config.vibe.description": "Mistral Vibe のセッションも表示します（~/.vibe/logs/session または $VIBE_HOME から読み込み）。オフにすると表示しません。",
+  "config.reply.description": "通話から、フォロー中の Claude Code セッションの tmux ペインにメッセージを入力できるようにします（Linux のみ、既定ではオフ）。あなたとしてコマンドを実行できる人は誰でも、あなたのセッションに入力できるようになります。",
   "config.claudePath.description": "Claude Code 実行ファイルのフルパス（自動で見つからない場合）。翻訳に使用します。",
   "config.charactersPath.description": "自作キャラクター画像（PNG、GIF、WebP、各300 KBまで）のフォルダ。空の場合は ~/.agent-standup/characters を使います。lead.png がメインエージェント、you.png があなた、それ以外の画像はサブエージェントになります。name-talk.png は口を開けた状態のフレーム（任意）です。"
 }

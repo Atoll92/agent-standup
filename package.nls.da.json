@@ -12,6 +12,7 @@
   "config.shareUsage.description": "Hjælp projektet med at tælle, hvor mange der bruger det: én gang om dagen, når editoren starter, og højst én gang om ugen, når du åbner opkaldet, sendes én tom forespørgsel til en 1-pixel-fil på GitHub (ingen identifikator, intet indhold; GitHub ser din IP som ved enhver download). Fra, indtil du siger ja (du bliver spurgt én gang, første gang du åbner opkaldet); ignoreres, hvis VS Code-telemetri er slået fra.",
   "config.codex.description": "Vis også Codex-sessioner (læses fra ~/.codex/sessions eller $CODEX_HOME). Slå fra for kun at vise Claude Code-sessioner.",
   "config.vibe.description": "Vis også Mistral Vibe-sessioner (læst fra ~/.vibe/logs/session eller $VIBE_HOME). Slå fra for at udelade dem.",
+  "config.reply.description": "Lad opkaldet skrive din besked i tmux-ruden for den fulgte Claude Code-session (kun Linux, slået fra som standard). Alle, der kan køre kommandoer som dig, kan så skrive i dine sessioner.",
   "config.claudePath.description": "Fuld sti til Claude Code-programmet, hvis det ikke findes automatisk (bruges til oversættelse).",
   "config.charactersPath.description": "Mappe med dine egne figurbilleder (PNG, GIF eller WebP, op til 300 KB hver). Tom bruger ~/.agent-standup/characters. lead.png er lederen, you.png er dig, alle andre billeder er underagenter, navn-talk.png er en valgfri ramme med åben mund."
 }
