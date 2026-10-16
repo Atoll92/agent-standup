@@ -306,5 +306,21 @@
  "Got it": "知道了",
  "Reset to defaults": "恢复默认设置",
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "设置换了位置：常用的在这里，其余的在“全部设置”里。",
- "2 € minimum: you can pay more on the payment page if you like.": "最低 2 欧元：如果愿意，可以在付款页面多付一些。"
+ "2 € minimum: you can pay more on the payment page if you like.": "最低 2 欧元：如果愿意，可以在付款页面多付一些。",
+ ". Press Enter again to send it there.": "。再按一次 Enter 即可发送到那里。",
+ "Claude is waiting for your answer in the terminal (a menu is open): answer it there": "Claude 正在终端中等待你的回答（菜单已打开）：请在那里回答",
+ "Could not send": "无法发送",
+ "Empty or too long message (4000 characters at most)": "消息为空或过长（最多 4000 个字符）",
+ "Recipient changed: ": "收件人已更改： ",
+ "Send": "发送",
+ "Sent to ": "已发送给 ",
+ "Session closed: nothing can receive the message": "会话已关闭：没有可接收消息的对象",
+ "Session started outside tmux: start it in tmux to talk to it": "会话在 tmux 之外启动：请在 tmux 中启动后再与它对话",
+ "Stale page: reload it": "页面已过期：请重新加载",
+ "the session": "该会话",
+ "tmux unreachable": "无法连接 tmux",
+ "To ": "发给 ",
+ "Claude is working: you can write when it is done": "Claude 正在工作：等它完成后你就可以输入",
+ "The session changed while sending: the text stayed in the terminal, without Enter": "发送时会话发生了变化：文本留在终端中，未按 Enter",
+ "Refused: only the user who started Agent Standup can write": "已拒绝：只有启动 Agent Standup 的用户才能输入"
 }

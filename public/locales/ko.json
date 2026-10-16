@@ -306,5 +306,21 @@
  "Got it": "알겠어요",
  "Reset to defaults": "기본값으로 되돌리기",
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "설정 위치가 바뀌었습니다. 자주 쓰는 설정은 여기에, 나머지는 '모든 설정'에 있습니다.",
- "2 € minimum: you can pay more on the payment page if you like.": "최소 2유로: 원하시면 결제 페이지에서 더 낼 수 있습니다."
+ "2 € minimum: you can pay more on the payment page if you like.": "최소 2유로: 원하시면 결제 페이지에서 더 낼 수 있습니다.",
+ ". Press Enter again to send it there.": ". Enter를 다시 누르면 그쪽으로 보냅니다.",
+ "Claude is waiting for your answer in the terminal (a menu is open): answer it there": "Claude가 터미널에서 답변을 기다리고 있습니다(메뉴가 열려 있음): 그곳에서 답하세요",
+ "Could not send": "보낼 수 없습니다",
+ "Empty or too long message (4000 characters at most)": "메시지가 비었거나 너무 깁니다(최대 4000자)",
+ "Recipient changed: ": "수신자 변경됨: ",
+ "Send": "보내기",
+ "Sent to ": "보낸 곳: ",
+ "Session closed: nothing can receive the message": "세션 종료됨: 메시지를 받을 대상이 없습니다",
+ "Session started outside tmux: start it in tmux to talk to it": "tmux 밖에서 시작된 세션: 대화하려면 tmux 안에서 시작하세요",
+ "Stale page: reload it": "오래된 페이지: 새로 고치세요",
+ "the session": "세션",
+ "tmux unreachable": "tmux에 연결할 수 없습니다",
+ "To ": "받는 사람: ",
+ "Claude is working: you can write when it is done": "Claude가 작업 중입니다: 끝나면 작성할 수 있습니다",
+ "The session changed while sending: the text stayed in the terminal, without Enter": "전송 중에 세션이 바뀌었습니다: 텍스트는 Enter 없이 터미널에 남아 있습니다",
+ "Refused: only the user who started Agent Standup can write": "거부됨: Agent Standup을 실행한 사용자만 작성할 수 있습니다"
 }

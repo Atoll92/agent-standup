@@ -306,5 +306,21 @@
  "Got it": "Entendido",
  "Reset to defaults": "Restablecer valores predeterminados",
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "Tus ajustes se han movido: los de cada día están aquí, el resto en «Todos los ajustes».",
- "2 € minimum: you can pay more on the payment page if you like.": "2 € como mínimo: puedes pagar más en la página de pago si quieres."
+ "2 € minimum: you can pay more on the payment page if you like.": "2 € como mínimo: puedes pagar más en la página de pago si quieres.",
+ ". Press Enter again to send it there.": ". Pulsa Enter de nuevo para enviarlo allí.",
+ "Claude is waiting for your answer in the terminal (a menu is open): answer it there": "Claude espera tu respuesta en el terminal (hay un menú abierto): responde allí",
+ "Could not send": "No se pudo enviar",
+ "Empty or too long message (4000 characters at most)": "Mensaje vacío o demasiado largo (4000 caracteres como máximo)",
+ "Recipient changed: ": "Destinatario cambiado: ",
+ "Send": "Enviar",
+ "Sent to ": "Enviado a ",
+ "Session closed: nothing can receive the message": "Sesión cerrada: nada puede recibir el mensaje",
+ "Session started outside tmux: start it in tmux to talk to it": "Sesión iniciada fuera de tmux: iníciala en tmux para hablarle",
+ "Stale page: reload it": "Página obsoleta: recárgala",
+ "the session": "la sesión",
+ "tmux unreachable": "tmux inaccesible",
+ "To ": "A ",
+ "Claude is working: you can write when it is done": "Claude está trabajando: podrás escribir cuando termine",
+ "The session changed while sending: the text stayed in the terminal, without Enter": "La sesión cambió durante el envío: el texto quedó en el terminal, sin Enter",
+ "Refused: only the user who started Agent Standup can write": "Rechazado: solo el usuario que inició Agent Standup puede escribir"
 }

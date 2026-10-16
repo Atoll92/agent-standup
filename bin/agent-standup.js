@@ -10,6 +10,7 @@ const argv = process.argv.slice(2), flags = {}, rest = [];
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], val = () => argv[++i];
   if (a === '--port') flags.port = val(); else if (a === '--projects') flags.projects = val(); else if (a === '--codex') flags.codex = val(); else if (a === '--vibe') flags.vibe = val(); else if (a === '--cowork') flags.cowork = val(); else if (a === '--characters') flags.characters = val(); else if (a === '--config-dir') flags.config = val();
+  else if (a === '--reply') flags.reply = /^(0|1|on|off|yes|no|true|false)$/i.test(argv[i + 1] || '') ? val() : 'on';   // alone or followed by on / off
   else if (a === '--open') flags.open = true; else if (a === '--here') flags.here = true; else if (a === '--json') flags.json = true; else if (a === '--titles') flags.titles = true;
   else if (a === '-h' || a === '--help') flags.help = true; else if (a === '-v' || a === '--version') flags.version = true; else rest.push(a);
 }
@@ -28,6 +29,7 @@ Options
   --codex DIR       where Codex keeps its files (default ~/.codex, or $CODEX_HOME); "off" to leave Codex sessions out
   --vibe DIR        where Mistral Vibe keeps its files (default ~/.vibe, or $VIBE_HOME); "off" to leave Vibe sessions out
   --cowork DIR      where the Claude desktop app keeps its Cowork sessions (default: its local-agent-mode-sessions folder); "off" to leave them out
+  --reply           let the call type into the followed Claude Code session's tmux pane (Linux, off by default; anyone who can run commands as you can then type into your sessions)
   --characters DIR  folder with your own pixel-art characters (default ~/.agent-standup/characters)
   --here            status: only sessions of the current folder (matched on its real path, as Claude Code names it)
   --json            status: machine-readable output (add --titles to include session titles)
@@ -38,6 +40,7 @@ if (flags.projects) process.env.AGENT_STANDUP_PROJECTS = path.resolve(flags.proj
 if (flags.codex !== undefined) process.env.AGENT_STANDUP_CODEX = /^(0|off|no|false)?$/i.test(String(flags.codex)) ? 'off' : path.resolve(String(flags.codex));
 if (flags.vibe !== undefined) process.env.AGENT_STANDUP_VIBE = /^(0|off|no|false)?$/i.test(String(flags.vibe)) ? 'off' : path.resolve(String(flags.vibe));
 if (flags.cowork !== undefined) process.env.AGENT_STANDUP_COWORK = /^(0|off|no|false)?$/i.test(String(flags.cowork)) ? 'off' : path.resolve(String(flags.cowork));
+if (flags.reply !== undefined) { if (/^(1|on|yes|true)$/i.test(flags.reply)) process.env.AGENT_STANDUP_REPLY = 'on'; else delete process.env.AGENT_STANDUP_REPLY; }
 if (flags.config) process.env.CLAUDE_CONFIG_DIR = path.resolve(flags.config);
 if (flags.characters) process.env.AGENT_STANDUP_CHARACTERS = path.resolve(flags.characters);
 if (flags.port !== undefined) {   // a real port number or nothing: no silent fallback to another port
