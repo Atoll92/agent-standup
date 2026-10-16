@@ -162,6 +162,13 @@
   .row .txt { color:#c3c6d4; word-break:break-word } .row.order .who { color:var(--gold) } .row.report .who { color:var(--ok) }
   footer { display:none; height:44px; flex:none; align-items:center; gap:12px; padding:0 14px; border-top:1px solid var(--line) }
   body.replay footer { display:flex }
+  #say { display:none; flex:1; min-width:0; align-items:flex-end; gap:8px } body.can-say:not(.replay) footer { display:flex; height:auto; min-height:44px; padding:6px 14px } body.can-say:not(.replay) footer > :not(#say) { display:none } body.can-say:not(.replay) #say { display:flex }   /* live: the footer row is the human's line; replay: the seek bar */
+  #say label { flex:none; align-self:center; color:var(--dim); font-size:12px; white-space:nowrap; max-width:30vw; overflow:hidden; text-overflow:ellipsis }
+  #sayT { flex:1; min-width:0; min-height:44px; max-height:96px; resize:none; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; font-size:14px; line-height:1.4 } #sayT:focus { border-color:var(--accent) } #sayT:disabled { opacity:.5; cursor:not-allowed }
+  #sayB { flex:none; min-width:44px; min-height:44px; background:var(--accent); color:#0b1020; font-weight:700; border:0; border-radius:8px; padding:0 14px; cursor:pointer } #sayB:disabled { opacity:.5; cursor:not-allowed } #sayB.busy { cursor:progress; position:relative; color:transparent } #sayB.busy::after { content:''; position:absolute; left:50%; top:50%; width:16px; height:16px; margin:-8px 0 0 -8px; border:2px solid #0b1020; border-right-color:transparent; border-radius:50%; animation:saySpin .7s linear infinite } @keyframes saySpin { to { transform:rotate(360deg) } } @media (prefers-reduced-motion:reduce) { #sayB.busy::after { animation:none } }
+  #sayChip { flex:none; align-self:center; font-size:11.5px; padding:2px 8px; border-radius:99px; border:1px solid var(--gold); color:var(--gold); white-space:nowrap } #sayChip:empty { display:none }
+  #sayS { flex-basis:100%; font-size:12px; color:var(--dim) } #sayS.err { color:var(--red) } #sayS:empty { height:0; margin-top:-8px } #say { flex-wrap:wrap }
+  @media (max-width:520px) { #sayChip { display:none } #say label { flex-basis:100%; max-width:none; align-self:flex-start; font-size:11.5px } }   /* phone: the recipient sits on its own line above the field */
   input[type=range] { accent-color:var(--accent) } #seek { flex:1; min-width:40px } #pos, footer label.dim { white-space:nowrap; flex:none } @media (max-width:520px) { footer { gap:8px; padding:0 8px } footer label.dim { display:none } }   /* narrow: the 1× 2× 4× 8× buttons are the speed control */
   @media (max-width:760px) { aside { position:absolute; right:0; top:0; bottom:0; z-index:6; box-shadow:-10px 0 30px rgba(0,0,0,.5) } .brand small { display:none } }
   @media (max-width:720px) { .brand b { display:none } }
@@ -400,6 +407,7 @@
   <input id="seek" type="range" min="0" max="0" value="0"><span class="dim" id="pos">0 / 0</span>
   <label class="dim"><span data-fr="Vitesse" data-en="Speed">Vitesse</span> <input id="speed" type="range" min="0.5" max="8" step="0.25" value="1.25" style="width:80px;vertical-align:middle"></label>
   <span id="sps" class="dim" role="group" aria-label="Speed presets"><button data-s="1">1×</button><button data-s="2">2×</button><button data-s="4">4×</button><button data-s="8">8×</button></span>
+  <form id="say" autocomplete="off"><label for="sayT" id="sayL"></label><textarea id="sayT" rows="1" enterkeyhint="send" maxlength="4000"></textarea><span id="sayChip"></span><button id="sayB" type="submit"></button><div id="sayS" role="status" aria-atomic="true"></div></form>
 </footer>
 <div id="card"></div><div id="recap"><div class="box"></div></div>
 
@@ -1299,6 +1307,7 @@ function syncUI() {
   $('#bPlay').textContent = S.playing ? '⏸' : '▶';
   paintPill(); paintTabs();
   document.body.classList.toggle('replay', !S.live);
+  sayCheck();
 }
 
 // ---------- tool ticker, shared screen, flying messages ----------
@@ -1400,6 +1409,37 @@ function fitBoard(force) {   // the chips lose their words when they do not all 
 addEventListener('resize', () => fitBoard(true)); new ResizeObserver(() => requestAnimationFrame(() => fitBoard(true))).observe($('#board'));   /* the room the chips have also changes when the texts beside them do (a title, a longer status) */
 const RORDER = { blocked: 0, stalled: 1, working: 2, waiting: 3, idle: 4, done: 5 };
 const TOOL = { _codex: 'Codex', _vibe: 'Vibe', _cowork: 'Cowork' }, leadTool = (p) => (p.id === 'main' && S.cur && TOOL[S.cur.proj] ? ' · ' + TOOL[S.cur.proj] : '');   // a session that is not a Claude Code one says which tool runs it: on its tab, and next to its lead, who has the same name in every call
+// ---------- the human's line: typed into the session's terminal through tmux (server: reply.js, off unless AGENT_STANDUP_REPLY=on) ----------
+const SAY = { name: '', why: '', draft: '' };   // draft: the id of the session the text in the field was started for
+let sayReq = 0;   // the latest sayCheck request: an older answer arriving late is ignored
+const sayWhy = (w) => ({ none: L('Session fermée : rien ne peut recevoir le message', 'Session closed: nothing can receive the message'), notmux: L('Session lancée hors tmux : lance-la dans tmux pour lui parler', 'Session started outside tmux: start it in tmux to talk to it'), tmux: L('tmux injoignable', 'tmux unreachable'), text: L('Message vide ou trop long (4000 caractères au plus)', 'Empty or too long message (4000 characters at most)'), token: L('Page périmée : recharge-la', 'Stale page: reload it'), waiting: L('Claude attend ta réponse dans le terminal (demande de permission) : réponds-y là-bas', 'Claude is waiting for your answer in the terminal (permission prompt): answer it there') }[w] || L('Envoi impossible', 'Could not send'));
+let sayTick = 0;
+const sayStatus = (msg, err) => { const s = $('#sayS'), n = ++sayTick; s.textContent = ''; s.classList.toggle('err', !!err); if (msg) requestAnimationFrame(() => { if (n === sayTick) s.textContent = msg; }); };   // clear then set on the next frame: a repeated identical message is announced again
+const sayGrow = () => { const f = $('#sayT'); f.style.height = 'auto'; f.style.height = Math.min(f.scrollHeight + 2, 96) + 'px'; };
+async function sayCheck() {   // can the followed session hear us: asked when the session changes and every 5 s while live
+  const on = !!window.REPLY_TOKEN && S.live && !S.demo && !!S.cur && !TOOL[S.cur.proj]; document.body.classList.toggle('can-say', on); if (!on) return;
+  const id = S.cur.id, n = ++sayReq; if (SAY.id !== id) { SAY.id = id; SAY.name = ''; SAY.why = ''; $('#sayL').textContent = ''; $('#sayT').disabled = true; $('#sayB').disabled = true; $('#sayChip').textContent = ''; sayStatus('', false); }   // another session: never show the old recipient
+  let r = { ok: false, why: 'tmux' }; try { r = await (await fetch('/api/reply?id=' + encodeURIComponent(id))).json(); } catch {}
+  if (n !== sayReq || !S.cur || S.cur.id !== id) return;
+  SAY.name = r.name || L('la session', 'the session'); $('#sayL').textContent = L('À ', 'To ') + SAY.name; $('#sayB').textContent = L('Envoyer', 'Send');
+  const wait = r.ok && r.status === 'waiting', can = r.ok && !wait; $('#sayT').disabled = !can; if (!$('#sayB').classList.contains('busy')) $('#sayB').disabled = !can;   // waiting = a permission menu: a typed line would answer it
+  $('#sayChip').textContent = r.ok && r.status === 'busy' ? L('travaille, ton message passera après', 'working, your message goes after') : '';
+  const why = !r.ok ? r.why : wait ? 'waiting' : '';
+  if (why) { if (SAY.why !== why) sayStatus(sayWhy(why), false); } else if (SAY.why) sayStatus('', false); SAY.why = why;
+}
+setInterval(sayCheck, 5000);
+$('#say').onsubmit = async (ev) => {
+  ev.preventDefault(); const f = $('#sayT'), b = $('#sayB'), text = f.value.trim(); if (!text || b.disabled || !S.cur) return;
+  if (SAY.draft && SAY.draft !== S.cur.id) { SAY.draft = S.cur.id; sayStatus(L('Destinataire changé : ', 'Recipient changed: ') + (SAY.name || L('la session', 'the session')) + L('. Appuie encore sur Entrée pour lui envoyer.', '. Press Enter again to send it there.'), true); return; }   // the draft was started for another session: asked once before it goes to this one
+  const id = S.cur.id, name = SAY.name; b.disabled = true; b.classList.add('busy'); let r;
+  try { r = await (await fetch('/api/reply', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, text, token: window.REPLY_TOKEN }) })).json(); } catch { r = { error: 'net' }; }
+  b.classList.remove('busy'); if (!S.cur || S.cur.id !== id) { if (r && r.ok && f.value.trim() === text) { f.value = ''; SAY.draft = ''; sayGrow(); } sayCheck(); return; }   // the call moved to another session meanwhile: sayCheck owns its state (button, status), the draft stays
+  b.disabled = false;
+  if (r && r.ok) { if (f.value.trim() === text) { f.value = ''; SAY.draft = ''; sayGrow(); } sayStatus(L('Envoyé à ', 'Sent to ') + name, false); } else sayStatus(sayWhy(r && r.error), true);   // the typed text stays when it failed
+  f.focus(); sayCheck();
+};
+$('#sayT').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#say').requestSubmit(); } };   // Shift+Enter: a new line, flattened by the server
+$('#sayT').oninput = () => { sayGrow(); SAY.draft = $('#sayT').value ? SAY.draft || (S.cur && S.cur.id) || '' : ''; };
 const rosTok = (id) => { const u = S.usage[id]; return u && tokTotal(u) ? `<span class="rt" title="${esc(tokTip(u))}">⚡${fmtTok(tokTotal(u))}</span>` : ''; };
 function paintRoster(ros) {   // a fixed list beside the call: who is doing what, urgent first, readable even with dozens of agents
   const box = $('#roster'); if (!box || !document.body.classList.contains('rost')) return;
@@ -2390,7 +2430,7 @@ async function followCurrent() {
   if (S.cur && S.cur.id === cur.id && S.cur.proj === cur.proj) return false;
   const key = cur.proj + '/' + cur.id, was = S.lastKey, moved = !!was && was !== key && !S.locked; if (moved) S.left[was] = Date.now();   // what was said of the session the call leaves is not said again when it comes back to it
   if (!(await loadSession(cur.proj, cur.id))) return false;
-  S.lastKey = key; if (moved) { const r = rowOf(cur); toast('↪ ' + (r ? tabName(r) : niceProj(cur.proj))); } paintTabs(); sessPoll();
+  S.lastKey = key; if (moved) { const r = rowOf(cur); toast('↪ ' + (r ? tabName(r) : niceProj(cur.proj))); } paintTabs(); sessPoll(); sayCheck();
   const start = liveStart(); if (!S.locked && !S.userPaused) run(start); return true;
 }
 // Live: a call starts when you join it. Only what happened since then, and was not said yet, is said (the last 16 events at most, when a session is picked up on the way);

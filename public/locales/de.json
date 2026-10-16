@@ -305,5 +305,19 @@
  "Got it": "Verstanden",
  "Reset to defaults": "Auf Standard zurücksetzen",
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "Deine Einstellungen sind umgezogen: die alltäglichen sind hier, der Rest unter „Alle Einstellungen“.",
- "2 € minimum: you can pay more on the payment page if you like.": "Mindestens 2 €: Auf der Zahlungsseite kannst du gern mehr zahlen."
+ "2 € minimum: you can pay more on the payment page if you like.": "Mindestens 2 €: Auf der Zahlungsseite kannst du gern mehr zahlen.",
+ ". Press Enter again to send it there.": ". Drücke erneut Enter, um sie dorthin zu senden.",
+ "Claude is waiting for your answer in the terminal (permission prompt): answer it there": "Claude wartet im Terminal auf deine Antwort (Berechtigungsabfrage): antworte dort",
+ "Could not send": "Senden nicht möglich",
+ "Empty or too long message (4000 characters at most)": "Nachricht leer oder zu lang (höchstens 4000 Zeichen)",
+ "Recipient changed: ": "Empfänger geändert: ",
+ "Send": "Senden",
+ "Sent to ": "Gesendet an ",
+ "Session closed: nothing can receive the message": "Sitzung geschlossen: nichts kann die Nachricht empfangen",
+ "Session started outside tmux: start it in tmux to talk to it": "Sitzung außerhalb von tmux gestartet: starte sie in tmux, um mit ihr zu sprechen",
+ "Stale page: reload it": "Seite veraltet: lade sie neu",
+ "the session": "die Sitzung",
+ "tmux unreachable": "tmux nicht erreichbar",
+ "To ": "An ",
+ "working, your message goes after": "arbeitet, deine Nachricht kommt danach"
 }

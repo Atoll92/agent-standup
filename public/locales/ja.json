@@ -305,5 +305,19 @@
  "Got it": "了解",
  "Reset to defaults": "初期設定に戻す",
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "設定の場所が変わりました。よく使うものはここに、それ以外は「すべての設定」にあります。",
- "2 € minimum: you can pay more on the payment page if you like.": "最低2ユーロ。お望みなら支払いページでそれ以上の金額も選べます。"
+ "2 € minimum: you can pay more on the payment page if you like.": "最低2ユーロ。お望みなら支払いページでそれ以上の金額も選べます。",
+ ". Press Enter again to send it there.": "。もう一度 Enter を押すと、そちらに送信します。",
+ "Claude is waiting for your answer in the terminal (permission prompt): answer it there": "Claude はターミナルであなたの返答を待っています（権限の確認）。そちらで答えてください",
+ "Could not send": "送信できませんでした",
+ "Empty or too long message (4000 characters at most)": "メッセージが空か長すぎます（最大4000文字）",
+ "Recipient changed: ": "宛先が変わりました： ",
+ "Send": "送信",
+ "Sent to ": "送信先： ",
+ "Session closed: nothing can receive the message": "セッション終了：メッセージを受け取れるものがありません",
+ "Session started outside tmux: start it in tmux to talk to it": "tmux の外で起動したセッション：話しかけるには tmux 内で起動してください",
+ "Stale page: reload it": "ページが古くなっています：再読み込みしてください",
+ "the session": "セッション",
+ "tmux unreachable": "tmux に接続できません",
+ "To ": "宛先： ",
+ "working, your message goes after": "作業中のため、メッセージは後で処理されます"
 }

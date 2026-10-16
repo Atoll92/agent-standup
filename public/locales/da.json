@@ -304,5 +304,19 @@
  "Got it": "Forstået",
  "Reset to defaults": "Nulstil til standard",
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "Dine indstillinger er flyttet: de daglige er her, resten under “Alle indstillinger”.",
- "2 € minimum: you can pay more on the payment page if you like.": "Mindst 2 €: du kan betale mere på betalingssiden, hvis du vil."
+ "2 € minimum: you can pay more on the payment page if you like.": "Mindst 2 €: du kan betale mere på betalingssiden, hvis du vil.",
+ ". Press Enter again to send it there.": ". Tryk Enter igen for at sende den dertil.",
+ "Claude is waiting for your answer in the terminal (permission prompt): answer it there": "Claude venter på dit svar i terminalen (tilladelsesforespørgsel): svar dér",
+ "Could not send": "Kunne ikke sende",
+ "Empty or too long message (4000 characters at most)": "Tom eller for lang besked (højst 4000 tegn)",
+ "Recipient changed: ": "Modtager ændret: ",
+ "Send": "Send",
+ "Sent to ": "Sendt til ",
+ "Session closed: nothing can receive the message": "Session lukket: intet kan modtage beskeden",
+ "Session started outside tmux: start it in tmux to talk to it": "Session startet uden for tmux: start den i tmux for at tale med den",
+ "Stale page: reload it": "Forældet side: genindlæs den",
+ "the session": "sessionen",
+ "tmux unreachable": "tmux kan ikke nås",
+ "To ": "Til ",
+ "working, your message goes after": "arbejder, din besked kommer bagefter"
 }

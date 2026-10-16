@@ -305,5 +305,19 @@
  "Got it": "知道了",
  "Reset to defaults": "恢復預設設定",
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "設定換了位置：常用的在這裡，其餘的在「全部設定」裡。",
- "2 € minimum: you can pay more on the payment page if you like.": "最低 2 歐元：如果願意，可以在付款頁面多付一些。"
+ "2 € minimum: you can pay more on the payment page if you like.": "最低 2 歐元：如果願意，可以在付款頁面多付一些。",
+ ". Press Enter again to send it there.": "。再按一次 Enter 即可傳送到那裡。",
+ "Claude is waiting for your answer in the terminal (permission prompt): answer it there": "Claude 正在終端機中等待你的回答（權限請求）：請在那裡回答",
+ "Could not send": "無法傳送",
+ "Empty or too long message (4000 characters at most)": "訊息為空或過長（最多 4000 個字元）",
+ "Recipient changed: ": "收件者已變更： ",
+ "Send": "傳送",
+ "Sent to ": "已傳送給 ",
+ "Session closed: nothing can receive the message": "工作階段已關閉：沒有可接收訊息的對象",
+ "Session started outside tmux: start it in tmux to talk to it": "工作階段在 tmux 之外啟動：請在 tmux 中啟動後再與它對話",
+ "Stale page: reload it": "頁面已過期：請重新載入",
+ "the session": "該工作階段",
+ "tmux unreachable": "無法連線 tmux",
+ "To ": "傳給 ",
+ "working, your message goes after": "正在工作，你的訊息會在之後處理"
 }
