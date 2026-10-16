@@ -307,7 +307,7 @@
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "Deine Einstellungen sind umgezogen: die alltäglichen sind hier, der Rest unter „Alle Einstellungen“.",
  "2 € minimum: you can pay more on the payment page if you like.": "Mindestens 2 €: Auf der Zahlungsseite kannst du gern mehr zahlen.",
  ". Press Enter again to send it there.": ". Drücke erneut Enter, um sie dorthin zu senden.",
- "Claude is waiting for your answer in the terminal (permission prompt): answer it there": "Claude wartet im Terminal auf deine Antwort (Berechtigungsabfrage): antworte dort",
+ "Claude is waiting for your answer in the terminal (a menu is open): answer it there": "Claude wartet im Terminal auf deine Antwort (ein Menü ist offen): antworte dort",
  "Could not send": "Senden nicht möglich",
  "Empty or too long message (4000 characters at most)": "Nachricht leer oder zu lang (höchstens 4000 Zeichen)",
  "Recipient changed: ": "Empfänger geändert: ",

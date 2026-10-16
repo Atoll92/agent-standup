@@ -306,7 +306,7 @@
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "Dine indstillinger er flyttet: de daglige er her, resten under “Alle indstillinger”.",
  "2 € minimum: you can pay more on the payment page if you like.": "Mindst 2 €: du kan betale mere på betalingssiden, hvis du vil.",
  ". Press Enter again to send it there.": ". Tryk Enter igen for at sende den dertil.",
- "Claude is waiting for your answer in the terminal (permission prompt): answer it there": "Claude venter på dit svar i terminalen (tilladelsesforespørgsel): svar dér",
+ "Claude is waiting for your answer in the terminal (a menu is open): answer it there": "Claude venter på dit svar i terminalen (en menu er åben): svar dér",
  "Could not send": "Kunne ikke sende",
  "Empty or too long message (4000 characters at most)": "Tom eller for lang besked (højst 4000 tegn)",
  "Recipient changed: ": "Modtager ændret: ",

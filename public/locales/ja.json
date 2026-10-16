@@ -307,7 +307,7 @@
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "設定の場所が変わりました。よく使うものはここに、それ以外は「すべての設定」にあります。",
  "2 € minimum: you can pay more on the payment page if you like.": "最低2ユーロ。お望みなら支払いページでそれ以上の金額も選べます。",
  ". Press Enter again to send it there.": "。もう一度 Enter を押すと、そちらに送信します。",
- "Claude is waiting for your answer in the terminal (permission prompt): answer it there": "Claude はターミナルであなたの返答を待っています（権限の確認）。そちらで答えてください",
+ "Claude is waiting for your answer in the terminal (a menu is open): answer it there": "Claude はターミナルであなたの返答を待っています（メニューが開いています）。そちらで答えてください",
  "Could not send": "送信できませんでした",
  "Empty or too long message (4000 characters at most)": "メッセージが空か長すぎます（最大4000文字）",
  "Recipient changed: ": "宛先が変わりました： ",

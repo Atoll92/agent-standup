@@ -307,7 +307,7 @@
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "设置换了位置：常用的在这里，其余的在“全部设置”里。",
  "2 € minimum: you can pay more on the payment page if you like.": "最低 2 欧元：如果愿意，可以在付款页面多付一些。",
  ". Press Enter again to send it there.": "。再按一次 Enter 即可发送到那里。",
- "Claude is waiting for your answer in the terminal (permission prompt): answer it there": "Claude 正在终端中等待你的回答（权限请求）：请在那里回答",
+ "Claude is waiting for your answer in the terminal (a menu is open): answer it there": "Claude 正在终端中等待你的回答（菜单已打开）：请在那里回答",
  "Could not send": "无法发送",
  "Empty or too long message (4000 characters at most)": "消息为空或过长（最多 4000 个字符）",
  "Recipient changed: ": "收件人已更改： ",
