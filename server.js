@@ -1096,6 +1096,7 @@ function start(port = PORT) {
     }
     if (url.pathname === '/api/reply') {   // the human's line: can this session hear it (GET), type it into its terminal (POST)
       if (!reply.on()) { res.writeHead(404); return res.end('not found'); }
+      const peer = reply.peerUid(req.socket); if (peer == null || peer !== process.getuid()) return json({ error: 'peer' }, 403);   // another local user, or a process we cannot tell: the token alone is readable by anyone who can reach the port
       if (req.method === 'POST') return readBody((body) => { let b = {}; try { b = JSON.parse(body) || {}; } catch {} if (!replyTokenOk(b.token)) return json({ error: 'token' }, 403); reply.send(String(b.id || ''), b.text).then((r) => json(r, r.ok ? 200 : r.error === 'text' ? 400 : 409), (e) => { logError('reply', e); json({ error: 'tmux' }, 500); }); }, 16384);
       return reply.lookup(url.searchParams.get('id') || '').then(({ pane, ...r }) => json(r), (e) => { logError('reply', e); json({ ok: false, why: 'tmux' }); });
     }

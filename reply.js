@@ -1,6 +1,6 @@
 // reply.js: the human's line, typed into the tmux pane of a running Claude Code session. Off unless AGENT_STANDUP_REPLY=on.
 // Claude Code writes <config>/sessions/<pid>.json for each running session (pid, sessionId, status, name); the pane is the tmux pane whose shell is an ancestor of that pid.
-const fs = require('fs'), path = require('path'), os = require('os'), { execFile } = require('child_process');
+const fs = require('fs'), path = require('path'), os = require('os'), net = require('net'), { execFile } = require('child_process');
 const on = () => /^(1|on|yes|true)$/i.test(process.env.AGENT_STANDUP_REPLY || '');
 const dir = () => process.env.AGENT_STANDUP_CC_SESSIONS || path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'sessions');
 const tmux = (args) => new Promise((resolve) => execFile(process.env.AGENT_STANDUP_TMUX || 'tmux', args, { timeout: 3000, windowsHide: true }, (err, out) => resolve(err ? null : String(out))));
@@ -29,9 +29,19 @@ async function send(id, text) {
   let t = clean(text); if (!t || t.length > 4000) return { error: 'text' };
   if (t.endsWith(';')) t += ' ';   // tmux reads a final ; of an argument as the end of the command
   const r = await lookup(id); if (!r.ok) return { error: r.why };
-  if (r.status === 'waiting') return { error: 'waiting' };   // a permission menu is open: typed text and Enter would answer it
+  if (r.status !== 'idle') return { error: r.status === 'waiting' ? 'waiting' : 'busy' };   // only at the prompt: a permission menu open (waiting) or one that opens during a turn would take the text and Enter as its answer
   if ((await tmux(['send-keys', '-t', r.pane, '-l', '--', t])) == null) return { error: 'tmux' };   // -l: literal text, never read as key names
+  const now = await lookup(id); if (!now.ok || now.pane !== r.pane || now.status !== 'idle') return { error: 'changed' };   // read again right before Enter: if a turn or a menu started meanwhile, the text stays in the prompt without Enter
   if ((await tmux(['send-keys', '-t', r.pane, 'Enter'])) == null) return { error: 'tmux' };
   return { ok: true };
 }
-module.exports = { on, lookup, send, clean };
+// Who is calling: the uid owning the client end of the loopback connection, from /proc/net/tcp (Linux). null when not found: refused.
+const tcpKey = (ip, port, v6) => (v6 ? '0000000000000000FFFF0000' : '') + ip.split('.').reverse().map((n) => (+n).toString(16).padStart(2, '0')).join('').toUpperCase() + ':' + port.toString(16).toUpperCase().padStart(4, '0');   // each 32-bit word little-endian, the port big-endian
+const uidIn = (table, local, rem) => { for (const l of table.split('\n').slice(1)) { const c = l.trim().split(/\s+/); if (c[1] === local && c[2] === rem && /^\d+$/.test(c[7])) return +c[7]; } return null; };
+function peerUid(sock) {   // ponytail: IPv4 only, the server listens on 127.0.0.1; a pure IPv6 peer (::1) would need the tcp6 address expanded
+  const v4 = (a) => String(a || '').replace(/^::ffff:/i, ''), ra = v4(sock.remoteAddress), la = v4(sock.localAddress);
+  if (process.platform !== 'linux' || !net.isIPv4(ra) || !net.isIPv4(la)) return null;
+  for (const v6 of [false, true]) { let t = ''; try { t = fs.readFileSync(v6 ? '/proc/net/tcp6' : '/proc/net/tcp', 'utf8'); } catch {} const u = uidIn(t, tcpKey(ra, sock.remotePort, v6), tcpKey(la, sock.localPort, v6)); if (u != null) return u; }
+  return null;
+}
+module.exports = { on, lookup, send, clean, tcpKey, uidIn, peerUid };
