@@ -10,11 +10,13 @@ on:
 jobs:
   test:   # nothing is published from a commit whose tests fail
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: npm ci
       - run: npm test
       - run: npm run i18n
@@ -28,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org
       - name: Which targets have a token   # each token is only given to the step that publishes with it, not to the tools the other steps download
         id: has

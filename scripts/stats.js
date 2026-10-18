@@ -4,7 +4,7 @@
 // The history is the file history.jsonl of the "stats" release on GitHub, beside the counters of the landing page. .github/workflows/stats.yml adds a line every day.
 // What each number is worth: Marketplace "installs" are people (installed from inside VS Code); the "downloads" of the Marketplace, of Open VSX and of npm
 // are fetches of the package, and every published version brings a burst of automatic ones (mirrors, scanners). Compare days, not totals.
-const { execFileSync } = require('child_process'), fs = require('fs'), os = require('os'), path = require('path');
+const { execFileSync, execFile } = require('child_process'), fs = require('fs'), os = require('os'), path = require('path');
 const repo = 'Atoll92/agent-standup', ext = 'DoubleGeste.agent-standup', pkg = '@double_geste/agent-standup', snap = path.join(os.homedir(), '.agent-standup-stats.json');
 const gh = (args) => JSON.parse(execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
 const soft = async (fn) => { try { return await fn(); } catch { return null; } };   // one source that does not answer leaves a hole in the line, not a failed run
@@ -26,12 +26,59 @@ async function collect() {
     }
     return { stars: r.stargazers_count, forks: r.forks_count, files, active, week, landing };
   });
-  return { d: new Date().toISOString().slice(0, 10), mp, ovsx, npm, hub };
+  const yt = await soft(youtube);
+  return { d: new Date().toISOString().slice(0, 10), mp, ovsx, npm, hub, ...(yt ? { yt } : {}) };
+}
+// The YouTube channel's public counts: subscribers, and the views of each video and Short, read from the channel's own pages (the consent cookie skips the EU consent page)
+async function youtube() {
+  const get = async (tab) => { const r = await fetch('https://www.youtube.com/@Agent_Standup/' + tab, { headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36', 'accept-language': 'en-US,en;q=0.9', cookie: 'SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg; CONSENT=YES+cb' }, signal: AbortSignal.timeout(20000) }); const m = (await r.text()).match(/var ytInitialData = (\{.*?\});<\/script>/s); return m ? JSON.parse(m[1]) : null; };
+  const num = (t) => { const m = /([\d.,]+)\s*([KM])?/.exec(String(t || '')); return m ? Math.round(parseFloat(m[1].replace(/,/g, '')) * (m[2] === 'K' ? 1e3 : m[2] === 'M' ? 1e6 : 1)) : 0; };
+  const videos = [], walk = (o, short) => { if (!o || typeof o !== 'object') return;
+    if (o.lockupViewModel) { const t = o.lockupViewModel.metadata && o.lockupViewModel.metadata.lockupMetadataViewModel, parts = JSON.stringify((t && t.metadata) || {}).match(/"content":"([^"]*)"/g) || []; if (t) videos.push({ title: t.title && t.title.content, views: num((parts[0] || '').slice(11, -1)) }); }
+    if (o.shortsLockupViewModel) { const m = o.shortsLockupViewModel.overlayMetadata || {}; videos.push({ title: m.primaryText && m.primaryText.content, views: num(m.secondaryText && m.secondaryText.content), short: 1 }); }
+    for (const k in o) walk(o[k], short); };
+  const v = await get('videos'), sh = await get('shorts'); if (!v && !sh) return null; walk(v); walk(sh);
+  const subs = /"(\d[\d.,]*[KM]?) subscribers?"/.exec(JSON.stringify(v || sh)); return { subs: subs ? num(subs[1]) : null, views: videos.reduce((n, x) => n + x.views, 0), videos };
+}
+// The website, from Vercel Web Analytics through the Vercel command line (needs `npx vercel login` on this computer; the daily job on GitHub has no login and skips it).
+// Per UTC day: page views, the visitors who saw a home page (any language), how many of them saw only that one page (bounce: Vercel's visitor id lasts a day),
+// and the clicks on the install buttons (counted since WEB_CLICKS_SINCE). The days of WEB_MARKS split the summary, to compare a change of the home page with what came before.
+const WEB_SINCE = '2026-10-13', WEB_CLICKS_SINCE = '2026-10-17', WEB_MARKS = { '2026-10-17': 'new hero "Stop checking on your agents."' };
+const INSTALL_CLICKS = /^(Install VS Code|Install Open VSX|Download|Copy command)$/, HOME = /^\/([a-z]{2}(-[a-z]{2,4})?\/?)?$/i;
+async function website() {
+  const run = (metric, ...a) => new Promise((ok, no) => execFile('npx', ['-y', 'vercel@latest', 'metrics', metric, '--scope', 'dg-team-fe3d9cf0', '-p', 'agent-standup', '--prod', '--json', ...a], { encoding: 'utf8', timeout: 180000, maxBuffer: 64e6 }, (err, out) => {
+    try { const x = JSON.parse(String(out).slice(String(out).indexOf('{'))); if (x.error) throw new Error(x.error.message); ok(x); } catch (e) { no(err || e); } }));
+  const PV = 'vercel.analytics.page_view.count', EV = 'vercel.analytics.event.count', num = (r) => Object.values(r).find((v) => typeof v === 'number') || 0;
+  const pool = async (jobs, n = 4) => { const out = []; let k = 0; await Promise.all(Array.from({ length: n }, async () => { while (k < jobs.length) { const m = k++; out[m] = await jobs[m](); } })); return out; };
+  const nDays = +process.env.STATS_WEB_DAYS || 14, today = Date.now(), days = Array.from({ length: nDays }, (_, x) => new Date(today - (nDays - 1 - x) * 864e5).toISOString().slice(0, 10)).filter((d) => d >= WEB_SINCE);
+  const next = (d) => new Date(Date.parse(d) + 864e5).toISOString().slice(0, 10), since = days[0] + 'T00:00:00Z';
+  const homeDay = async (d) => { const x = await run(PV, '--since', d + 'T00:00:00Z', '--until', next(d) + 'T00:00:00Z', '-g', '1d', '--group-by', 'visitorId', '--group-by', 'requestPath', '-l', '500'), rows = (x.data || []).filter((r) => r.timestamp.startsWith(d) && num(r) > 0), V = {};
+    for (const r of rows) { const v = (V[r.visitorId] = V[r.visitorId] || { n: 0, home: false }); v.n += num(r); if (HOME.test(r.requestPath || '')) v.home = true; }
+    const h = Object.values(V).filter((v) => v.home); return { d, views: rows.reduce((t, r) => t + num(r), 0), home: h.length, one: h.filter((v) => v.n === 1).length, capped: (x.data || []).length >= 500 }; };
+  const top = async (dim) => { const x = await run(PV, '--since', '3d', '--group-by', dim, '-l', '6'), by = {}; for (const r of x.data || []) by[r[dim] || '(direct)'] = (by[r[dim] || '(direct)'] || 0) + num(r); return Object.entries(by).filter(([, n]) => n).sort((a, b) => b[1] - a[1]).slice(0, 6); };
+  const [perDay, sources, countries, evDay, evAll] = await Promise.all([pool(days.map((d) => () => homeDay(d))), top('referrerHostname'), top('country'),
+    run(EV, '--since', since, '-g', '1d', '--group-by', 'eventName', '-l', '50').catch(() => ({ data: [] })), run(EV, '--since', '7d', '--group-by', 'eventName', '--group-by', 'eventData', '-l', '200').catch(() => ({ data: [] }))]);
+  const clicks = {}; for (const r of evDay.data || []) if (INSTALL_CLICKS.test(r.eventName || '')) clicks[r.timestamp.slice(0, 10)] = (clicks[r.timestamp.slice(0, 10)] || 0) + num(r);
+  const ev = {}; for (const r of evAll.data || []) { if (!r.eventName || !num(r)) continue; let dt = r.eventData; try { if (typeof dt === 'string') dt = JSON.parse(dt); } catch { dt = {}; } const e = (ev[r.eventName] = ev[r.eventName] || { n: 0, where: {}, what: {} }); e.n += num(r); if (dt && dt.where) e.where[dt.where] = (e.where[dt.where] || 0) + num(r); if (dt && dt.what) e.what[dt.what] = (e.what[dt.what] || 0) + num(r); }
+  return { perDay: perDay.map((x) => ({ ...x, clicks: x.d >= WEB_CLICKS_SINCE ? clicks[x.d] || 0 : null })), sources, countries, events: Object.entries(ev).sort((a, b) => b[1].n - a[1].n) };
+}
+function printWebsite(w) {
+  const pct = (a, b) => (b ? Math.round((100 * a) / b) + '%' : '–'), per100 = (a, b) => (a == null || !b ? '–' : ((100 * a) / b).toFixed(1));
+  console.log('\nWebsite agent-standup.com (Vercel Web Analytics; UTC days; bounce = home visitors who saw only that page; install clicks = Install VS Code, Install Open VSX, Download, Copy command):');
+  console.log('  day     views   home visitors   bounce   install clicks   per 100 home visitors');
+  for (const x of w.perDay) console.log('  ' + x.d.slice(5) + String(x.views).padStart(8) + String(x.home + (x.capped ? '+' : '')).padStart(16) + pct(x.one, x.home).padStart(9) + String(x.clicks == null ? '–' : x.clicks).padStart(17) + per100(x.clicks, x.home).padStart(24) + (WEB_MARKS[x.d] ? '   ← ' + WEB_MARKS[x.d] : ''));
+  const cuts = Object.keys(WEB_MARKS).sort(), periods = []; let from = w.perDay.length ? w.perDay[0].d : '';
+  for (const c of cuts.concat('9999')) { const p = w.perDay.filter((x) => x.d >= from && x.d < c); if (p.length) periods.push(p); from = c; }
+  if (periods.length > 1) for (const p of periods) { const home = p.reduce((t, x) => t + x.home, 0), one = p.reduce((t, x) => t + x.one, 0), c = p.filter((x) => x.clicks != null), cl = c.reduce((t, x) => t + x.clicks, 0), ch = c.reduce((t, x) => t + x.home, 0);
+    console.log('  ' + p[0].d.slice(5) + ' to ' + p[p.length - 1].d.slice(5) + ' (' + p.length + ' day' + (p.length > 1 ? 's' : '') + (WEB_MARKS[p[0].d] ? ', ' + WEB_MARKS[p[0].d] : '') + '): ' + Math.round(home / p.length) + ' home visitors a day, bounce ' + pct(one, home) + (c.length ? ', ' + per100(cl, ch) + ' install clicks per 100 home visitors' : '')); }
+  console.log('  last 3 days, by source: ' + w.sources.map(([k, n]) => k + ' ' + n).join(', ') + '\n  last 3 days, by country: ' + w.countries.map(([k, n]) => k + ' ' + n).join(', '));
+  const top3 = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, n]) => k + ' ' + n).join(', ');
+  console.log('  clicks, last 7 days' + (w.events.length ? ':\n' + w.events.map(([k, e]) => '    ' + k.padEnd(18) + String(e.n).padStart(5) + '   where: ' + top3(e.where) + (Object.keys(e.what).length ? '   · ' + top3(e.what) : '')).join('\n') : ': none yet (counted since ' + WEB_CLICKS_SINCE + ')'));
 }
 const flat = (x) => ({ 'Marketplace installs': x.mp && x.mp.installs, 'Marketplace downloads': x.mp && x.mp.downloads, 'Marketplace updates': x.mp && x.mp.updates, 'Marketplace ratings': x.mp && x.mp.ratings,
   'Open VSX downloads': x.ovsx && x.ovsx.downloads, 'Open VSX reviews': x.ovsx && x.ovsx.reviews, 'npm downloads': x.npm, 'GitHub stars': x.hub && x.hub.stars, 'GitHub forks': x.hub && x.hub.forks,
   'GitHub: extension files': x.hub && x.hub.files && x.hub.files.vsix, 'GitHub: desktop app (Mac / Windows / Linux)': x.hub && x.hub.files && [x.hub.files.mac, x.hub.files.windows, x.hub.files.linux].join(' / '), 'GitHub: command line file': x.hub && x.hub.files && x.hub.files.cli,
-  'Opt-in active installs (1 request a day each)': x.hub && x.hub.active, 'Opt-in people who opened the call (1 request a week each)': x.hub && x.hub.week });
+  'Opt-in active installs (1 request a day each)': x.hub && x.hub.active, 'Opt-in people who opened the call (1 request a week each)': x.hub && x.hub.week, 'YouTube subscribers': x.yt && x.yt.subs, 'YouTube views (all videos)': x.yt && x.yt.views });
 const lines = (text) => text.split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((x) => x && x.d);
 
 (async () => {
@@ -58,6 +105,8 @@ const lines = (text) => text.split('\n').filter(Boolean).map((l) => { try { retu
   for (const x of lines(hist).filter((x) => x.d !== now.d).concat(now)) { const n = x.hub && x.hub.week; if (typeof n !== 'number') continue; const m = monday(x.d), w = wk[wk.length - 1]; if (w && w.m === m) w.n = n; else wk.push({ m, n, from: w ? w.n : null }); }
   if (wk.length) console.log('\nPeople who opened the call, week by week (opt-in):\n' + wk.map((w, i) => `  week of ${w.m}  ${w.from == null ? 'counting starts at ' + w.n : w.n - w.from}${i === wk.length - 1 ? ' so far' : ''}`).join('\n'));
   if (days.length < 3) console.log('\n  The daily job on GitHub adds one line a day: the trend is worth reading after a week or two.');
+  if (now.yt && now.yt.videos.length) console.log('\nYouTube (public counts):\n' + now.yt.videos.map((x) => '  ' + String(x.views).padStart(6) + '  ' + (x.short ? '[Short] ' : '') + x.title).join('\n'));
+  if (!process.env.STATS_NO_WEBSITE) { try { printWebsite(await website()); } catch { console.log('\nWebsite: not read (the Vercel command line needs `npx vercel login` on this computer)'); } }
   console.log('\nThe funnel of the Marketplace page (views, then installs, per day) is only in your publisher account: https://marketplace.visualstudio.com/manage (Acquisition tab).');
   fs.writeFileSync(snap, JSON.stringify({ at: new Date().toISOString().slice(0, 16).replace('T', ' '), f }));
 })().catch((e) => { console.error(e.message || e); process.exit(1); });

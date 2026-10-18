@@ -14,5 +14,6 @@
   "config.vibe.description": "同时显示 Mistral Vibe 会话（读取自 ~/.vibe/logs/session 或 $VIBE_HOME）。关闭后不显示。",
   "config.reply.description": "允许通话把你的消息输入到所跟随的 Claude Code 会话的 tmux 窗格中（仅限 Linux，默认关闭）。任何能以你的身份运行命令的人都可以借此向你的会话输入内容。",
   "config.claudePath.description": "Claude Code 可执行文件的完整路径（若无法自动找到；用于翻译）。",
-  "config.charactersPath.description": "存放你自己角色图片的文件夹（PNG、GIF 或 WebP，每张最大 300 KB）。留空则使用 ~/.agent-standup/characters。lead.png 是主代理，you.png 是你，其他图片是子代理，name-talk.png 是可选的张嘴帧。"
+  "config.charactersPath.description": "存放你自己角色图片的文件夹（PNG、GIF 或 WebP，每张最大 300 KB）。留空则使用 ~/.agent-standup/characters。lead.png 是主代理，you.png 是你，其他图片是子代理，name-talk.png 是可选的张嘴帧。",
+  "config.notifyNeedsYou.description": "当此工作区的某个会话开始等你（提问、审批、计划）时显示通知，写明会话名称和它的请求；如果 5 分钟后仍在等待，再提醒一次。通话可见时不显示。"
 }

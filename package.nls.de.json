@@ -14,5 +14,6 @@
   "config.vibe.description": "Auch Mistral-Vibe-Sitzungen anzeigen (gelesen aus ~/.vibe/logs/session oder $VIBE_HOME). Ausschalten, um sie wegzulassen.",
   "config.reply.description": "Lässt den Anruf deine Nachricht in den tmux-Bereich der verfolgten Claude Code-Sitzung tippen (nur Linux, standardmäßig aus). Jeder, der Befehle unter deinem Konto ausführen kann, kann dann in deine Sitzungen tippen.",
   "config.claudePath.description": "Vollständiger Pfad zur Claude Code-Programmdatei, falls sie nicht automatisch gefunden wird (für die Übersetzung verwendet).",
-  "config.charactersPath.description": "Ordner mit deinen eigenen Figurenbildern (PNG, GIF oder WebP, je bis 300 KB). Leer verwendet ~/.agent-standup/characters. lead.png ist der Hauptagent, you.png bist du, jedes andere Bild ist ein Subagent, name-talk.png ist ein optionales Bild mit offenem Mund."
+  "config.charactersPath.description": "Ordner mit deinen eigenen Figurenbildern (PNG, GIF oder WebP, je bis 300 KB). Leer verwendet ~/.agent-standup/characters. lead.png ist der Hauptagent, you.png bist du, jedes andere Bild ist ein Subagent, name-talk.png ist ein optionales Bild mit offenem Mund.",
+  "config.notifyNeedsYou.description": "Eine Benachrichtigung anzeigen, wenn eine Sitzung dieses Arbeitsbereichs auf dich zu warten beginnt (eine Frage, eine Freigabe, ein Plan), mit dem Namen der Sitzung und ihrer Frage, und noch einmal, wenn sie 5 Minuten später immer noch wartet. Nicht, solange der Anruf sichtbar ist."
 }

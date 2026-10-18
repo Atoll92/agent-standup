@@ -14,5 +14,6 @@
   "config.vibe.description": "Mistral Vibe のセッションも表示します（~/.vibe/logs/session または $VIBE_HOME から読み込み）。オフにすると表示しません。",
   "config.reply.description": "通話から、フォロー中の Claude Code セッションの tmux ペインにメッセージを入力できるようにします（Linux のみ、既定ではオフ）。あなたとしてコマンドを実行できる人は誰でも、あなたのセッションに入力できるようになります。",
   "config.claudePath.description": "Claude Code 実行ファイルのフルパス（自動で見つからない場合）。翻訳に使用します。",
-  "config.charactersPath.description": "自作キャラクター画像（PNG、GIF、WebP、各300 KBまで）のフォルダ。空の場合は ~/.agent-standup/characters を使います。lead.png がメインエージェント、you.png があなた、それ以外の画像はサブエージェントになります。name-talk.png は口を開けた状態のフレーム（任意）です。"
+  "config.charactersPath.description": "自作キャラクター画像（PNG、GIF、WebP、各300 KBまで）のフォルダ。空の場合は ~/.agent-standup/characters を使います。lead.png がメインエージェント、you.png があなた、それ以外の画像はサブエージェントになります。name-talk.png は口を開けた状態のフレーム（任意）です。",
+  "config.notifyNeedsYou.description": "このワークスペースのセッションがあなたを待ち始めたとき（質問、承認、プラン）、セッション名と内容を通知します。5 分後もまだ待っていれば、もう一度だけ通知します。通話が表示されている間は通知しません。"
 }

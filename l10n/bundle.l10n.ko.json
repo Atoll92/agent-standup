@@ -10,5 +10,11 @@
   "No thanks": "괜찮습니다",
   "Help count how many people use Agent Standup? When you open the call, at most once a week (and once a day when the editor starts), the extension would load an empty 1-pixel file from GitHub: no identifier, nothing about you or your sessions. GitHub sees your IP address, as with any download. You can turn it off any time in the settings.": "Agent Standup 사용자 수 집계에 도움을 주시겠어요? 통화를 열 때 최대 주 1회(그리고 에디터 시작 시 하루 1회), 확장 프로그램이 GitHub에서 빈 1픽셀 파일을 불러옵니다. 식별자는 없고 사용자나 세션에 관한 정보도 없습니다. 일반 다운로드처럼 GitHub에는 IP 주소가 보입니다. 설정에서 언제든 끌 수 있습니다.",
   "Count me in": "참여하기",
-  "Privacy policy": "개인정보 처리방침"
+  "Privacy policy": "개인정보 처리방침",
+  "{0} is waiting for you: {1}": "{0}이(가) 기다리고 있어요: {1}",
+  "{0} is waiting for you": "{0}이(가) 기다리고 있어요",
+  "Still waiting: {0}": "아직 기다리는 중: {0}",
+  "a plan to approve": "승인할 계획",
+  "Go to session": "세션으로 이동",
+  "Open call": "통화 열기"
 }

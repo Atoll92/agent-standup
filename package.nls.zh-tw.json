@@ -14,5 +14,6 @@
   "config.vibe.description": "同時顯示 Mistral Vibe 工作階段（讀取自 ~/.vibe/logs/session 或 $VIBE_HOME）。關閉後不顯示。",
   "config.reply.description": "允許通話把你的訊息輸入到所追蹤的 Claude Code 工作階段的 tmux 窗格中（僅限 Linux，預設關閉）。任何能以你的身分執行命令的人都可以藉此向你的工作階段輸入內容。",
   "config.claudePath.description": "Claude Code 可執行檔的完整路徑（若無法自動找到時使用；用於翻譯）。",
-  "config.charactersPath.description": "存放你自己角色圖片的資料夾（PNG、GIF 或 WebP，每張最大 300 KB）。留空則使用 ~/.agent-standup/characters。lead.png 是主代理，you.png 是你，其他圖片是子代理，name-talk.png 是選用的張嘴畫面。"
+  "config.charactersPath.description": "存放你自己角色圖片的資料夾（PNG、GIF 或 WebP，每張最大 300 KB）。留空則使用 ~/.agent-standup/characters。lead.png 是主代理，you.png 是你，其他圖片是子代理，name-talk.png 是選用的張嘴畫面。",
+  "config.notifyNeedsYou.description": "當此工作區的某個工作階段開始等你（提問、核准、計畫）時顯示通知，寫明工作階段名稱和它的請求；如果 5 分鐘後仍在等待，再提醒一次。通話可見時不顯示。"
 }

@@ -66,6 +66,7 @@
       <p class="lead"><span data-k="lead">Eight characters drawn by hand by</span> <a href="https://www.instagram.com/fabien_coupas/" rel="noopener">Fabien Coupas</a><span data-k="lead2">, each in its own room, to replace the cast of your Agent Standup calls. Your agents become a pumpkin, a ghost, a cat, a bat, a wolf, a witch and a crowd of skeletons.</span></p>
       <div class="buy"><div class="price">2 €<small data-k="vat">or more, as you wish. One payment, VAT included if any.</small></div><button class="btn" id="buy" data-k="buy">Buy the pack</button></div>
       <p class="msg" id="buyMsg" role="status"></p>
+      <p class="fine" data-k="optional">Entirely optional. Agent Standup is and stays free and open source, and nothing in it is locked behind the pack. Buying it is simply a way to support the artist who drew it and the developer who makes the app: the money is shared between them.</p>
       <p class="fine" data-k="secure">Secure payment on Stripe. No account. You get the pack at once, with a code that installs it on any computer.</p>
       <p class="fine"><span data-k="inapp">Already using Agent Standup? You can buy it from the app too:</span> <b data-k="path">⚙ → Characters → Halloween pack</b>.</p>
     </div>
@@ -130,7 +131,7 @@
 <script>
   const T = { fr: { home: 'Accueil', shop: 'Boutique', eyebrow: 'La boutique d’Agent Standup', title: 'Pack Halloween',
     lead: 'Huit personnages dessinés à la main par', lead2: ', chacun dans sa pièce, pour remplacer l’équipe de vos appels Agent Standup. Vos agents deviennent une citrouille, un fantôme, un chat, une chauve-souris, un loup, une sorcière et une foule de squelettes.',
-    vat: 'ou plus, comme vous voulez. Un seul paiement, TTC le cas échéant.', buy: 'Acheter le pack', secure: 'Paiement sécurisé sur Stripe. Sans compte. Vous recevez le pack tout de suite, avec un code qui l’installe sur n’importe quel ordinateur.',
+    vat: 'ou plus, comme vous voulez. Un seul paiement, TTC le cas échéant.', buy: 'Acheter le pack', optional: 'Entièrement facultatif. Agent Standup est et restera gratuit et open source, et rien n’y est réservé au pack. L’acheter, c’est simplement soutenir l’artiste qui l’a dessiné et le développeur qui fait l’app : l’argent est partagé entre eux.', secure: 'Paiement sécurisé sur Stripe. Sans compte. Vous recevez le pack tout de suite, avec un code qui l’installe sur n’importe quel ordinateur.',
     inapp: 'Vous utilisez déjà Agent Standup ? Vous pouvez aussi l’acheter depuis l’app :', path: '⚙ → Personnages → Pack Halloween', play: 'Lire la vidéo', ytnote: 'La vidéo vient de YouTube, et seulement quand vous appuyez sur lecture.',
     handEyebrow: 'Dessiné à la main', handTitle: 'Chaque personnage, dessiné à la main',
     handText: 'Chaque personnage a été dessiné à la main par l’illustrateur Fabien Coupas, puis découpé en calques pour qu’il puisse parler, hocher la tête et taper dans l’appel. Les pièces autour d’eux sont dans le même style : une crypte, un champ sous la lune, une vieille maison, un cimetière, les toits de la ville, un clocher, une forêt, la cuisine d’une sorcière.',
@@ -157,7 +158,7 @@
   const buy = document.getElementById('buy');
   buy.onclick = async () => {
     buy.disabled = true; document.getElementById('buyMsg').textContent = '';
-    try { const r = await fetch('/api/checkout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pack: 'halloween' }) }), j = await r.json(); if (j.url) return void (location.href = j.url); document.getElementById('buyMsg').textContent = why(j.error); }
+    try { const r = await fetch('/api/checkout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pack: 'halloween', from: 'site', ref: new URLSearchParams(location.search).get('ref') || '' }) }), j = await r.json(); if (j.url) return void (location.href = j.url); document.getElementById('buyMsg').textContent = why(j.error); }
     catch { document.getElementById('buyMsg').textContent = why('shop'); }
     buy.disabled = false;
   };

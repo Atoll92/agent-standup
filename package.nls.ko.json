@@ -14,5 +14,6 @@
   "config.vibe.description": "Mistral Vibe 세션도 표시합니다 (~/.vibe/logs/session 또는 $VIBE_HOME에서 읽음). 끄면 표시하지 않습니다.",
   "config.reply.description": "통화에서 팔로우 중인 Claude Code 세션의 tmux 창에 메시지를 입력할 수 있게 합니다(Linux 전용, 기본값은 꺼짐). 당신의 계정으로 명령을 실행할 수 있는 사람은 누구나 당신의 세션에 입력할 수 있게 됩니다.",
   "config.claudePath.description": "자동으로 찾지 못할 경우 Claude Code 실행 파일의 전체 경로입니다(번역에 사용).",
-  "config.charactersPath.description": "직접 만든 캐릭터 이미지(PNG, GIF, WebP, 각 300 KB 이하) 폴더입니다. 비워 두면 ~/.agent-standup/characters를 사용합니다. lead.png는 메인 에이전트, you.png는 나, 그 밖의 이미지는 서브에이전트이며, name-talk.png는 입을 벌린 프레임(선택)입니다."
+  "config.charactersPath.description": "직접 만든 캐릭터 이미지(PNG, GIF, WebP, 각 300 KB 이하) 폴더입니다. 비워 두면 ~/.agent-standup/characters를 사용합니다. lead.png는 메인 에이전트, you.png는 나, 그 밖의 이미지는 서브에이전트이며, name-talk.png는 입을 벌린 프레임(선택)입니다.",
+  "config.notifyNeedsYou.description": "이 워크스페이스의 세션이 당신을 기다리기 시작하면(질문, 승인, 계획) 세션 이름과 요청 내용을 알림으로 보여 줍니다. 5분 뒤에도 계속 기다리면 한 번 더 알립니다. 통화가 화면에 보이는 동안에는 알리지 않습니다."
 }

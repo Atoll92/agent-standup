@@ -19,7 +19,38 @@ const hwPin = (html) => (hwVideo ? html.replace(/<!--HWSHOP-->[\s\S]*?<!--\/HWSH
 if (!/^https:\/\/[^/]+\/$/.test(site)) throw new Error('website/site.json: "url" must be the https address of the site');
 // Visits are counted by the host (Vercel Web Analytics, switched on in the project's settings; no cookie, see PRIVACY.md). This is the tag Vercel gives for a plain HTML site,
 // which is all its npm package adds. Only on the site's own address, so not on a preview or a copy opened from a folder, and not for a browser that sends Do Not Track.
-const analytics = `<script>if (location.hostname === ${JSON.stringify(new URL(site).hostname)} && navigator.doNotTrack !== '1') { window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); }; const s = document.createElement('script'); s.defer = true; s.src = '/_vercel/insights/script.js'; document.head.appendChild(s); }</script>`;
+// The buttons and links people click, counted by name with Vercel custom events (Pro plan): which way of installing, which download, from which part of the page.
+// It runs only where the visit itself is counted (this host, no Do Not Track), and sends the name of the button, the part of the page and a short detail, nothing else.
+function trackClicks() {
+  const what = (el) => {
+    if (el.matches('button[data-copy]')) return ['Copy command', el.getAttribute('data-copy').split(' ').slice(0, 2).join(' ')];
+    const u = new URL(el.getAttribute('href') || '', location.href);
+    if (u.origin === location.origin) {
+      if (u.pathname === location.pathname && u.hash) return ['Jump', u.hash];
+      const p = u.pathname.replace(/^\/[a-z]{2}(-[a-z]{2,4})?\//i, '/');
+      return /^\/shop\//.test(p) ? ['Shop', u.searchParams.get('ref') || ''] : /^\/(claude-code-subagents|codex-sessions|mistral-vibe-sessions)\//.test(p) ? ['Guide', p.split('/')[1]] : null;
+    }
+    if (/marketplace\.visualstudio\.com$/.test(u.hostname)) return ['Install VS Code', ''];
+    if (/open-vsx\.org$/.test(u.hostname)) return ['Install Open VSX', ''];
+    if (/github\.com$/.test(u.hostname)) {
+      const f = /\/releases\/(?:latest\/)?download\/(?:[^/]+\/)?([^/]+)$/.exec(u.pathname);
+      if (f) return ['Download', /mac-apple/.test(f[1]) ? 'Mac Apple silicon' : /mac-intel/.test(f[1]) ? 'Mac Intel' : /windows/.test(f[1]) ? 'Windows' : /linux/.test(f[1]) ? 'Linux' : /\.vsix$/.test(f[1]) ? 'vsix' : f[1].slice(0, 40)];
+      return ['GitHub', /\/releases/.test(u.pathname) ? 'releases' : /\/issues/.test(u.pathname) ? 'issues' : /CHANGELOG/.test(u.pathname) ? 'changelog' : 'repo'];
+    }
+    if (/buymeacoffee\.com$/.test(u.hostname)) return ['Coffee', ''];
+    if (/(youtube\.com|youtu\.be)$/.test(u.hostname)) return ['YouTube', u.pathname.startsWith('/watch') ? 'video' : 'channel'];
+    if (/instagram\.com$/.test(u.hostname)) return ['Artist', ''];
+    return null;
+  };
+  document.addEventListener('click', (e) => {
+    try {
+      const el = e.target.closest && e.target.closest('a[href], button[data-copy]'), w = el && what(el); if (!w) return;
+      const where = el.closest('.hero') ? 'hero' : el.closest('header') ? 'nav' : el.closest('footer') ? 'footer' : (el.closest('section[id]') || {}).id || 'page', data = { where };
+      if (w[1]) data.what = w[1]; window.va('event', { name: w[0], data });
+    } catch (err) {}
+  }, true);
+}
+const analytics = `<script>if (location.hostname === ${JSON.stringify(new URL(site).hostname)} && navigator.doNotTrack !== '1') { window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); }; const s = document.createElement('script'); s.defer = true; s.src = '/_vercel/insights/script.js'; document.head.appendChild(s); (${trackClicks.toString()})(); }</script>`;
 
 // on the host, the people who bought a coffee are fetched again first (scripts/supporters.js), so a deployment shows the latest ones; here, the ones committed in website/supporters/
 if (process.env.VERCEL) require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'supporters.js')], { stdio: 'inherit' });
@@ -94,14 +125,17 @@ ${analytics}
 ${markdown(read(file).replace(/^# .+\n/, ''))}
   </main>
 </div>
-<footer><div class="wrap"><nav><a href="../">Agent Standup</a><a href="../privacy/">Privacy</a><a href="../name-and-logo/">Name and logo</a><a href="https://github.com/Atoll92/agent-standup" rel="noopener">GitHub</a></nav></div></footer>
+<footer><div class="wrap"><nav><a href="../">Agent Standup</a><a href="../privacy/">Privacy</a><a href="../name-and-logo/">Name and logo</a><a href="../claude-code-subagents/">Claude Code sub-agents</a><a href="../codex-sessions/">Codex sessions</a><a href="../mistral-vibe-sessions/">Mistral Vibe sessions</a><a href="https://github.com/Atoll92/agent-standup" rel="noopener">GitHub</a></nav></div></footer>
 </body>
 </html>
 `);
 page('PRIVACY.md', 'privacy', 'Privacy', 'What Agent Standup reads, what it keeps on your computer, and what can leave it.');
 page('TERMS.md', 'terms', 'Terms of sale', 'The terms of sale of the Agent Standup shop: the seller, the price, the delivery, the right of withdrawal, the licence of the pictures.');
+page('website/guides/claude-code-subagents.md', 'claude-code-subagents', 'Claude Code sub-agent monitor', 'See which Claude Code sub-agent is working, stuck, waiting on another or burning tokens, live, from the session files Claude Code already writes. Free, local, zero tokens.');
+page('website/guides/codex-sessions.md', 'codex-sessions', 'Codex session viewer', 'Follow and replay your OpenAI Codex sessions (desktop app and CLI) as a live call: prompts, commands with their output, file changes. Free, local, zero tokens.');
+page('website/guides/mistral-vibe-sessions.md', 'mistral-vibe-sessions', 'Mistral Vibe session viewer', 'Follow and replay your Mistral Vibe sessions and sub-agents as a live call, in both of Vibe\'s log formats. Free, local, zero tokens.');
 page('TRADEMARKS.md', 'name-and-logo', 'Name and logo', 'The code of Agent Standup is MIT licensed. What you may and may not do with its name, its logo and its characters.');
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${site}sitemap.xml\n`);
-write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...LANGS.map((l) => l[4]), 'shop/', 'privacy/', 'terms/', 'name-and-logo/'].map((p) => `  <url><loc>${site}${p}</loc></url>`).join('\n')}\n</urlset>\n`);
+write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...LANGS.map((l) => l[4]), 'shop/', 'claude-code-subagents/', 'codex-sessions/', 'mistral-vibe-sessions/', 'privacy/', 'terms/', 'name-and-logo/'].map((p) => `  <url><loc>${site}${p}</loc></url>`).join('\n')}\n</urlset>\n`);
 const size = (d) => fs.readdirSync(d, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? size(path.join(d, e.name)) : fs.statSync(path.join(d, e.name)).size), 0);
 console.log(`website built for ${site} in website/dist (v${version}, ${(size(dist) / 1048576).toFixed(1)} MB${waitlist ? ', waitlist on' : ', no waitlist form yet'}, ${people} supporter(s))`);

@@ -3,7 +3,7 @@
 //   agent-standup [serve] [--port 4747] [--open]   start the local server and (optionally) open the page
 //   agent-standup status [--here] [--json]          counts of working / needs you / your turn
 //   agent-standup statusline                        same, one short line; reads Claude Code's statusLine JSON on stdin
-// Everything reads the local session files Claude Code already writes. Nothing is sent anywhere unless you turn on the optional French translation or jokes (they use your own Claude login or ANTHROPIC_API_KEY).
+// Everything reads the local session files Claude Code already writes. Nothing is sent anywhere unless the call is in French, Spanish or Brazilian Portuguese or you turn on the jokes (they use your own Claude login or ANTHROPIC_API_KEY).
 const path = require('path'), { spawn } = require('child_process');
 const pkg = require('../package.json');
 const argv = process.argv.slice(2), flags = {}, rest = [];

@@ -1,6 +1,6 @@
 {
   "name": "agent-standup",
-  "version": "1.35.0",
+  "version": "1.38.0",
   "description": "Watch the Claude Code, Codex and Mistral Vibe sessions on your computer as a live team call: who is working, who waits on whom, who needs you. Opens a local page and reads only local session files.",
   "author": {
     "name": "Double Geste",

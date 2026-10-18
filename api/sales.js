@@ -27,7 +27,7 @@ async function rows() {
     if (pi.status !== 'succeeded' || !pi.metadata || !own(PACKS, pi.metadata.pack)) continue;
     const c = pi.latest_charge && typeof pi.latest_charge === 'object' ? pi.latest_charge : {}, bt = c.balance_transaction && typeof c.balance_transaction === 'object' ? c.balance_transaction : null, pm = c.payment_method_details || {};
     r.push({ at: pi.created, pack: pi.metadata.pack, amount: pi.amount_received || pi.amount, currency: pi.currency, fee: bt ? bt.fee : null, net: bt ? bt.net : null, refunded: c.amount_refunded || 0, disputed: !!c.disputed,
-      country: (c.billing_details && c.billing_details.address && c.billing_details.address.country) || (pm.card && pm.card.country) || '', method: pm.type === 'card' ? (pm.card && pm.card.brand) || 'card' : pm.type || '', live: !!pi.livemode });
+      country: (c.billing_details && c.billing_details.address && c.billing_details.address.country) || (pm.card && pm.card.country) || '', method: pm.type === 'card' ? (pm.card && pm.card.brand) || 'card' : pm.type || '', src: typeof pi.metadata.from === 'string' ? pi.metadata.from.slice(0, 30) : '', live: !!pi.livemode });   // src: where the purchase started (app, site, site:<link>); nothing before 17 Oct 2026
   }
   return { rows: r, fees, split: Math.min(1, Math.max(0, parseFloat(process.env.SALES_SPLIT || '0.5') || 0)), base: Object.fromEntries(Object.entries(PACKS).map(([k, p]) => [k, p.amount])), live: /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY || ''), at: Date.now() };
 }
@@ -42,6 +42,7 @@ module.exports = async function sales(req, res) {
   }
   res.statusCode = 200; res.setHeader('content-type', 'text/html; charset=utf-8'); res.end(PAGE);
 };
+module.exports.rows = rows;   // the growth dashboard (api/stats.js) shows the totals too
 
 const PAGE = `<!doctype html>
 <html lang="en">
@@ -100,14 +101,14 @@ const PAGE = `<!doctype html>
   <p class="sub"><span id="state"><span class="dot"></span><span data-k="loading">Loading…</span></span><span id="mode"></span></p>
   <div class="tiles" id="tiles"></div>
   <p class="note" id="note"></p>
-  <div class="wrap"><table><thead><tr><th data-k="when">When</th><th class="n" data-k="paid">Paid</th><th class="n opt" data-k="fee">Stripe fee</th><th class="n" data-k="net">Net</th><th data-k="from">From</th><th class="opt" data-k="how">Paid with</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <div class="wrap"><table><thead><tr><th data-k="when">When</th><th class="n" data-k="paid">Paid</th><th class="n opt" data-k="fee">Stripe fee</th><th class="n" data-k="net">Net</th><th data-k="from">From</th><th class="opt" data-k="how">Paid with</th><th data-k="src">Started in</th></tr></thead><tbody id="rows"></tbody></table></div>
 </main>
 <script>
   const FR = (navigator.language || '').toLowerCase().startsWith('fr'), L = FR ? 'fr-FR' : 'en-GB';
-  const T = FR ? { title: 'Ventes du pack <span>Halloween</span>', loading: 'Chargement…', when: 'Quand', paid: 'Payé', fee: 'Frais Stripe', net: 'Net', from: 'Pays', how: 'Moyen',
+  const T = FR ? { title: 'Ventes du pack <span>Halloween</span>', loading: 'Chargement…', when: 'Quand', paid: 'Payé', fee: 'Frais Stripe', net: 'Net', from: 'Pays', how: 'Moyen', src: 'Depuis', app: 'l’app', siteW: 'le site',
       sales: 'ventes', gross: 'encaissé', tips: 'dont pourboires', fees: 'frais Stripe', refunds: 'remboursé', netT: 'net à partager', share: 'part de', live: 'En direct', updated: 'mis à jour à', offline: 'Hors ligne, nouvel essai dans 20 s', keyErr: 'La clé Stripe ne peut pas lire les paiements', none: 'Aucune vente pour l’instant.', test: 'Mode test', refunded: 'remboursé', disputed: 'contesté',
       noFees: 'Les frais Stripe ne sont pas lus (la clé n’a pas le droit « Balance, lecture ») : le net est donc avant frais.', vat: 'Montants TTC. La TVA éventuelle n’est pas déduite ici. Rafraîchi toutes les 20 s.' }
-    : { title: 'Halloween pack <span>sales</span>', loading: 'Loading…', when: 'When', paid: 'Paid', fee: 'Stripe fee', net: 'Net', from: 'From', how: 'Paid with',
+    : { title: 'Halloween pack <span>sales</span>', loading: 'Loading…', when: 'When', paid: 'Paid', fee: 'Stripe fee', net: 'Net', from: 'From', how: 'Paid with', src: 'Started in', app: 'the app', siteW: 'the website',
       sales: 'sales', gross: 'taken in', tips: 'of which tips', fees: 'Stripe fees', refunds: 'refunded', netT: 'net to share', share: 'share of', live: 'Live', updated: 'updated at', offline: 'Offline, trying again in 20 s', keyErr: 'The Stripe key cannot read payments', none: 'No sales yet.', test: 'Test mode', refunded: 'refunded', disputed: 'disputed',
       noFees: 'Stripe fees are not read (the key lacks “Balance, read”): the net is before fees.', vat: 'Amounts include taxes; any VAT owed is not taken out here. Refreshed every 20 s.' };
   if (FR) { document.documentElement.lang = 'fr'; document.title = 'Ventes · Agent Standup'; }
@@ -132,8 +133,8 @@ const PAGE = `<!doctype html>
     $('rows').innerHTML = rows.length ? rows.map((r) => {
       const extra = r.amount - (d.base[r.pack] || r.amount), status = r.disputed ? ' <span class="refund">' + T.disputed + '</span>' : r.refunded ? ' <span class="refund">' + T.refunded + (r.refunded < r.amount ? ' ' + money(r.refunded) : '') + '</span>' : '';
       return '<tr' + (fresh.includes(r) ? ' class="new"' : '') + '><td>' + new Date(r.at * 1000).toLocaleString(L, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</td><td class="n">' + money(r.amount) + (extra > 0 ? '<span class="tip">+' + money(extra) + '</span>' : '') + status
-        + '</td><td class="n opt">' + (r.fee != null ? money(r.fee) : '–') + '</td><td class="n">' + money(left(r)) + '</td><td>' + esc(flag(r.country)) + '</td><td class="opt">' + esc(r.method) + '</td></tr>';
-    }).join('') : '<tr><td colspan="6" class="empty">' + T.none + '</td></tr>';
+        + '</td><td class="n opt">' + (r.fee != null ? money(r.fee) : '–') + '</td><td class="n">' + money(left(r)) + '</td><td>' + esc(flag(r.country)) + '</td><td class="opt">' + esc(r.method) + '</td><td>' + esc(r.src === 'app' ? T.app : /^site/.test(r.src) ? T.siteW + (r.src.length > 5 ? ' · ' + r.src.slice(5) : '') : '–') + '</td></tr>';
+    }).join('') : '<tr><td colspan="7" class="empty">' + T.none + '</td></tr>';
     if (fresh.length && document.hidden) document.title = '(+' + fresh.length + ') ' + document.title.replace(/^\\(\\+\\d+\\) /, '');
     seen = new Set(rows.map(rowId));
     $('state').innerHTML = '<span class="dot"></span>' + T.live + ' · ' + T.updated + ' ' + new Date(d.at).toLocaleTimeString(L, { hour: '2-digit', minute: '2-digit', second: '2-digit' });

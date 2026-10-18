@@ -16,30 +16,68 @@ titled('-other', 'twin', 'Fix the login page and its tests', 1); titled('-other'
 function standIn({ tabGroups = true } = {}) {
   const v = { cmds: {}, provider: null, sent: [], tabs: [], groups: [], panels: 0, errors: [], active: null, opened: [], relay: null };
   const webview = (where) => ({ options: {}, html: '', onDidReceiveMessage: (f) => { v.relay = f; return { dispose() {} }; }, postMessage: (m) => { v.sent.push({ where, ...m }); return Promise.resolve(true); } });
-  const settings = { port: 0, statusBar: true, onlyThisWorkspace: true, autoOpen: false, claudePath: '', charactersPath: '', shareUsage: false };
+  const settings = { port: 0, statusBar: true, onlyThisWorkspace: true, autoOpen: false, claudePath: '', charactersPath: '', shareUsage: false, notifyNeedsYou: true };
   v.vscode = {
-    workspace: { getConfiguration: () => ({ get: (k) => settings[k] }), workspaceFolders: [{ uri: { fsPath: '/work/app' } }], onDidChangeConfiguration: () => ({ dispose() {} }) },
+    workspace: { getConfiguration: () => ({ get: (k) => settings[k] }), workspaceFolders: [{ uri: { fsPath: '/work/app' } }], onDidChangeConfiguration: (f) => { v.conf = f; return { dispose() {} }; } },
     commands: { registerCommand: (n, f) => { v.cmds[n] = f; return { dispose() {} }; }, executeCommand: async () => {} },
     window: { state: { focused: true }, showErrorMessage: (m) => v.errors.push(m), showInformationMessage: () => {}, onDidChangeWindowState: () => ({ dispose() {} }),
       registerWebviewViewProvider: (id, p) => { v.provider = p; return { dispose() {} }; },
-      createWebviewPanel: () => { v.panels++; return { webview: (v.panel = webview('panel')), reveal() {}, onDidDispose() {} }; },
+      createWebviewPanel: () => { v.panels++; return (v.panelObj = { webview: (v.panel = webview('panel')), reveal() {}, onDidDispose() {} }); },   // panelObj: a test can put it in view (visible)
       createStatusBarItem: () => ({ show() {}, dispose() {}, text: '', tooltip: '' }),
       ...(tabGroups ? { tabGroups: { get activeTabGroup() { return v.active; }, onDidChangeTabs: (f) => { v.tabs.push(f); return { dispose() {} }; }, onDidChangeTabGroups: (f) => { v.groups.push(f); return { dispose() {} }; } } } : {}) },
     env: { isTelemetryEnabled: false, asExternalUri: async (u) => u, openExternal: async (u) => { v.opened.push(u); return true; } },
     Uri: { parse: (s) => ({ toString: () => s }), file: (s) => ({ fsPath: s, toString: () => 'file://' + s }) },
     ViewColumn: { Beside: -2 }, StatusBarAlignment: { Right: 2 }, ThemeColor: class { constructor(id) { this.id = id; } },
   };
-  v.go = (tab, column = 1) => { v.active = tab === undefined ? null : { viewColumn: column, activeTab: tab }; const n = v.sent.length; for (const f of v.tabs) f({}); return v.sent.slice(n); };   // you go to this tab: what the call is sent
+  v.settings = settings;
+  v.go = async (tab, column = 1) => { v.active = tab === undefined ? null : { viewColumn: column, activeTab: tab }; const n = v.sent.length; await Promise.all(v.tabs.map((f) => f({}))); return v.sent.slice(n); };   // the sessions are asked of the server, which runs in a process of its own   // you go to this tab: what the call is sent
   return v;
 }
 const claude = (label) => ({ label, input: { viewType: 'mainThreadWebview-claudeVSCodePanel' } });
-async function activated(v, first) {   // a fresh copy of the extension for each stand-in: it keeps its panel and its last tab to itself. first: the session the status bar opens the call on
+async function activated(v, first, more = {}) {   // a fresh copy of the extension for each stand-in: it keeps its panel and its last tab to itself. first: the session the status bar opens the call on
   const load = Module._load; Module._load = function (req, ...a) { return req === 'vscode' ? v.vscode : load.call(this, req, ...a); };
-  const file = require.resolve('../extension.js'); delete require.cache[file]; const ext = require(file), ctx = { subscriptions: [], globalState: { get() {}, update: async () => {} } };
+  const file = require.resolve('../extension.js'); delete require.cache[file]; const ext = require(file), ctx = { subscriptions: [], globalState: { get() {}, update: async () => {} }, ...more };   // more: e.g. the extension's own folder (globalStorageUri)
   const log = console.log; console.log = () => {};
-  try { ext.activate(ctx); await v.cmds['agentStandup.open'](first); await v.provider.resolveWebviewView({ webview: (v.side = { options: {}, html: '', onDidReceiveMessage: () => ({ dispose() {} }), postMessage: (m) => { v.sent.push({ where: 'side', ...m }); return Promise.resolve(true); } }), onDidDispose() {} }); } finally { console.log = log; Module._load = load; }
+  try { ext.activate(ctx); if (more.noOpen) return { ext, close: async () => { for (const s of ctx.subscriptions) try { s.dispose && s.dispose(); } catch {} await ext.deactivate(); } }; await v.cmds['agentStandup.open'](first); await v.provider.resolveWebviewView({ webview: (v.side = { options: {}, html: '', onDidReceiveMessage: () => ({ dispose() {} }), postMessage: (m) => { v.sent.push({ where: 'side', ...m }); return Promise.resolve(true); } }), onDidDispose() {} }); } finally { console.log = log; Module._load = load; }
   return { ext, close: async () => { for (const s of ctx.subscriptions) try { s.dispose && s.dispose(); } catch {} await ext.deactivate(); } };
 }
+
+test('the server runs in a process of its own, not in the extension host every extension shares; a setting changed in the editor reaches it, and it ends with the extension', async () => {
+  const v = standIn(), x = await activated(v), srv = await x.ext._server();
+  try {
+    assert.ok(srv.kid && srv.kid.pid !== process.pid, 'a process of its own'); assert.equal(srv.server, undefined);
+    const get = (p) => new Promise((res) => require('http').get({ host: '127.0.0.1', port: srv.port, path: p }, (m) => { let b = ''; m.on('data', (d) => (b += d)); m.on('end', () => res(JSON.parse(b))); }));
+    const dir = path.join(tmp, 'my-characters'); v.settings.charactersPath = dir; v.conf({ affectsConfiguration: (k) => k === 'agentStandup.charactersPath' });
+    let seen = ''; for (let i = 0; i < 50 && seen !== dir; i++) { seen = (await get('/api/characters')).dir; if (seen !== dir) await new Promise((r) => setTimeout(r, 50)); }
+    assert.equal(seen, dir, 'the new folder, in the server');
+  } finally { await x.close(); }
+  for (let i = 0; i < 50 && srv.kid.exitCode === null && srv.kid.signalCode === null; i++) await new Promise((r) => setTimeout(r, 50));
+  assert.ok(srv.kid.exitCode !== null || srv.kid.signalCode !== null, 'ended with the extension');
+});
+
+test('a window whose call is never opened starts no server: its status bar reads the ends of the transcripts itself, as before', async () => {
+  const v = standIn(), x = await activated(v, undefined, { noOpen: true });
+  try { await new Promise((r) => setTimeout(r, 300)); assert.equal(x.ext._server(), null); } finally { await x.close(); }
+});
+
+test('a server that ends while the call is open comes back, on the same port, also in a window that is not focused', async () => {
+  const v = standIn(), x = await activated(v), first = await x.ext._server();
+  try {
+    v.vscode.window.state.focused = false; first.kid.kill('SIGKILL');
+    let next = null; for (let i = 0; i < 80 && !(next && next.kid && next.kid.pid !== first.kid.pid); i++) { await new Promise((r) => setTimeout(r, 100)); const s = x.ext._server(); next = s ? await s : null; }
+    assert.ok(next && next.kid && next.kid.pid !== first.kid.pid, 'started again'); assert.equal(next.port, first.port, 'where the open call looks for it');
+  } finally { await x.close(); }
+});
+
+test('server.js run by a manager that gives it a channel (pm2) is the plain server on its own port: the editor\'s mode is asked for by name', async () => {
+  const net = require('net'), port = await new Promise((r) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
+  const kid = require('child_process').fork(path.join(__dirname, '..', 'server.js'), [], { env: { ...process.env, PORT: String(port), AGENT_STANDUP_CHILD: '' }, stdio: ['ignore', 'pipe', 'ignore', 'ipc'] }), said = [];
+  kid.on('message', (m) => said.push(m));
+  try {
+    let up = false; for (let i = 0; i < 50 && !up; i++) { await new Promise((r) => setTimeout(r, 100)); up = await new Promise((r) => require('http').get({ host: '127.0.0.1', port, path: '/api/health' }, (m) => { m.resume(); r(m.statusCode === 200); }).on('error', () => r(false))); }
+    assert.ok(up, 'on the port it was given'); assert.deepEqual(said, [], 'and it says nothing on the channel');
+  } finally { kid.kill(); }
+});
 
 test('the extension registers its commands, its panel and its sidebar view, also on a VS Code that has no tab groups', async () => {
   const v = standIn({ tabGroups: false }), x = await activated(v);
@@ -66,6 +104,17 @@ test('a rating is asked once, on the third day the call is opened, for the store
     answer = 2; await use(store(), '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-20'); assert.equal(asked.length, 5); assert.equal(v.opened.length, 2);   // "No thanks": never again
     assert.match(x.ext._ratePages.vscode, /^https:\/\/marketplace\.visualstudio\.com\/items\?itemName=DoubleGeste\.agent-standup&/); assert.match(x.ext._ratePages.other, /^https:\/\/open-vsx\.org\/extension\/DoubleGeste\/agent-standup\//);
   } finally { await x.close(); }
+});
+
+test('a day an agent works counts towards the rating, call opened or not; ⚙ › Rate in the page opens the store page and ends the asking', async () => {
+  const m = new Map(), st = { get: (k) => m.get(k), update: async (k, val) => { m.set(k, val); } }, v = standIn(), r0 = process.env.AGENT_STANDUP_RATE;
+  v.vscode.env.uriScheme = 'vscode'; const x = await activated(v, undefined, { globalState: st, noOpen: true });
+  try {
+    await new Promise((r) => setTimeout(r, 50));
+    assert.equal(m.get('rate.days'), 1); assert.equal(m.get('rate.last'), new Date().toISOString().slice(0, 10));   // the status bar saw the sessions of this folder at work
+    assert.equal(process.env.AGENT_STANDUP_RATE, x.ext._ratePages.vscode);   // the page opened in a browser rates on the same store
+    x.ext._rateNow(st); assert.deepEqual(v.opened, [x.ext._ratePages.vscode]); assert.equal(m.get('rate.done'), true);
+  } finally { await x.close(); if (r0 == null) delete process.env.AGENT_STANDUP_RATE; else process.env.AGENT_STANDUP_RATE = r0; }
 });
 
 test('sharing usage is asked once, the first time the call is opened, never when VS Code telemetry is off; yes turns it on for every window, and a week is counted once', async () => {
@@ -106,21 +155,31 @@ test('the call is sent to the Claude Code tab you go to: found by its title, who
   const v = standIn(), x = await activated(v), to = (id, proj) => ['panel', 'side'].map((where) => ({ where, agentStandup: 'pin', id, proj, tab: true }));
   try {
     assert.equal(v.tabs.length, 1); assert.equal(v.groups.length, 1);
-    assert.deepEqual(v.go({ label: 'server.js', input: { uri: {} } }), [], 'a file');
-    assert.deepEqual(v.go({ label: 'Agent Standup', input: { viewType: 'mainThreadWebview-agentStandup' } }), [], 'the call itself');
-    assert.deepEqual(v.go({ label: 'Welcome' }), [], 'a tab that says nothing of what it shows'); assert.deepEqual(v.go(undefined), [], 'no tab at all');
-    assert.deepEqual(v.go(claude('Claude Code')), [], 'a conversation that has no title yet');
-    assert.deepEqual(v.go(claude('No session has this title')), [], 'a title no recent session has');
-    assert.deepEqual(v.go(claude('Short title')), to('short', '-work-app'), 'a whole title: the panel and the sidebar view are both told');
-    assert.deepEqual(v.go(claude('Short title')), [], 'the same tab again: the call may have been moved by hand since');
-    assert.deepEqual(v.go(claude('Short')), [], 'a whole label is a whole title, not the start of one');
-    assert.deepEqual(v.go(claude('Fix the login page and i…')), to('long', '-work-app'), 'a title cut after 24 characters: this workspace before a more recent session elsewhere');
-    assert.deepEqual(v.go(claude('Two spaces and a tab in …')), to('spaced', '-work-app'), 'spaces are told apart by neither side');
-    assert.deepEqual(v.go(claude('Only in another folder')), to('away', '-other'), 'a session of another folder, when this workspace has none by that title');
-    assert.deepEqual(v.go(claude('Short title'), 2), to('short', '-work-app'), 'the same title in another column is another tab');
-    assert.equal(require('../server.js').boardRows().some((r) => r.id === 'lastweek'), false); assert.deepEqual(v.go(claude('A conversation of last w…')), to('lastweek', '-work-app'), 'a conversation of another day is no longer among the sessions of the moment: it is found in the whole list');
+    assert.deepEqual(await v.go({ label: 'server.js', input: { uri: {} } }), [], 'a file');
+    assert.deepEqual(await v.go({ label: 'Agent Standup', input: { viewType: 'mainThreadWebview-agentStandup' } }), [], 'the call itself');
+    assert.deepEqual(await v.go({ label: 'Welcome' }), [], 'a tab that says nothing of what it shows'); assert.deepEqual(await v.go(undefined), [], 'no tab at all');
+    assert.deepEqual(await v.go(claude('Claude Code')), [], 'a conversation that has no title yet');
+    assert.deepEqual(await v.go(claude('No session has this title')), [], 'a title no recent session has');
+    assert.deepEqual(await v.go(claude('Short title')), to('short', '-work-app'), 'a whole title: the panel and the sidebar view are both told');
+    assert.deepEqual(await v.go(claude('Short title')), [], 'the same tab again: the call may have been moved by hand since');
+    assert.deepEqual(await v.go(claude('Short')), [], 'a whole label is a whole title, not the start of one');
+    assert.deepEqual(await v.go(claude('Fix the login page and i…')), to('long', '-work-app'), 'a title cut after 24 characters: this workspace before a more recent session elsewhere');
+    assert.deepEqual(await v.go(claude('Two spaces and a tab in …')), to('spaced', '-work-app'), 'spaces are told apart by neither side');
+    assert.deepEqual(await v.go(claude('Only in another folder')), to('away', '-other'), 'a session of another folder, when this workspace has none by that title');
+    assert.deepEqual(await v.go(claude('Short title'), 2), to('short', '-work-app'), 'the same title in another column is another tab');
+    assert.equal(require('../server.js').boardRows().some((r) => r.id === 'lastweek'), false); assert.deepEqual(await v.go(claude('A conversation of last w…')), to('lastweek', '-work-app'), 'a conversation of another day is no longer among the sessions of the moment: it is found in the whole list');
     v.active = null; assert.doesNotThrow(() => v.groups[0]({}));
   } finally { await x.close(); }
+});
+
+test('an editor reopened with three windows counts its day and its week once, not once per window: the first window to mark it sends it', async () => {
+  const dir = path.join(tmp, 'storage'), sent = [], store = () => { const m = new Map(); return { get: (k) => m.get(k), update: async (k, val) => { m.set(k, val); } }; }, xs = [];
+  try {
+    for (let i = 0; i < 3; i++) { const v = standIn(); xs.push(await activated(v, undefined, { globalStorageUri: { fsPath: dir } })); v.settings.shareUsage = true; v.vscode.env.isTelemetryEnabled = true; xs[i].ext._net.pixel = (name) => sent.push(name); }
+    for (const x of xs) x.ext._pingActive({ globalState: store() });   // each window's store has not heard of the others yet
+    for (const x of xs) x.ext._pingWeek(store());
+    assert.deepEqual(sent, ['app-active.gif', 'app-week.gif']);
+  } finally { for (const x of xs) await x.close(); }
 });
 
 test('a link the page asks for is opened on a known site only; the draft of a problem report is handed over as text, so that its query arrives whole', async () => {
@@ -135,4 +194,61 @@ test('a link the page asks for is opened on a known site only; the draft of a pr
     const art = 'https://claude.ai/artifact/AbCdEf123456'; ask(art); ask('https://claude.ai/code/artifact/0f81abdd-8134-4fc0-889a-28c4fe7dbb8f'); ask('https://claude.ai/settings'); ask('https://claude.ai.example.com/artifact/AbCdEf123456'); ask('https://claude.ai/artifact/../settings');   // an artifact the call shows: that page of claude.ai, and no other
     assert.equal(v.opened.length, 5); assert.equal(v.opened[3].toString(), art);
   } finally { await x.close(); }
+});
+
+// ---- "needs you": a notification when a session starts to wait on you, naming it and what it asks ----
+const waits = (over = {}) => ({ proj: '-work-app', id: 'wait-1', title: 'Fix the  login\tpage', state: 'blocked', since: 1e12, mtime: 1e12, tool: 'Bash', ask: 'Bash(npm test)', ...over });
+const tick = () => new Promise((r) => setImmediate(r));
+
+test('a session that starts to wait on you is told once, naming it and what it asks; once more 5 minutes later if it still waits, then not again until it waits again', async () => {
+  const v = standIn(), told = [], x = await activated(v, undefined, { noOpen: true }), T = 1e12;
+  v.vscode.window.showInformationMessage = (m, ...b) => { told.push([m, ...b]); return Promise.resolve(undefined); };
+  try {
+    x.ext._needsYou([waits()], T); assert.deepEqual(told, [['✋ Fix the login page is waiting for you: Bash(npm test)', 'Go to session', 'Open call']]);
+    x.ext._needsYou([waits()], T + 4000); x.ext._needsYou([waits()], T + 5 * 60e3 - 1); assert.equal(told.length, 1, 'not at every scan');
+    x.ext._needsYou([waits()], T + 5 * 60e3); assert.deepEqual(told[1], ['✋ Still waiting: Fix the login page is waiting for you: Bash(npm test)', 'Go to session', 'Open call']);
+    x.ext._needsYou([waits()], T + 6 * 60e3); x.ext._needsYou([waits()], T + 60 * 60e3); assert.equal(told.length, 2, 'one reminder only');
+    x.ext._needsYou([waits({ state: 'working' })], T + 61 * 60e3); x.ext._needsYou([waits({ since: T + 62 * 60e3 })], T + 62 * 60e3); assert.equal(told.length, 3, 'answered, then waiting again: told again');
+    x.ext._needsYou([waits({ id: 'q', title: 'Pick a name', tool: 'AskUserQuestion', ask: 'Which name do you want for the new command, the short one or the long one that says exactly what it does?' }), waits({ id: 'p', title: 'Plan it', tool: 'ExitPlanMode', ask: undefined }), waits({ id: 'm', title: 'A menu', tool: '', ask: undefined }), waits({ id: 'w', state: 'working' })], T);
+    assert.deepEqual(told.slice(3).map((t) => t[0]), ['✋ Pick a name is waiting for you: Which name do you want for the new command, the short one or the long one that…', '✋ Plan it is waiting for you: a plan to approve', '✋ A menu is waiting for you'], 'one per session; the question cut to about 80 characters');
+  } finally { await x.close(); }
+});
+
+test('no "needs you" notification when the setting is off, when the call is in view, or on that session\'s Claude Code tab; "Go to session" opens the call on it', async () => {
+  const v = standIn(), told = [], x = await activated(v), T = 1e12; let answer;
+  v.vscode.window.showInformationMessage = (m, ...b) => { told.push([m, ...b]); return Promise.resolve(answer == null ? undefined : b[answer]); };
+  try {
+    v.settings.notifyNeedsYou = false; x.ext._needsYou([waits()], T); x.ext._needsYou([waits()], T + 5 * 60e3); assert.equal(told.length, 0, 'setting off');
+    v.settings.notifyNeedsYou = true; v.panelObj.visible = true; x.ext._needsYou([waits()], T); assert.equal(told.length, 0, 'the call is in view: the page alerts itself');
+    v.relay({ agentStandup: 'notify', text: 'An agent may be waiting for you ✋' }); assert.equal(told.length, 1, 'the page\'s own alert, call in view');
+    v.panelObj.visible = false; x.ext._needsYou([waits()], T + 60e3); assert.equal(told.length, 1, 'already seen in the call');
+    v.relay({ agentStandup: 'notify', text: 'An agent may be waiting for you ✋' }); v.relay({ agentStandup: 'notify', text: 'Your agents are done 🎉' }); assert.deepEqual(told.slice(1).map((t) => t[0]), ['Agent Standup: An agent may be waiting for you ✋', 'Agent Standup: Your agents are done 🎉'], 'call out of view and nothing told by the extension: the page\'s ✋ is the only word of it (a stalled agent, a sub-agent, another folder)');
+    answer = 0; const n = v.sent.length; x.ext._needsYou([waits()], T + 5 * 60e3); assert.match(told[3][0], /^✋ Still waiting: Fix the login page/, 'the reminder, once the call is out of view');
+    v.relay({ agentStandup: 'notify', text: 'An agent may be waiting for you ✋' }); assert.equal(told.length, 4, 'right after the notification that names the session, the page\'s generic ✋ is the same news: not shown');
+    await tick(); await tick(); assert.deepEqual(v.sent.slice(n), [{ where: 'panel', agentStandup: 'pin', id: 'wait-1', proj: '-work-app' }], 'Go to session: what the status bar does for it');
+    v.active = { viewColumn: 1, activeTab: claude('Fix the login page and i…') }; x.ext._needsYou([waits({ id: 'tab', title: 'Fix the login page and its tests' })], T); assert.equal(told.length, 4, 'you are on its tab');
+    x.ext._needsYou([waits({ id: 'tab', title: 'Fix the login page and its tests' }), waits({ id: 'other', title: 'Another one' })], T); assert.equal(told.length, 5, 'another session is told');
+  } finally { await x.close(); }
+});
+
+test('the status bar\'s scan tells the sessions of this workspace that wait on you, once', async () => {
+  const dir = path.join(tmp, 'projects', '-work-app'), file = path.join(dir, 'asking.jsonl'), at = Date.now() - 20000, told = [];
+  fs.writeFileSync(file, [{ type: 'user', message: { role: 'user', content: 'name it' } }, { type: 'custom-title', customTitle: 'Name the command' }, { type: 'assistant', message: { id: 'm2', role: 'assistant', stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tu1', name: 'AskUserQuestion', input: { questions: [{ question: 'Short or long name?', header: 'Name', options: [{ label: 'Short' }, { label: 'Long' }] }] } }] } }].map((r) => JSON.stringify({ timestamp: new Date(at).toISOString(), ...r })).join('\n') + '\n');
+  fs.utimesSync(file, at / 1000, at / 1000); await new Promise((r) => setTimeout(r, 1300));   // past the scan the other tests shared
+  const v = standIn(); v.vscode.window.showInformationMessage = (m, ...b) => { told.push(m); return Promise.resolve(undefined); };
+  const x = await activated(v, undefined, { noOpen: true });
+  try {
+    await tick(); assert.deepEqual(told, ['✋ Name the command is waiting for you: Short or long name?']);
+    await new Promise((r) => setTimeout(r, 4300)); assert.equal(told.length, 1, 'the next scan says nothing');
+  } finally { await x.close(); fs.unlinkSync(file); }
+});
+
+test('two windows on the same folder tell a wait once between them, and its reminder once', async () => {
+  const dir = path.join(tmp, 'storage-needs'), told = [], xs = [], T = 1e12;
+  try {
+    for (let i = 0; i < 2; i++) { const v = standIn(); xs.push(await activated(v, undefined, { globalStorageUri: { fsPath: dir }, noOpen: true })); v.vscode.window.showInformationMessage = (m) => { told.push([i, m]); return Promise.resolve(undefined); }; }
+    for (const x of xs) x.ext._needsYou([waits()], T); assert.equal(told.length, 1);
+    for (const x of xs) x.ext._needsYou([waits()], T + 5 * 60e3); assert.equal(told.length, 2); assert.match(told[1][1], /Still waiting/);
+    for (const x of xs) { x.ext._needsYou([], T + 6 * 60e3); x.ext._needsYou([waits({ since: T + 7 * 60e3 })], T + 7 * 60e3); } assert.equal(told.length, 3, 'a new wait');
+  } finally { for (const x of xs) await x.close(); }
 });

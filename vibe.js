@@ -73,7 +73,8 @@ function meta(dir) {
 }
 // The sessions a person started, newest first, each with the folder it was started in.
 function sessions(limit = 80) { return scan().rows.slice(0, limit).map((r) => { const m = meta(r.dir); return { ...r, cwd: m.cwd, key: dirKey(m.cwd) }; }); }   // meta.json is written in both formats
-const inProject = (id, key) => { const r = row(id); if (!r || !key) return false; if (key === PROJ) return true; const d = dirKey(meta(r.dir).cwd); return d === key || d.startsWith(key + '-'); };
+const under = (cwd, key) => { for (let d = String(cwd || ''); d;) { if (dirKey(d) === key) return true; const up = path.dirname(d); if (up === d) return false; d = up; } return false; };   // key is the folder itself or one above it: a dashed name alone cannot tell app/old (inside app) from app-old (beside it)
+const inProject = (id, key) => { const r = row(id); if (!r || !key) return false; if (key === PROJ) return true; const c = meta(r.dir).cwd, d = dirKey(c); return d === key || (d.startsWith(key + '-') && under(c, key)); };
 const cwd = (id) => { const r = row(id); return r ? meta(r.dir).cwd : ''; };   // the folder the session was started in: where a file it names by a relative path is
 const projectLabel = (cwd) => { const h = os.homedir(), rel = cwd && cwd.startsWith(h + path.sep) ? cwd.slice(h.length + 1) : cwd; return 'Mistral Vibe' + (rel ? ' · ' + rel.split(path.sep).join('/') : ''); };
 

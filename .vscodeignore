@@ -40,3 +40,8 @@ reports/**
 
 # local secrets written by tools (vercel env pull, Vercel CLI): never in a package
 .env*
+
+# notes for coding agents, and exports left at the root by hand
+CLAUDE.md
+*.xlsx
+*.csv

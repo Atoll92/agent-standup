@@ -66,7 +66,8 @@ function sessions(limit = 80) {
   const out = []; for (const r of scan().rows) { const h = head(r.file); if (!h.ok || h.child) continue; out.push({ ...r, cwd: h.cwd, dir: h.dir }); if (out.length >= limit) break; }
   return out;
 }
-const inProject = (id, key) => { const r = row(id); if (!r || !key) return false; if (key === PROJ) return true; const d = head(r.file).dir; return d === key || d.startsWith(key + '-'); };
+const under = (cwd, key) => { for (let d = String(cwd || ''); d;) { if (dirKey(d) === key) return true; const up = path.dirname(d); if (up === d) return false; d = up; } return false; };   // key is the folder itself or one above it: a dashed name alone cannot tell app/old (inside app) from app-old (beside it)
+const inProject = (id, key) => { const r = row(id); if (!r || !key) return false; if (key === PROJ) return true; const h = head(r.file), d = h.dir; return d === key || (d.startsWith(key + '-') && under(h.cwd, key)); };
 const cwd = (id) => { const r = row(id); return r ? head(r.file).cwd : ''; };   // the folder the session was started in: where a file it names by a relative path is
 const projectLabel = (cwd) => { const h = os.homedir(), rel = cwd && cwd.startsWith(h + path.sep) ? cwd.slice(h.length + 1) : cwd; return 'Codex' + (rel ? ' · ' + rel.split(path.sep).join('/') : ''); };
 

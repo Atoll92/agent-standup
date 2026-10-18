@@ -17,11 +17,45 @@ test('settings are kept in a file; cross-site writes are refused', async () => {
     assert.equal((await get(port, '/api/prefs', { 'content-type': 'application/json' }, 'PUT', '{"lang":"fr","_t":5}')).status, 200);
     assert.match((await get(port, '/api/prefs.js')).body, /"lang":"fr"/);
     assert.equal((await get(port, '/api/prefs', { 'sec-fetch-site': 'cross-site' }, 'PUT', '{}')).status, 403);
+    assert.equal((await get(port, '/api/prefs', { origin: 'http://localhost:3000', 'content-type': 'application/json' }, 'PUT', '{"_t":6}')).status, 403, 'another local page (a dev server on another port) is another site');
+    assert.equal((await get(port, '/api/prefs', { origin: `http://localhost:${port}`, 'content-type': 'application/json' }, 'PUT', '{"lang":"fr","_t":7}')).status, 200, 'the page itself');
     assert.equal((await get(port, '/api/prefs', {}, 'PUT', '[1]')).status, 400);
     assert.equal(JSON.parse((await get(port, '/api/kokoro')).body).installed, false);
     assert.equal((await get(port, '/api/kokoro/install', { 'sec-fetch-site': 'cross-site' }, 'POST')).status, 403);
   } finally { srv.close(); require('../server.js').shutdown(); }
 });
+test('the page is told where it runs, for ⚙ › Rate: the store page the editor gave, a star on GitHub for the desktop app and the command line', async () => {
+  const srv = require('../server.js').start(0); await new Promise((r) => srv.once('listening', r)); const port = srv.address().port, h0 = process.env.AGENT_STANDUP_HOST, r0 = process.env.AGENT_STANDUP_RATE;
+  const app = async () => JSON.parse((await get(port, '/api/prefs.js')).body.match(/window\.AS_APP = (.*);$/)[1]), GH = 'https://github.com/Atoll92/agent-standup', MP = 'https://marketplace.visualstudio.com/items?itemName=DoubleGeste.agent-standup&ssr=false#review-details';
+  try {
+    delete process.env.AGENT_STANDUP_HOST; delete process.env.AGENT_STANDUP_RATE; assert.deepEqual(await app(), { kind: '', rate: GH });
+    process.env.AGENT_STANDUP_HOST = 'desktop app'; process.env.AGENT_STANDUP_RATE = MP; assert.deepEqual(await app(), { kind: 'desktop', rate: GH });   // the desktop app has no store
+    process.env.AGENT_STANDUP_HOST = 'command line'; assert.deepEqual(await app(), { kind: 'cli', rate: GH });
+    process.env.AGENT_STANDUP_HOST = 'Cursor 1.2'; assert.deepEqual(await app(), { kind: 'editor', rate: MP });
+    process.env.AGENT_STANDUP_RATE = 'https://example.com/'; assert.deepEqual(await app(), { kind: 'editor', rate: GH });   // only the two stores
+  } finally {
+    for (const [k, v] of [['AGENT_STANDUP_HOST', h0], ['AGENT_STANDUP_RATE', r0]]) { if (v == null) delete process.env[k]; else process.env[k] = v; }
+    srv.close(); require('../server.js').shutdown();
+  }
+});
+
+test('one window at a time plays sound, also when each window has its own server (one per VS Code window): the last that claimed it, until it stops answering', async () => {
+  const a = require('../server.js').start(0), b = require('../server.js').start(0); await Promise.all([a, b].map((x) => new Promise((r) => x.once('listening', r))));
+  const owner = async (srv, q) => JSON.parse((await get(srv.address().port, '/api/audio?' + q)).body).owner;
+  try {
+    assert.equal(await owner(a, 'cid=win-one&claim=1'), 'win-one'); assert.equal(await owner(b, 'cid=win-two'), 'win-one', 'the other server knows it too');
+    assert.equal(await owner(b, 'cid=win-two&claim=1'), 'win-two'); assert.equal(await owner(a, 'cid=win-one'), 'win-two');
+    const f = path.join(path.dirname(process.env.AGENT_STANDUP_PREFS), 'audio.json'); fs.writeFileSync(f, JSON.stringify({ id: 'win-two', seen: Date.now() - 7000 }));   // win-two has not answered for 7 s
+    assert.equal(await owner(a, 'cid=win-one'), null);
+  } finally { a.close(); b.close(); }
+});
+
+test('on Windows, a claude installed with npm gets each argument whole through cmd.exe: the empty value of --tools and the system prompt stay one argument each', () => {
+  const q = require('../server.js')._winArg;
+  assert.equal(['-p', '--tools', '', '--system-prompt', 'Translate it, as a colleague would say it.'].map(q).join(' '), '"-p" "--tools" "" "--system-prompt" "Translate it, as a colleague would say it."');
+  assert.equal(q('a "quote"\nand a line'), '"a \'quote\' and a line"');
+});
+
 test('pictures returned by tools are counted in the timeline and served from the transcript only', async () => {
   const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', pic = (type, data) => ({ type: 'image', source: { type: 'base64', media_type: type, data } });
   const rec = (id, content) => [{ type: 'assistant', timestamp: '2026-01-01T00:00:00Z', message: { content: [{ type: 'tool_use', id, name: 'Read', input: { file_path: '/x/shot.png' } }] } }, { type: 'user', timestamp: '2026-01-01T00:00:01Z', message: { content: [{ type: 'tool_result', tool_use_id: id, content }] } }].map((r) => JSON.stringify(r)).join('\n') + '\n';
@@ -407,7 +441,7 @@ test('an artifact a session published is shown from the session file alone: each
     const skel = '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
     const one = await page('agent=main&tool=toolu_pub001'); assert.equal(one.status, 200); assert.equal(one.type, 'text/html; charset=utf-8'); assert.equal(one.body, skel + v1);   // the first version, as it was published
     const two = await page('agent=main&tool=toolu_pub002'); assert.equal(two.body, skel + '<title>Report</title>\n<h1>Totals: $& "quoted" e</h1>\n<p>two $1</p>\n<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>');   // the edits up to the second publish, one by one; not the one that was refused, nor the one that came after
-    assert.equal(await new Promise((ok, no) => http.get({ port, path: '/' }, (x) => { x.resume(); ok(x.headers['content-security-policy']); }).on('error', no)), "frame-src 'self'");   // the page that holds the frame lets it show the app's own address and no other
+    assert.equal(await new Promise((ok, no) => http.get({ port, path: '/' }, (x) => { x.resume(); ok(x.headers['content-security-policy']); }).on('error', no)), "frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'");   // the page that holds the frame lets it show the app's own address and no other
     assert.match(one.csp, /^sandbox allow-scripts; default-src 'none';/); assert.ok(!/https?:|allow-same-origin|allow-popups|allow-forms|allow-top/.test(two.csp)); assert.match(two.csp, /connect-src 'none'/);   // nothing from the network unless asked
     const net = await page('agent=main&tool=toolu_pub002&net=1'); assert.match(net.csp, /script-src 'unsafe-inline' 'unsafe-eval' https:\/\/cdnjs\.cloudflare\.com https:\/\/cdn\.jsdelivr\.net /); assert.match(net.csp, /^sandbox allow-scripts;/); assert.match(net.csp, /connect-src 'none'; frame-src 'none'; form-action 'none'/); assert.ok(!/allow-same-origin/.test(net.csp));
     assert.deepEqual(JSON.parse((await page('agent=main&tool=toolu_pub001&check=1')).body), { ok: true, net: false }); assert.deepEqual(JSON.parse((await page('agent=main&tool=toolu_pub002&check=1')).body), { ok: true, net: true });
@@ -524,6 +558,21 @@ test('sessions started in the temporary folder: the call that looks everywhere l
     assert.equal((await cur('proj=' + temp)).proj, temp, 'a window open on that folder follows it');
     assert.equal((await cur('proj=&sproj=' + temp + '&sid=s')).proj, mine, 'a call that was in it is not kept there');
     const rows = JSON.parse((await get(port, '/api/board')).body); assert.deepEqual([mine, temp].map((p) => (rows.find((r) => r.proj === p) || {}).tmp), [undefined, 1], 'the list of sessions has both, the one in the temporary folder marked');
+  } finally { stop(); }
+});
+
+test('a session of the folder the call follows stays in the list however many sessions are written elsewhere: in temporary folders, or in other projects', async () => {
+  const mine = '-Users-xxxx-DEV-cap-workflow', s0 = Math.floor((Date.now() - Date.UTC(2026, 0, 1)) / 1000), now = Date.now();
+  const put = (proj, id, s, recs, ago) => { const d = path.join(tmp, 'projects', proj), file = path.join(d, id + '.jsonl'); fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(file, recs.map(line).join('')); fs.utimesSync(file, (now - ago) / 1000, (now - ago) / 1000); };
+  put(mine, 'mine', s0 - 70, [typed(s0 - 70, 'Write the feature'), used(s0 - 69, 'toolu_cap', 'Bash', { command: 'npm test' })], 60000);   // at work, its order the latest; then 45 sessions in temporary folders and 50 in other projects are written after it
+  for (let i = 0; i < 45; i++) put('-private-var-folders-zz-ab12cd-T-neutral-cap' + i, 's', s0 - 200, [typed(s0 - 200, 'Say OK'), said(s0 - 199, 'OK', { stop: 'end_turn' })], 30000 - i * 100);
+  for (let i = 0; i < 50; i++) put('-Users-xxxx-DEV-other' + i, 's', s0 - 300, [typed(s0 - 300, 'Older work'), said(s0 - 299, 'Done.', { stop: 'end_turn' })], 20000 - i * 100);
+  const { port, stop } = await serve();
+  try {
+    await wait(1300); const rows = JSON.parse((await get(port, '/api/board')).body);
+    assert.ok(rows.some((r) => r.proj === mine), 'the session of the folder is in the list'); assert.ok(rows.filter((r) => r.tmp).length <= 10, 'sessions in temporary folders have a few places of their own');
+    assert.equal(rows.filter((r) => /^-Users-xxxx-DEV-other/.test(r.proj)).length, 50, 'and every other project keeps its newest sessions');   // one each here
+    assert.equal(JSON.parse((await get(port, '/api/current?proj=' + mine + '&sproj=-Users-xxxx-DEV-other0&sid=s')).body).id, 'mine', 'the call goes to it');
   } finally { stop(); }
 });
 

@@ -10,7 +10,7 @@ for (const f of ['server.js', 'codex.js', 'vibe.js', 'reply.js', 'kokoro.js', 'k
 fs.cpSync(path.join(root, 'public'), path.join(core, 'public'), { recursive: true }); for (const e of ['cats', 'vampire']) fs.cpSync(path.join(root, 'examples', e), path.join(core, 'examples', e), { recursive: true }); for (const f of ['icon.png', 'tray.png', 'tray@2x.png']) fs.copyFileSync(path.join(root, 'media', f), path.join(core, 'media', f));
 if (!fs.existsSync(path.join(d, 'node_modules/electron'))) execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install', '--no-audit', '--no-fund'], { cwd: d, stdio: 'inherit', shell: process.platform === 'win32' });
 const appName = process.platform === 'win32' ? '"Agent Standup"' : 'Agent Standup';   // quoted on Windows, where the command goes through a shell and would split the name
-const args = ['--yes', '@electron/packager', d, appName, `--platform=${process.platform}`, `--arch=${arch}`, `--out=${out}`, '--overwrite', '--prune=true', '--asar', '--app-bundle-id=com.doublegeste.agentstandup', '--ignore=^/node_modules/\\.cache'];
+const args = ['--yes', '@electron/packager@20.3.0', d, appName, `--platform=${process.platform}`, `--arch=${arch}`, `--out=${out}`, '--overwrite', '--prune=true', '--asar', '--app-bundle-id=com.doublegeste.agentstandup', '--ignore=^/node_modules/\\.cache'];
 if (process.platform !== 'darwin') args.push('--executable-name=agent-standup');   // no space in the executable name on Windows and Linux
 if (fs.existsSync(path.join(d, process.platform === 'darwin' ? 'icon.icns' : 'icon.ico'))) args.push(`--icon=${path.join(d, 'icon')}`);
 execFileSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', args, { stdio: 'inherit', shell: process.platform === 'win32' });

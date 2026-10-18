@@ -1,5 +1,5 @@
 // test/board.test.js: the Sessions board. What the server says of each session (its pull request, the question it stopped on), and in a real browser the sections by state and the sessions put away as done.
-// The browser part needs puppeteer-core (npm i) and a Chrome (CHROME_PATH, or the usual places), like test/live.test.js: skipped with a note when they are missing, except in CI where that is a failure.
+// The browser part needs puppeteer-core (npm i) and a Chrome (CHROME_PATH, or the usual places), like the test/live-*.test.js files: skipped with a note when they are missing, except in CI where that is a failure.
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), os = require('os'), path = require('path');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-board-')), PROJECTS = path.join(tmp, 'projects');
 process.env.AGENT_STANDUP_PREFS = path.join(tmp, 'prefs.json'); process.env.AGENT_STANDUP_KOKORO_DIR = path.join(tmp, 'kokoro'); process.env.AGENT_STANDUP_PROJECTS = PROJECTS;

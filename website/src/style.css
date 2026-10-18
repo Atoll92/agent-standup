@@ -145,3 +145,6 @@ footer a { color: var(--soft) }
 .doc th, .doc td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); color: var(--soft) }
 .doc th { color: var(--dim); font-weight: 600 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto } .btn, .yt span { transition: none } }
+
+.packcard img { display: block; width: 100%; height: auto; border-radius: 12px; margin-bottom: 18px }
+#pack { padding-block: 56px 8px }

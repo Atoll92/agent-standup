@@ -2,7 +2,7 @@
   "name": "agent-standup",
   "displayName": "Agent Standup",
   "description": "%extension.description%",
-  "version": "1.35.0",
+  "version": "1.38.0",
   "publisher": "DoubleGeste",
   "license": "MIT",
   "engines": {
@@ -79,6 +79,11 @@
           "type": "boolean",
           "default": true,
           "description": "%config.statusBar.description%"
+        },
+        "agentStandup.notifyNeedsYou": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.notifyNeedsYou.description%"
         },
         "agentStandup.shareUsage": {
           "type": "boolean",
@@ -176,6 +181,9 @@
   "homepage": "https://agent-standup.com",
   "bugs": {
     "url": "https://github.com/Atoll92/agent-standup/issues"
+  },
+  "sponsor": {
+    "url": "https://www.buymeacoffee.com/bored_dev_and_his_robots"
   },
   "l10n": "./l10n"
 }

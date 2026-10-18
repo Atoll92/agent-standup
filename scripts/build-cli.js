@@ -17,11 +17,11 @@ const cli = {
 fs.writeFileSync(path.join(out, 'package.json'), JSON.stringify(cli, null, 2) + '\n');
 fs.writeFileSync(path.join(out, 'README.md'), `# Agent Standup (command line)
 
-Your Claude Code, Codex and Mistral Vibe sessions as a live team call, without any editor. Free, MIT, and it never calls Claude: it only reads the session files Claude Code, Codex and Mistral Vibe already write.
+Your Claude Code, Codex and Mistral Vibe sessions as a live team call, without any editor. Free, MIT, and by default it never calls Claude: it reads the session files Claude Code, Codex, Mistral Vibe and Cowork already write, and calls Claude only to translate a call held in French, Spanish or Brazilian Portuguese, or for the optional jokes.
 
 \`\`\`bash
 npx ${NAME}            # then open http://localhost:4747   (add --open to open it for you)
-npx ${NAME} status     # ⚙ 3 working · ✋ 1 needs you
+npx ${NAME} status     # ✋ 1 needs you · ⚙ 3 working
 \`\`\`
 
 Install once for status bars (faster than npx): \`npm i -g ${NAME}\`

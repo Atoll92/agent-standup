@@ -10,5 +10,11 @@
   "No thanks": "Non merci",
   "Help count how many people use Agent Standup? When you open the call, at most once a week (and once a day when the editor starts), the extension would load an empty 1-pixel file from GitHub: no identifier, nothing about you or your sessions. GitHub sees your IP address, as with any download. You can turn it off any time in the settings.": "Aider à compter combien de personnes utilisent Agent Standup ? Quand vous ouvrez l’appel, au plus une fois par semaine (et une fois par jour au démarrage de l’éditeur), l’extension chargerait un fichier vide d’un pixel sur GitHub : aucun identifiant, rien sur vous ni sur vos sessions. GitHub voit votre adresse IP, comme pour tout téléchargement. Vous pouvez le désactiver à tout moment dans les réglages.",
   "Count me in": "Je participe",
-  "Privacy policy": "Politique de confidentialité"
+  "Privacy policy": "Politique de confidentialité",
+  "{0} is waiting for you: {1}": "{0} vous attend : {1}",
+  "{0} is waiting for you": "{0} vous attend",
+  "Still waiting: {0}": "Toujours en attente : {0}",
+  "a plan to approve": "un plan à approuver",
+  "Go to session": "Aller à la session",
+  "Open call": "Ouvrir l’appel"
 }

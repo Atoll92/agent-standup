@@ -25,3 +25,7 @@ halloween-src/
 brand/youtube/**/*.mp4
 # working copies left by agents
 .claude/worktrees/
+
+# private exports left at the root by hand (the Marketplace publisher report): never in the public repository
+*.xlsx
+*.csv

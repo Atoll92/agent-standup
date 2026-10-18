@@ -14,5 +14,6 @@
   "config.vibe.description": "Mostrar também as sessões do Mistral Vibe (lidas de ~/.vibe/logs/session, ou $VIBE_HOME). Desative para não mostrá-las.",
   "config.reply.description": "Permite que a chamada digite sua mensagem no painel tmux da sessão do Claude Code acompanhada (somente Linux, desativado por padrão). Qualquer pessoa que possa executar comandos como você poderá então digitar nas suas sessões.",
   "config.claudePath.description": "Caminho completo do executável do Claude Code, se não for encontrado automaticamente (usado para a tradução).",
-  "config.charactersPath.description": "Pasta com suas próprias imagens de personagens (PNG, GIF ou WebP, até 300 KB cada). Vazio usa ~/.agent-standup/characters. lead.png é o agente principal, you.png é você, qualquer outra imagem é um subagente, name-talk.png é um quadro opcional de boca aberta."
+  "config.charactersPath.description": "Pasta com suas próprias imagens de personagens (PNG, GIF ou WebP, até 300 KB cada). Vazio usa ~/.agent-standup/characters. lead.png é o agente principal, you.png é você, qualquer outra imagem é um subagente, name-talk.png é um quadro opcional de boca aberta.",
+  "config.notifyNeedsYou.description": "Mostrar uma notificação quando uma sessão deste workspace começa a esperar por você (uma pergunta, uma aprovação, um plano), com o nome da sessão e o que ela pede, e mais uma vez se ainda estiver esperando 5 minutos depois. Não aparece enquanto a chamada está à vista."
 }

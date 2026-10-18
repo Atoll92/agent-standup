@@ -1,15 +1,18 @@
 # Experimental: builds the unsigned desktop app for Windows and Linux when a release tag is pushed, and attaches the archives to the release.
 # Only the macOS builds (made by hand) have been tested; a failure here does not block anything else.
+# The build downloads and runs tools (npx), so it gets a token that can only read; only the small job that attaches the archives can write to the release.
 name: Desktop app
 on:
   workflow_dispatch:
   push:
     tags: ['v*']
 permissions:
-  contents: write
+  contents: read
 jobs:
   build:
     continue-on-error: true
+    permissions:
+      contents: read
     strategy:
       matrix:
         include:
@@ -18,9 +21,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # the token is not left in .git/config for the build's tools to find
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: node scripts/build-desktop.js
       - name: Zip (Linux)
         if: runner.os == 'Linux'
@@ -29,9 +34,30 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: Compress-Archive -Path dist-desktop\* -DestinationPath "Agent-Standup-$($env:GITHUB_REF_NAME.TrimStart('v'))-${{ matrix.name }}.zip"
+      - name: Keep the archive for the release job
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.name }}
+          path: Agent-Standup-*.zip
+          if-no-files-found: error
+          retention-days: 7
+  release:
+    needs: build
+    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') }}   # also when one of the builds failed: the other archive is attached all the same
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          merge-multiple: true
       - name: Attach to the release
-        if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
-        run: gh release upload "$GITHUB_REF_NAME" Agent-Standup-*.zip --clobber
+        run: |
+          shopt -s nullglob; zips=(Agent-Standup-*.zip)
+          test ${#zips[@]} -gt 0 || { echo "no archive was built"; exit 1; }
+          gh release upload "$GITHUB_REF_NAME" "${zips[@]}" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}   # no checkout in this job: gh is told which repository

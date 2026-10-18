@@ -45,7 +45,8 @@ function install() {
   const npm = findNpm(); if (!npm) { lastError = 'npm not found'; return status(); }
   fs.mkdirSync(DIR, { recursive: true }); lastError = '';
   const out = fs.openSync(LOG, 'w'), args = ['install', '--prefix', DIR, '--no-audit', '--no-fund', PKG, G2P];
-  job = WIN && /\.(cmd|bat)$/i.test(npm) ? spawn('"' + npm + '"', args.map((a) => (a === DIR ? '"' + a + '"' : a)), { shell: true, stdio: ['ignore', out, out], windowsHide: true }) : spawn(npm, args, { stdio: ['ignore', out, out], windowsHide: true });
+  const env = { ...process.env }, pk = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') || 'PATH'; env[pk] = path.dirname(npm) + path.delimiter + (env[pk] || '');   // npm starts with `#!/usr/bin/env node`: an editor or app opened from the Dock has a PATH without node's folder (exit 127, issue #11), and node sits next to npm
+  job = WIN && /\.(cmd|bat)$/i.test(npm) ? spawn('"' + npm + '"', args.map((a) => (a === DIR ? '"' + a + '"' : a)), { shell: true, env, stdio: ['ignore', out, out], windowsHide: true }) : spawn(npm, args, { env, stdio: ['ignore', out, out], windowsHide: true });
   const done = (why) => { job = null; try { fs.closeSync(out); } catch {} if (why) lastError = why; else warm(); };
   job.on('error', (e) => done('npm: ' + e.message));
   job.on('close', (code) => done(code === 0 && installed() ? '' : 'npm install failed (exit ' + code + ')'));
@@ -76,8 +77,9 @@ function warm() { if (installed() && !worker && restarts < MAX_RESTARTS) try { s
 function pump() {
   if (busy || !queue.length) return;
   const j = queue.shift(); let w; try { w = startWorker(); } catch (e) { j.reject(e); return pump(); }
-  const id = ++seq, next = (fn) => (v) => { busy = false; fn(v); pump(); }; busy = true;
-  w.pending.set(id, { resolve: next(j.resolve), reject: next(j.reject) });
+  const id = ++seq, late = setTimeout(() => { if (w.pending.has(id)) { lastError = 'kokoro worker: no answer'; try { w.p.kill(); } catch {} } }, w.ready ? 60e3 : 180e3);   // a worker that hangs is stopped (and started again on the next line): every line after it waited for ever
+  const next = (fn, ok) => (v) => { clearTimeout(late); busy = false; if (ok) restarts = 0; fn(v); pump(); }; busy = true;   // ok: a line spoken, the count of crashes starts again (three over days of an open editor turned the voices off)
+  w.pending.set(id, { resolve: next(j.resolve, true), reject: next(j.reject) });
   const v = find(j.voice);
   w.p.stdin.write(JSON.stringify({ id, text: j.text, voice: j.voice, speed: j.speed, out: j.out, lang: v.lang, mix: v.mix }) + '\n');
 }

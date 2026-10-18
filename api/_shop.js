@@ -59,13 +59,14 @@ const shortCode = (prefix) => { const b = require('crypto').randomBytes(8); let 
 const INSTALL = 'In Agent Standup: Settings > Characters > Halloween pack > "I already bought it", then this code.';
 
 async function checkout(req, res) {
-  return handle(req, res, async (pack, p) => {
+  return handle(req, res, async (pack, p, b) => {
+    const ref = String((b && b.ref) || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 24), from = b && b.from === 'site' ? 'site' + (ref ? ':' + ref : '') : 'app';   // where the purchase started, for the sales page: the shop page says so, and anything else is the app (older versions send nothing)
     if (!p.file()) throw Object.assign(new Error('no file for ' + pack), { closed: true });   // nothing to deliver: nothing to sell
     const price = await priceOf(p), short = shortCode(p.prefix);
     const s = await stripe('POST', '/v1/checkout/sessions', {
       mode: 'payment', line_items: [price ? { quantity: 1, price } : { quantity: 1, price_data: { currency: p.currency, unit_amount: p.amount, product_data: { name: p.name, description: p.description } } }],
-      success_url: site() + '/thanks/?code=' + short + '&s={CHECKOUT_SESSION_ID}', cancel_url: site() + '/shop/', metadata: { pack, code: short },
-      payment_intent_data: { metadata: { pack, code: short }, description: `${p.name}. Purchase code ${short}` },   // the description is printed on the receipt Stripe emails
+      success_url: site() + '/thanks/?code=' + short + '&s={CHECKOUT_SESSION_ID}', cancel_url: site() + '/shop/', metadata: { pack, code: short, from },
+      payment_intent_data: { metadata: { pack, code: short, from }, description: `${p.name}. Purchase code ${short}` },   // the description is printed on the receipt Stripe emails
       invoice_creation: process.env.SHOP_INVOICE === '0' ? undefined : { enabled: 'true', invoice_data: { description: `${p.name}. ${INSTALL}`, custom_fields: [{ name: 'Purchase code', value: short }], metadata: { pack, code: short }, footer: 'Lost your code? It installs the pack on any computer: https://agent-standup.com/shop/ · Questions: contact.doublegeste@gmail.com' } },
       custom_text: { submit: { message: 'The pack is delivered as soon as you pay. By paying, you ask for this immediate delivery and give up the 14-day right of withdrawal, which ends with it. Terms of sale: https://agent-standup.com/terms/' } },
       automatic_tax: process.env.STRIPE_TAX === '1' ? { enabled: true } : undefined,

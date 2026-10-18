@@ -1,6 +1,6 @@
 # Privacy
 
-Last updated: 14 October 2026.
+Last updated: 17 October 2026.
 
 This page covers Agent Standup in all its forms (the VS Code extension, the `agent-standup` command, the desktop app, the Claude Code plugin) and its website. Agent Standup is published by Double Geste, an individual developer. It is an unofficial community project, not affiliated with Anthropic, OpenAI or Mistral AI.
 
@@ -10,18 +10,19 @@ Agent Standup runs on your own computer. It reads files that are already there, 
 
 ## What it reads
 
-- **Your session files.** The ones Claude Code writes in `~/.claude/projects`, the ones Codex writes in `~/.codex/sessions` the ones Mistral Vibe writes in `~/.vibe/logs/session`, and the ones Cowork (a tab of the Claude desktop app) writes in that app's own folder (`local-agent-mode-sessions`), with the title the app noted beside each of them. They hold what you typed, what the agents answered and what they ran, so they can contain personal or confidential information. Agent Standup only reads them. It never changes or deletes them. Reading Codex sessions, reading Mistral Vibe sessions and reading Cowork sessions can each be turned off. A page a session published on claude.ai (an artifact) is shown from what the session file holds of it; it is not read from your disk nor fetched from claude.ai.
+- **Your session files.** The ones Claude Code writes in `~/.claude/projects` (and the status it keeps for each open session in `~/.claude/sessions`: busy, idle or waiting for your answer; and the plan files a session names in `~/.claude/plans`, to show a plan that waits for your approval), the ones Codex writes in `~/.codex/sessions` (with the names Codex gives them in `~/.codex/session_index.jsonl`), the ones Mistral Vibe writes in `~/.vibe/logs/session`, and the ones Cowork (a tab of the Claude desktop app) writes in that app's own folder (`local-agent-mode-sessions`), with the title the app noted beside each of them. They hold what you typed, what the agents answered and what they ran, so they can contain personal or confidential information. Agent Standup only reads them. It never changes or deletes them. Reading Codex sessions, reading Mistral Vibe sessions and reading Cowork sessions can each be turned off. A page a session published on claude.ai (an artifact) is shown from what the session file holds of it; it is not read from your disk nor fetched from claude.ai.
 - **Your own character images**, if you put some in its characters folder.
 
 ## What it keeps on your computer
 
-- **Your settings**, in one small file in your user configuration folder.
-- **Spoken lines, for a day.** When voices are on, each line is turned into a sound file in a private temporary folder so it does not have to be made twice. Files older than a day are deleted.
+- **Your settings**, in one small file in your user configuration folder. In every form, it also holds, for the one time the call asks for a coffee, the first day the call was in view and the day it asked. In the desktop app and from the command line, it also holds, for the one time the app asks for a star on GitHub, the number of days the page was in view, the last of those days and your answer.
+- **Spoken lines, for a day.** When voices are on, each line is turned into a sound file in a private folder (a temporary one on macOS and Windows, `~/.cache/agent-standup/tts` on Linux) so it does not have to be made twice. Files older than a day are deleted.
 - **The natural voice model**, only if you install it.
+- **Which window plays sound**, in a file named `audio.json` beside your settings: a random name for that window and a time.
 - **The sessions you put away as done**, in a file named `done.json` beside your settings: for each one, the name of its project folder, its id and a time. Nothing of what was said in it.
 - **A log of the app's own errors**, in a file named `errors.log` beside your settings. Each line holds the date, the app's version, where the error happened, its message and the first lines of its stack trace. The path of your home folder is replaced by `~`, and the address of the page (which names the project) by the word `page`. An error message can still name a file or a project of yours, or hold a few characters of what the app was reading when it failed. The file is cut down when it passes 256 KB, and it is never sent anywhere by the app.
 - **A character pack you bought**, in a `packs` folder beside your characters folder (`~/.agent-standup/packs`): its pictures, and in a file named `codes.json` the code of the purchase, which is the reference Stripe gave it. The code is kept so that the app can show it to you: it is what installs the pack on another computer.
-- **In VS Code's own storage for the extension:** the day and the week of the last "share usage" requests when that setting is on, whether you have been asked about that setting, and, for the one time the extension asks for a rating, the number of days the call was opened, the last of those days and your answer.
+- **In VS Code's own storage for the extension:** the day and the week of the last "share usage" requests when that setting is on, whether you have been asked about that setting, and, for the one time the extension asks for a rating, the number of days the call was opened or an agent was at work, the last of those days and your answer.
 
 Nothing else is written. Uninstalling the app and deleting those folders removes everything.
 
@@ -50,6 +51,8 @@ The website at https://agent-standup.com is hosted by Vercel. It sets no cookie 
 
 Since 13 October 2026 its visits are counted with Vercel Web Analytics, the host's own counter. For each page viewed, Vercel records the page, the page the visit came from, the approximate location (country, region, city), and the kind of browser, system and device. It uses no cookie. According to Vercel, it tells visitors apart with a value computed from the request that is discarded after a day and is not kept as an identifier: https://vercel.com/docs/analytics/privacy-policy. A visit from a browser that sends "Do Not Track" is not counted.
 
+Since 17 October 2026 the website also counts clicks on its buttons and on its links to other sites, with the same Vercel Web Analytics: for each click, the name of the button (for example "Install VS Code" or "Download"), the part of the page it is in (for example the top of the page or the install section) and a short detail (for example "Mac Intel"), along with the same page, location and browser details as for a page view. Nothing you type is sent, and a browser that sends "Do Not Track" is not counted either.
+
 The website is also the shop for the character packs that are sold (https://agent-standup.com/shop/). Paying happens on a page of Stripe, the payment company: your card and your email are typed there and never pass through the app or the website. Stripe emails you a receipt and an invoice, which carry your purchase code. The website keeps no account and no list of buyers. When the app, or the download on the shop, asks for a pack, the website asks Stripe whether the purchase with that code is paid and not refunded, and sends the pack if it is. The shop page and the page you land on after paying set no cookie, load nothing from another site (except the shop's YouTube video once you play it) and are not counted; the latter shows the code from its own address and sends it nowhere. Stripe's privacy policy: https://stripe.com/privacy.
 
 The earlier landing page at https://atoll92.github.io/agent-standup/ is hosted by GitHub Pages. Each visit there loads one tiny image from GitHub, named after where the visit came from (for example "reddit" or "direct"), so the project can count visits by source. It also asks GitHub's public API which release is the latest, to show its version number and download links. It sets no cookie and carries no identifier. GitHub, as the host, sees your IP address.
@@ -58,9 +61,9 @@ Both pages show one video from YouTube. Until you press play it is a picture and
 
 ## What the developer can see
 
-Only totals that the stores, GitHub and Vercel show: download and install counts, stars, the number of daily and weekly "share usage" requests, visit counts by source, and for the website the number of visits by page, by the page they came from, by country and by kind of browser and device. None of it identifies a person.
+Only totals that the stores, GitHub and Vercel show: download and install counts, stars, the number of daily and weekly "share usage" requests, visit counts by source, and for the website the number of visits by page, by the page they came from, by country and by kind of browser and device, and how many times each button was clicked. None of it identifies a person.
 
-If you buy a character pack, the developer also sees what Stripe shows a seller about a payment: the email and the name you gave on the payment page, your country, the amount and the date, and the last four digits and the brand of the card. This is used to answer you about that purchase, to refund it, and for the accounts the law requires, and for nothing else.
+If you buy a character pack, the developer also sees what Stripe shows a seller about a payment: the email and the name you gave on the payment page, your country, the amount and the date, and the last four digits and the brand of the card. It also sees whether the purchase was started in the app or on the website, and from which link of the website. This is used to answer you about that purchase, to refund it, and for the accounts the law requires, and for nothing else.
 
 ## Children
 

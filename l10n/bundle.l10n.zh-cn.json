@@ -10,5 +10,11 @@
   "No thanks": "不用了",
   "Help count how many people use Agent Standup? When you open the call, at most once a week (and once a day when the editor starts), the extension would load an empty 1-pixel file from GitHub: no identifier, nothing about you or your sessions. GitHub sees your IP address, as with any download. You can turn it off any time in the settings.": "愿意帮忙统计有多少人在用 Agent Standup 吗？打开通话时每周最多一次（以及编辑器启动时每天一次），扩展会从 GitHub 加载一个 1 像素的空文件：没有标识符，不含任何关于你或你的会话的信息。和任何下载一样，GitHub 会看到你的 IP 地址。你可以随时在设置中关闭。",
   "Count me in": "参与统计",
-  "Privacy policy": "隐私政策"
+  "Privacy policy": "隐私政策",
+  "{0} is waiting for you: {1}": "{0} 在等你：{1}",
+  "{0} is waiting for you": "{0} 在等你",
+  "Still waiting: {0}": "仍在等待：{0}",
+  "a plan to approve": "一个待批准的计划",
+  "Go to session": "前往会话",
+  "Open call": "打开视频通话"
 }

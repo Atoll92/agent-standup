@@ -2,7 +2,7 @@
 
 ![Agent Standup](.claude-plugin/icon.png)
 
-Watch the Claude Code, Codex and Mistral Vibe sessions on your computer as a live team call. Each agent is a small character at its desk: the lead gives orders, sub-agents join, share their screen with the real commands and diffs, and report back. You see at a glance who is working, who waits on whom, and who needs you.
+Watch the Claude Code, Codex, Mistral Vibe and Cowork sessions on your computer as a live team call. Each agent is a small character at its desk: the lead gives orders, sub-agents join, share their screen with the real commands and diffs, and report back. You see at a glance who is working, who waits on whom, and who needs you.
 
 This plugin is a thin way in to the [Agent Standup](https://github.com/Atoll92/agent-standup) app. It adds two skills to Claude Code.
 
@@ -28,15 +28,15 @@ It needs Node.js 18 or later and works where Claude Code runs on your own comput
 
 Both skills run one command, pinned to an exact version of the app's npm package:
 
-    npx -y @double_geste/agent-standup@1.35.0
+    npx -y @double_geste/agent-standup@1.38.0
 
 `npx` downloads that package from the npm registry the first time. The package has no dependencies. `open` starts a web server that listens on your own machine only (`127.0.0.1`); `status` starts nothing and exits.
 
 ## Data
 
-The app reads the session files Claude Code writes in `~/.claude/projects`, the ones Codex writes in `~/.codex/sessions`, the ones Mistral Vibe writes in `~/.vibe/logs/session`, and those of Cowork (a tab of the Claude desktop app) in that app’s own folder. It never writes to them. By default it sends nothing anywhere: the page is served from your machine (`127.0.0.1`) to your browser.
+The app reads the session files Claude Code writes in `~/.claude/projects` (and the status it keeps for each open session in `~/.claude/sessions`), the ones Codex writes in `~/.codex/sessions`, the ones Mistral Vibe writes in `~/.vibe/logs/session`, and those of Cowork (a tab of the Claude desktop app) in that app’s own folder. It never writes to them. By default it sends nothing anywhere: the page is served from your machine (`127.0.0.1`) to your browser.
 
-On your machine it keeps your settings in one small file, the list of sessions you put away as done, a log of its own errors, a character pack if you buy one, and, when voices are on, the spoken lines as sound files in a private temporary folder, deleted after a day.
+On your machine it keeps your settings in one small file, the list of sessions you put away as done, a log of its own errors, a character pack if you buy one, and, when voices are on, the spoken lines as sound files in a private folder, deleted after a day.
 
 Only these can leave your computer, each when you turn it on or start it yourself. The plugin turns none of them on.
 

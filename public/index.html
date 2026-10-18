@@ -19,20 +19,29 @@
   header { height:48px; flex:none; display:flex; align-items:center; gap:10px; padding:0 12px; border-bottom:1px solid var(--line); background:var(--bg) }
   .brand { display:flex; align-items:center; gap:9px; min-width:0; overflow:hidden } .brand .logo { flex:none } .brand > div { min-width:0 } .brand b { overflow:hidden; text-overflow:ellipsis }
   header > * { flex-shrink:0 } header .brand { flex-shrink:100; min-width:26px } header #board { flex-shrink:.01 } .tok, .ctxp { flex-shrink:2; min-width:0; overflow:hidden; text-overflow:ellipsis } #pill { flex-shrink:.05; min-width:min-content; overflow:hidden; text-overflow:ellipsis }   /* in a narrow window the buttons (the gear above all) stay whole: the name gives way first (down to the logo), then the counters; the chips only when nothing else can (.01, not 0: the header must never overflow) */
-  @media (max-width:720px) { .ctxp { display:none !important } } @media (max-width:620px) { .tok { display:none !important } } @media (max-width:560px) { #bCoffee { display:none !important } } @media (max-width:480px) { header { gap:6px; padding-left:8px; padding-right:8px } }   /* narrow: the coffee link stays in ⚙ › Tools */
+  @media (max-width:720px) { .ctxp { display:none !important } } @media (max-width:620px) { .tok { display:none !important } } @media (max-width:299px) { #bCoffee { display:none !important } } @media (max-width:480px) { header { gap:6px; padding-left:8px; padding-right:8px } }   /* very narrow (it fits down to 300 px, the sidebar's usual width): the coffee link stays in ⚙ › Tools */
   .logo { width:26px; height:26px; display:block; flex:none }
   .brand b { font:700 14px "Comic Sans MS","Chalkboard SE",system-ui,sans-serif; white-space:nowrap }
   .brand small { display:block; color:var(--dim); font-size:11px; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
   .sp { flex:1 }
   .tok { font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; background:var(--panel2); color:#c3c6d4; white-space:nowrap } .tok:hover { color:#fff }
   .tbadge { position:absolute; top:30px; right:6px; display:flex; gap:4px; z-index:2; pointer-events:none } .tbadge span { font-size:10.5px; padding:1px 7px; border-radius:99px; background:rgba(14,15,24,.78); backdrop-filter:blur(6px) }
-  .tbadge .e { color:#ff7b72 } .tbadge .s { color:#ffb347 } .tbadge .q { color:#9aa3bd }
+  .tbadge .e { color:#ff7b72 } .tbadge .w { color:#79c0ff } .tbadge .s { color:#ffb347 } .tbadge .q { color:#9aa3bd } .tbadge [data-tip] { pointer-events:auto; cursor:help }
+  #btip { position:fixed; z-index:30; top:0; left:0; width:max-content; max-width:min(360px, calc(100vw - 16px)); padding:12px 12px 10px; border-radius:12px; background:rgba(22,25,40,.97); border:1px solid rgba(255,255,255,.09); box-shadow:0 18px 48px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.3); backdrop-filter:blur(10px); color:var(--text); font-size:12.5px; line-height:1.45; pointer-events:none; opacity:0; transform:translateY(-4px); transition:opacity .14s ease, transform .14s ease; visibility:hidden }
+  #btip.on { opacity:1; transform:none; visibility:visible } #btip.k-e { --c:#ff7b72; --cb:rgba(255,123,114,.15) } #btip.k-w { --c:#79c0ff; --cb:rgba(121,192,255,.15) } #btip.k-l { --c:#d2a8ff; --cb:rgba(210,168,255,.15) } #btip.k-s { --c:#ffb347; --cb:rgba(255,179,71,.15) } #btip.k-q { --c:#9aa3bd; --cb:rgba(154,163,189,.15) }
+  #btip .bh { display:flex; align-items:center; gap:8px; padding:0 2px } #btip .bi { flex:none; width:24px; height:24px; border-radius:7px; display:grid; place-items:center; font-size:12.5px; background:var(--cb); color:var(--c) } #btip .bt { font-weight:650; font-size:13px; white-space:nowrap } #btip .bn { padding:0 7px; border-radius:99px; background:var(--cb); color:var(--c); font-size:11px; font-weight:700; line-height:18px } #btip .ba { margin-left:auto; padding-left:14px; color:var(--dim); font-size:11.5px; white-space:nowrap }
+  #btip ul { list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:6px } #btip li { padding:7px 9px 8px; border-radius:8px; background:rgba(255,255,255,.045); box-shadow:inset 2px 0 0 var(--c); min-width:0 } #btip .r1 { display:flex; align-items:center; gap:8px } #btip .rk { font-weight:600 } #btip .rn { min-width:0; color:var(--dim); font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap } #btip .rt { margin-left:auto; padding-left:10px; color:var(--dim); font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap }
+  #btip .pill { font-size:10.5px; font-weight:650; padding:1px 6px; border-radius:5px; background:rgba(255,255,255,.08); color:#cfd6e6 } #btip code { display:block; margin-top:3px; font:11.5px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:#d6dcea; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  #btip .ro { margin-top:5px; padding:5px 7px; border-radius:6px; background:rgba(255,123,114,.08); font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:#ffc1bb } #btip .ro div { overflow:hidden; text-overflow:ellipsis; white-space:nowrap } #btip .bf { margin:8px 2px 0; color:var(--dim); font-size:11px } #btip .bf + .bf { margin-top:2px }
+  @media (prefers-reduced-motion:reduce) { #btip { transition:none } }
   .tile.slow { border-color:#ff9f1c !important; animation:slowp 1.6s ease-in-out infinite } @keyframes slowp { 50% { box-shadow:0 0 0 4px rgba(255,159,28,.35) } }
   .tile.quiet { opacity:.72 }
   .tag .tk { color:#aab2c5; font-size:10px } .tag .tk:empty { display:none }
   .tile.focus .tag .tk, #pcam .tag .tk { font-size:11.5px; color:#cfd6e6 } body:not(.compact):not(.presenting) .tile.focus .tag .tk:not(:empty)::after { content:' ' attr(data-w) }   /* what an agent has used so far, readable where there is room: the large tile (with the word) and the camera of the one who shares a screen */
   .keys { padding:6px 10px 4px; color:var(--dim); font-size:10.5px; line-height:1.5 }
   /* the status of the session: a pill in the header of a wide window, a line of its own under the header from 1080 px down (#sline), where it stays readable in the narrowest side panel. Two lines at most, the whole text in the tooltip */
+  #attn { flex:none; display:flex; align-items:center; gap:8px; width:100%; min-width:0; padding:5px 12px; border-bottom:1px solid #ff8a80; background:#c0392b; color:#fff; font-weight:600; font-size:12.5px; text-align:left } #attn[hidden] { display:none } #attn:hover { filter:brightness(1.1) } #attn:focus-visible { outline:2px solid #fff; outline-offset:-3px }
+  #attn .aw { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap } #attn .am { flex:none; padding:0 8px; border-radius:99px; background:rgba(0,0,0,.25); font-size:11.5px } #attn .ak { flex:none; opacity:.8; font-weight:500; font-size:11px }   /* what needs you, here or in another session: one line in every view, a click goes there (G) */
   #pill, #sline { font-weight:600; background:var(--panel2); color:var(--dim); cursor:default; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2 }
   #pill { display:-webkit-box; font-size:11px; letter-spacing:.04em; line-height:1.3; padding:3px 9px; border-radius:12px; max-width:min(34vw,440px) } #sline { display:none; flex:none; font-size:12px; line-height:1.4; padding:5px 12px; border-bottom:1px solid var(--line) }
   :is(#pill, #sline).go { cursor:pointer } :is(#pill, #sline).go:hover { filter:brightness(1.15) } :is(#pill, #sline).off { color:#fff; background:#b3261e; box-shadow:inset 0 0 0 1.5px #ff8a80 } :is(#pill, #sline).blocked { color:#fff; background:#c0392b } :is(#pill, #sline).stalled { color:#1b1d27; background:#ffb347 }
@@ -40,11 +49,19 @@
   @media (max-width:1080px) { #pill { display:none } #sline { display:-webkit-box } } @media (max-width:760px) { #sline::after { content:attr(data-sub); font-weight:400; opacity:.8 } } @media (max-width:400px) { #sline { -webkit-line-clamp:3 } }
   @media (min-width:1081px) { header .brand { min-width:150px } #pill { flex-shrink:20 } .tok, .ctxp { flex-shrink:0 } }   /* wide: a long status gives way before the name and the counters */
   /* several sessions at once (live): the sessions of the moment as tabs under the header, the one the call is in among them, each with its state; and a visitor from another session that needs you, who takes you there on a click */
-  #tabs { display:none; flex:none; align-items:center; gap:5px; padding:4px 10px; border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none } #tabs::-webkit-scrollbar { display:none } #tabs:not(:empty) { display:flex }
+  #tabs { display:none; flex:none; align-items:center; gap:5px; padding:4px 10px; border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none } #tabs::-webkit-scrollbar { display:none } #tabs:not(:empty) { display:flex } #tabs .why { margin-left:auto; flex:none; padding-left:10px; color:var(--dim); font-size:11px; white-space:nowrap; cursor:default } body.narrow #tabs .why { display:none }
   .stab { flex:0 1 auto; min-width:92px; max-width:190px; display:flex; align-items:center; gap:5px; padding:2px 9px; border-radius:99px; border:1px solid var(--line); color:var(--dim); font-size:11.5px; line-height:1.5; white-space:nowrap } .stab span { overflow:hidden; text-overflow:ellipsis } .stab i { flex:none; font-style:normal; font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:0 5px; border-radius:99px; border:1px solid currentColor; opacity:.85 } .stab:hover { color:var(--text); border-color:var(--accent) }
   .stab.on { flex-shrink:0; max-width:min(320px,62vw); background:var(--panel2); color:var(--text); font-weight:600; border-color:var(--accent) } .stab.turn:not(.on) { color:var(--accent) } .stab.blocked:not(.on) { color:#fff; background:#c0392b; border-color:#ff8a80; font-weight:600 } .stab.all { flex:none; min-width:0; padding:2px 8px }   /* a narrow panel: the tabs keep a readable width and the row scrolls */
   #visit { position:absolute; right:12px; bottom:14px; z-index:6; display:none; align-items:flex-end; gap:8px; max-width:min(380px,calc(100% - 24px)); cursor:pointer } #visit.on { display:flex; animation:visit .45s cubic-bezier(.2,1.3,.4,1) } @keyframes visit { from { transform:translateX(120%) } } body.react #visit { bottom:140px }
   #visit .vsay { position:relative; min-width:0; background:#fff; color:#1b1d27; border-radius:11px 11px 2px 11px; padding:7px 10px; font-size:12.5px; line-height:1.35; box-shadow:0 4px 14px rgba(0,0,0,.4); overflow-wrap:anywhere } #visit .vsay small { display:block; color:#5a6072; font-size:11px; margin-bottom:2px } #visit .vgo { display:inline-block; margin-top:5px; padding:1px 10px; border-radius:99px; background:var(--accent); color:#0b1020; font-weight:600; font-size:11.5px }
+  #askc { position:absolute; left:12px; bottom:14px; z-index:6; display:none; align-items:flex-end; gap:8px; max-width:min(520px,calc(100% - 24px)) } #askc.on { display:flex; animation:askc .45s cubic-bezier(.2,1.3,.4,1) } @keyframes askc { from { transform:translateX(-120%) } } @media (prefers-reduced-motion:reduce) { #askc.on { animation:none } } body.react #askc { bottom:140px } #center:has(#visit.on) #askc { bottom:118px } #center:has(#askc.on) #pcap { display:none }   /* the menu the session waits on, in the lead's words, until it is answered */
+  #askc .awho { flex:none; width:72px; height:54px; border-radius:12px; overflow:hidden; border:2px solid #ff5252; box-shadow:0 4px 14px rgba(0,0,0,.45); background:#222 } #askc .awho svg { width:100%; height:100%; display:block } @media (max-width:520px) { #askc .awho { display:none } }
+  #askc .asay { min-width:0; display:flex; flex-direction:column; max-height:min(60vh,480px); overflow:hidden; background:#fff; color:#1b1d27; border-radius:12px 12px 12px 3px; font-size:13px; line-height:1.45; box-shadow:0 6px 20px rgba(0,0,0,.42); overflow-wrap:break-word }   /* a head and a foot that stay, the menu between them scrolls */
+  #askc .ahd { flex:none; display:flex; align-items:center; gap:6px; padding:7px 6px 6px 12px; border-bottom:1px solid #eceef4; color:#5a6072; font-size:11.5px } #askc .ahd span:first-child { min-width:0; flex:1 } #askc .ak-t { flex:none; color:#c62828; font-weight:600; font-variant-numeric:tabular-nums } #askc .abody { min-height:0; overflow:auto; overscroll-behavior:contain; padding:9px 12px 11px; scrollbar-width:thin } #askc .aab { margin:0 0 4px }
+  #askc .aqs + .aqs { margin-top:11px; padding-top:10px; border-top:1px solid #eceef4 } #askc .aqh { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:4px; font-size:11px; color:#5a6072 } #askc .atag { padding:1px 8px; border-radius:99px; background:#eef1ff; color:#3949ab; font-weight:600 } #askc .anum { font-variant-numeric:tabular-nums } #askc .aq { margin:0 0 8px; font-size:13.5px; font-weight:500; text-wrap:pretty }
+  #askc .aops { list-style:none; margin:0; padding:0; display:grid; gap:5px } #askc .aops li { display:grid; grid-template-columns:20px 1fr; gap:9px; align-items:start; padding:6px 9px; border:1px solid #e6e7ee; border-radius:8px; background:#f8f9fc } #askc .aops i { width:20px; height:20px; margin-top:1px; border-radius:50%; background:#1b1d27; color:#fff; font:700 11px/20px system-ui,sans-serif; text-align:center } #askc .multi .aops i { border-radius:5px } #askc .aops b { display:block; font-weight:600 } #askc .aops span { display:block; margin-top:1px; color:#5a6072; font-size:12px; line-height:1.4; text-wrap:pretty }   /* a round number for one choice, a square one for several, as radio buttons and boxes */
+  #askc pre { margin:0; padding:7px 9px; background:#f1f2f6; border-radius:7px; font:12px/1.45 ui-monospace,Menlo,Consolas,monospace; white-space:pre-wrap } #askc .afoot { flex:none; padding:6px 12px 7px; border-top:1px solid #eceef4; background:#f7f8fb; color:#5a6072; font-size:11.5px }
+  #askc .ax { flex:none; width:24px; height:24px; border:0; border-radius:50%; background:transparent; color:#5a6072; cursor:pointer; font-size:13px; line-height:24px } #askc .ax:hover { background:#eceef4 } #askc .ax:focus-visible { outline:2px solid var(--accent); outline-offset:1px }
   #visit .vwho { flex:none; width:88px; height:66px; border-radius:12px; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 14px rgba(0,0,0,.45); background:#222 } #visit.blocked .vwho { border-color:#ff5252 } #visit.speaking .vwho { box-shadow:0 0 0 3px rgba(124,156,255,.4), 0 4px 14px rgba(0,0,0,.45) } #visit .vwho svg { width:100%; height:100%; display:block }
   #visit .vx { position:absolute; top:-9px; left:-9px; width:20px; height:20px; border-radius:50%; background:var(--panel2); border:1px solid var(--line); color:var(--dim); font-size:11px; line-height:18px } #visit .vx:hover { color:var(--text) }
   @keyframes pulse { 50% { opacity:.3 } }
@@ -63,11 +80,12 @@
   body.tree #stage, body.board #stage, body.board #tree { display:none } body.tree #tree { display:block } body.board #boardv { display:block } body.board #present, body.board #gantt { display:none !important }
   #roster { display:none; width:232px; flex:none; flex-direction:column; gap:5px; padding:10px 8px; overflow:auto; border-right:1px solid var(--line); background:var(--panel) }
   @media (min-width:900px) { body.rost:not(.tree):not(.board) #roster { display:flex } }
+  #roster:focus-visible { outline:2px solid var(--accent); outline-offset:-2px }   /* the first stop of the Tab key */
   #roster h3 { margin:2px 6px 4px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--dim) }
   .rr { display:flex; flex-direction:column; gap:2px; padding:6px 9px; border-radius:9px; border-left:3px solid transparent; background:var(--panel2); cursor:pointer; min-width:0 }
   .rr:hover { background:#2a2f45 } .rr.sel { outline:1px solid var(--accent) }
   .rr .n { display:flex; align-items:center; gap:7px; min-width:0 } .rr .dot { width:9px; height:9px; border-radius:50%; flex:none } .rr b { font-size:12.5px } .rr .ro { color:var(--dim); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0 }
-  .rr .st { font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .rr .st { font-size:11.5px; overflow:hidden; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }   /* two lines before it is cut; the whole text is in the tooltip */
   .rr .rt { margin-left:auto; flex:none; padding-left:6px; color:#aab2c5; font-size:10.5px; white-space:nowrap } .rr.left { opacity:.72; padding-top:4px; padding-bottom:4px } .rr.left:hover { opacity:1 }   /* what each agent has used so far; those who left the call keep their line, and their count with it */
   .rr.k-working { border-left-color:var(--gold) } .rr.k-working .st { color:var(--gold) } .rr.k-waiting { border-left-color:#8fd3ff } .rr.k-waiting .st { color:#8fd3ff }
   .rr.k-blocked { border-left-color:#ff5252; background:rgba(192,57,43,.28) } .rr.k-blocked .st { color:#fff; font-weight:700 } .rr.k-stalled { border-left-color:#ffb347 } .rr.k-stalled .st { color:#ffb347; font-weight:700 }
@@ -80,6 +98,7 @@
   .bcard .bt { font-weight:600; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical } .bcard .bp, .bcard .bm { color:var(--dim); font-size:11.5px }
   .bcard .stc { align-self:flex-start } .bcard .bh { display:flex; align-items:center; gap:6px; min-width:0 } .bcard .bh .stc { overflow:hidden; text-overflow:ellipsis }
   .bcard .bq { font-size:12.5px; color:var(--text); border-left:2px solid #ff5252; padding-left:8px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical }
+  .bfilt { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px } .bft { padding:2px 11px; border-radius:99px; border:1px solid var(--line); color:var(--dim); font-size:12px } .bft:hover { color:var(--text) } .bft.on { color:var(--text); border-color:var(--accent); background:var(--panel2) } .bft i { font-style:normal; opacity:.7 } details.bidle > summary { cursor:pointer; list-style:none } details.bidle > summary::-webkit-details-marker { display:none } details.bidle:not([open]) > summary::after { content:'▸'; margin-left:2px; opacity:.6 }
   .bsec { margin-bottom:18px } .bhd { display:flex; align-items:center; gap:7px; margin:0 0 9px; font-size:12.5px; font-weight:700; color:var(--dim) } .bhd.blocked { color:#ff8a80 } .bhd.turn { color:var(--text) }
   .bhd .bl { display:inline-block } .bhd .bl::first-letter { text-transform:uppercase } .bhd i { font-style:normal; font-weight:600; font-size:11.5px; padding:0 7px; border-radius:99px; background:var(--panel2); border:1px solid var(--line) }
   .bdone summary { cursor:pointer; list-style:none } .bdone summary::-webkit-details-marker { display:none } .bdone summary::after { content:'▸' } .bdone[open] summary::after { content:'▾' } .bdone .bcard { opacity:.7 }
@@ -98,7 +117,7 @@
   #fpop { position:absolute; left:10px; z-index:8; width:min(360px,calc(100% - 20px)); max-height:min(46vh,340px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.55); padding:6px; animation:fadein .15s }
   #fpop h4 { margin:6px 10px 4px; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); font-weight:600 }
   .sfr { display:grid; grid-template-columns:auto 1fr; gap:0 9px; align-items:center; width:100%; text-align:left; padding:6px 10px; border-radius:8px } .sfr:hover { background:var(--panel2) } .sfr i { font-style:normal; grid-row:span 2 } .sfr b, .sfr em { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .sfr b { font-size:12.5px; font-weight:600 } .sfr em { font-style:normal; font-size:11px; color:var(--dim) }
-  body:not(.replay) #center:has(#files.on) #toasts { bottom:46px } body:not(.replay):not(.react) #center:has(#files.on) #visit { bottom:48px }   /* live: the line is the bottom of the call, and what pops up there stays above it */
+  body:not(.replay) #center:has(#files.on) #toasts { bottom:46px } body:not(.replay):not(.react) #center:has(#files.on) #visit, body:not(.replay):not(.react) #center:has(#files.on) #askc { bottom:48px }   /* live: the line is the bottom of the call, and what pops up there stays above it */
   .tbadge .l { color:#ff9f1c } .tbadge span { font-size:11px } .tbadge .q { color:#b4bcd4 }
   .ic:active, .btn:active { transform:scale(.96) } .rr, .ic, .bcard { transition:background .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease) }
   .meet { font-size:11.5px; color:var(--dim); white-space:nowrap; display:flex; gap:8px; align-items:center } .meet i { width:8px; height:8px; border-radius:50%; background:#ff4d4d; animation:pulse 1.6s infinite }
@@ -116,6 +135,7 @@
   .prop.cheer { animation:cheer 1.1s ease-out both } @keyframes cheer { 0% { transform:scale(.3) translateY(10px); opacity:0 } 40% { transform:scale(1.25); opacity:1 } 100% { transform:translateY(-14px); opacity:0 } }
   /* ---------- screen sharing (presentation mode) ---------- */
   #present { display:none; flex:0 1 auto; min-height:96px; overflow:hidden; position:relative; height:clamp(190px,46vh,430px); background:radial-gradient(ellipse at 50% 0,#1b2033,#0b0d14); border-bottom:1px solid var(--line); padding:12px 16px; justify-content:center }
+  body.focusl #present { height:clamp(240px,58vh,900px) } body.focusl #present.pic { height:clamp(260px,68vh,1000px) } body.focusl #present.pin { height:clamp(240px,74vh,1000px) }   /* Focus layout: the shared screen gets the room the characters gave up */
   #present.on { display:flex; animation:fadein .3s } #present.pic { height:clamp(220px,60vh,640px) }
   .pwin { flex:0 1 900px; display:flex; flex-direction:column; border-radius:10px; overflow:hidden; background:#0d1117; box-shadow:0 18px 50px rgba(0,0,0,.6), 0 0 0 2px rgba(240,160,32,.55) }
   .pbar { display:flex; align-items:center; gap:6px; padding:7px 10px; background:#1c1f2b; font-size:11.5px; color:#9aa0b4 } .pbar i { width:10px; height:10px; border-radius:50%; display:inline-block }
@@ -188,6 +208,7 @@
   .tag b, .tag span { background:rgba(14,15,24,.78); backdrop-filter:blur(6px); padding:2px 9px; border-radius:99px; font-size:11.5px; white-space:nowrap }
   .tag span { color:#e3e6f0; font-size:10.5px; overflow:hidden; text-overflow:ellipsis; min-width:0 }
   .status { position:absolute; top:6px; right:6px; font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:99px; background:rgba(14,15,24,.8); backdrop-filter:blur(6px) }
+  #stage .tile .status { white-space:normal; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.3; border-radius:10px } #stage .tile .status:empty { display:none }   /* what a tile is doing: two lines before it is cut */
   .status.working { color:var(--gold) } .status.done { color:var(--ok) } .status.turn { color:#0b1020; background:var(--accent) }
   .status.waiting { color:#8fd3ff } .status.blocked { color:#fff; background:#c0392b; font-weight:700 } .status.stalled { color:#1b1d27; background:#ffb347; font-weight:700 }
   .tile.waiting { border-color:rgba(110,190,255,.85) } .tile.blocked { border-color:#ff5252 !important; animation:slowp 1.2s ease-in-out infinite } .tile.stalled { border-color:#ffb347 !important }
@@ -238,10 +259,11 @@
   .fly { position:fixed; left:0; top:0; font-size:28px; z-index:8; pointer-events:none; filter:drop-shadow(0 3px 4px rgba(0,0,0,.5)) }
 
   /* ---------- overlays ---------- */
-  #gate, #empty { position:absolute; inset:0; z-index:4; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; padding:24px; background:rgba(18,19,26,.82); backdrop-filter:blur(3px) }
-  #gate.on, #empty.on { display:flex } #empty { background:var(--bg) } #empty.on ~ #gate { display:none }   /* no session at all: nothing to join, the empty state and its demo button are what there is to see */
-  body:has(#gate.on) .toast.offer, body:has(#empty.on) .toast.offer { display:none !important }   /* the lines that offer something wait for the call: over the join screen of a small panel they covered its button, and the click fell on theirs */
-  #gate h2, #empty h2 { margin:0; font:800 22px "Comic Sans MS","Chalkboard SE",system-ui,sans-serif } #gate p, #empty p { margin:0; color:var(--dim); max-width:380px } #eP b { color:var(--text) }
+  #empty { position:absolute; inset:0; z-index:4; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; padding:24px; background:var(--bg) }
+  #empty.on { display:flex } #empty.on ~ #gate { display:none }   /* no session at all: the empty state and its demo button are what there is to see */
+  #gate { position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:7; display:none } #gate.on { display:block } #gate .cta { padding:7px 16px; font-size:13px; box-shadow:0 6px 20px rgba(0,0,0,.45); white-space:nowrap }   /* the call plays at once, silent: this chip (or any click) turns its sound on, which a browser allows only after one */
+  body:has(#empty.on) .toast.offer { display:none !important }   /* the lines that offer something wait for the call */
+  #empty h2 { margin:0; font:800 22px "Comic Sans MS","Chalkboard SE",system-ui,sans-serif } #empty p { margin:0; color:var(--dim); max-width:380px } #eP b { color:var(--text) }
   .cta { background:var(--accent); color:#0b1020; font-weight:700; padding:10px 22px; border-radius:99px; font-size:14px } .cta:hover { filter:brightness(1.1) } .cta:empty { display:none }
   .btn { background:var(--panel2); border:1px solid var(--line); padding:6px 12px; border-radius:8px } .btn:hover { border-color:var(--accent) }
   #menu { position:absolute; top:52px; right:10px; z-index:12; width:280px; background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.55); padding:6px; display:none; max-height:calc(100vh - 62px); max-height:calc(100dvh - 62px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin }   /* never taller than the window: it scrolls instead of being cut off */
@@ -287,6 +309,7 @@
   #prefs .flash { animation:flash 1.6s ease } @keyframes flash { 0%, 40% { background:rgba(124,156,255,.28) } }
   #prefs .pfoot { display:flex; justify-content:flex-end; padding:12px 10px 0; margin-top:8px; border-top:1px solid var(--line) } #prefsReset.sure { border-color:#ff7a6b; color:#ffb4a8 }
   #menuTip { position:fixed; z-index:13; max-width:260px; padding:10px 12px; border-radius:10px; background:#2b3352; border:1px solid var(--accent); box-shadow:0 10px 30px rgba(0,0,0,.5); font-size:12.5px; line-height:1.45; color:var(--text) } #menuTip::before { content:''; position:absolute; top:-7px; right:var(--ax,14px); width:12px; height:12px; background:#2b3352; border-left:1px solid var(--accent); border-top:1px solid var(--accent); transform:rotate(45deg) } #menuTip .btn { display:block; margin:8px 0 0 auto }   /* once, after the menu moved */
+  #rateTip, #coffeeTip { position:fixed; z-index:13; max-width:280px; padding:10px 12px; border-radius:10px; background:#2b3352; border:1px solid var(--accent); box-shadow:0 10px 30px rgba(0,0,0,.5); font-size:12.5px; line-height:1.45; color:var(--text) } #rateTip::before, #coffeeTip::before { content:''; position:absolute; top:-7px; right:var(--ax,14px); width:12px; height:12px; background:#2b3352; border-left:1px solid var(--accent); border-top:1px solid var(--accent); transform:rotate(45deg) } #rateTip .rtb, #coffeeTip .rtb { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; margin-top:8px } #rateYes, #coffeeYes { border-color:var(--accent) }   /* once, on the third day: a star (desktop app, command line) */
   a.artist { color:#f5c04a; text-underline-offset:2px } #menuShop:empty { display:none } #menuShop { margin:2px 0 8px; font-size:12px; line-height:1.5; color:#c3c6d4 }   /* the Halloween pack, for those who do not have it */
   #recap { position:fixed; inset:0; z-index:15; background:rgba(5,6,12,.88); display:none; overflow:auto; padding:28px 16px } #recap.on { display:block }
   #recap .box { max-width:860px; margin:0 auto; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px 26px }
@@ -324,6 +347,7 @@
   <button class="ic" id="bMenu" title="Réglages">⚙</button>
 </header>
 <div id="sline"></div>
+<button id="attn" hidden></button>
 <div id="tabs" role="tablist" aria-label="Sessions"></div>
 
 <div id="menu">
@@ -349,6 +373,7 @@
   <button class="mi" id="mPrefs"><span data-fr="⚙ Tous les réglages (affichage, alertes…)" data-en="⚙ All settings (display, alerts…)">⚙ Tous les réglages (affichage, alertes…)</span><span class="dim" aria-hidden="true">›</span></button>
   <h4 data-fr="Outils" data-en="Tools">Outils</h4>
   <button class="mi" id="mCoffee" style="display:none"><span id="mCoffeeT"></span></button>
+  <button class="mi" id="mRate"><span id="mRateT"></span></button>
   <button class="mi" id="mKeys"><span data-fr="⌨ Raccourcis clavier (?)" data-en="⌨ Keyboard shortcuts (?)">⌨ Raccourcis clavier (?)</span></button>
   <button class="mi" id="mRecap"><span data-fr="📋 Récapitulatif" data-en="📋 Recap">📋 Récapitulatif</span></button>
   <button class="mi" id="mExport"><span data-fr="🎞 Exporter la vidéo" data-en="🎞 Export video">🎞 Exporter la vidéo</span></button>
@@ -358,6 +383,9 @@
   <button class="mi" id="mReport"><span data-fr="🐞 Signaler un problème" data-en="🐞 Report a problem">🐞 Signaler un problème</span></button>
 </div>
 <div id="menuTip" role="status" style="display:none"><span id="menuTipT"></span><button class="btn" id="menuTipOk"></button></div>
+<div id="btip" role="tooltip"></div>
+<div id="coffeeTip" role="status" style="display:none"><span id="coffeeTipT"></span><div class="rtb"><button class="btn" id="coffeeNo"></button><button class="btn" id="coffeeYes"></button></div></div>
+<div id="rateTip" role="status" style="display:none"><span id="rateTipT"></span><div class="rtb"><button class="btn" id="rateNo"></button><button class="btn" id="rateLater"></button><button class="btn" id="rateYes"></button></div></div>
 <div id="prefs" role="dialog" aria-modal="true" aria-labelledby="prefsT"><div class="pbox">
   <div class="phead"><h2 id="prefsT" data-fr="Réglages" data-en="Settings">Réglages</h2><button class="btn" id="prefsX" data-fr="Fermer" data-en="Close">Fermer</button></div>
   <div class="pcols"><div class="pcol">
@@ -373,6 +401,7 @@
   </div><div class="pcol">
   <h4 data-fr="Affichage" data-en="Display">Affichage</h4>
   <button class="mi" data-t="roster"><span data-fr="Liste des agents (à gauche)" data-en="Agents list (left)">Liste des agents (à gauche)</span><i class="sw"></i></button>
+  <button class="mi" data-t="focusLayout"><span data-fr="Mise en page concentrée : petites caméras, grand écran partagé" data-en="Focus layout: small cameras, big shared screen">Mise en page concentrée : petites caméras, grand écran partagé</span><i class="sw"></i></button>
   <button class="mi" data-t="reactions"><span data-fr="Barre de réactions (👍 👏 ☕)" data-en="Reactions bar (👍 👏 ☕)">Barre de réactions (👍 👏 ☕)</span><i class="sw"></i></button>
   <button class="mi" data-t="banter"><span data-fr="Petites répliques et animations" data-en="Little lines & animations">Petites répliques et animations</span><i class="sw"></i></button>
   <div class="box"><div class="lbl"><span data-fr="Bavardage entre agents" data-en="Chatter between agents">Bavardage entre agents</span></div><select id="chatSel"><option value="quiet" data-fr="Discret" data-en="Quiet">Discret</option><option value="normal" data-fr="Normal" data-en="Normal">Normal</option><option value="lively" data-fr="Animé" data-en="Lively">Animé</option></select></div>
@@ -381,6 +410,7 @@
   <button class="mi" data-t="files"><span data-fr="Fichiers créés pour vous, à la fin d’un tour" data-en="Files made for you, when a turn ends">Fichiers créés pour vous, à la fin d’un tour</span><i class="sw"></i></button>
   <button class="mi" data-t="artNet"><span data-fr="Artifacts : charger leurs bibliothèques (depuis Internet)" data-en="Artifacts: load their libraries (from the internet)">Artifacts : charger leurs bibliothèques (depuis Internet)</span><i class="sw"></i></button>
   <button class="mi" data-t="visits"><span data-fr="Un visiteur quand une autre session vous attend" data-en="A visitor when another session needs you">Un visiteur quand une autre session vous attend</span><i class="sw"></i></button>
+  <button class="mi" data-t="askCard"><span data-fr="Une carte avec ce que la session vous demande" data-en="A card with what the session asks you">Une carte avec ce que la session vous demande</span><i class="sw"></i></button>
   <button class="mi" data-t="followTab" id="mFollowTab" style="display:none"><span data-fr="Suivre l’onglet Claude Code affiché" data-en="Follow the Claude Code tab I am on">Suivre l’onglet Claude Code affiché</span><i class="sw"></i></button>
   </div></div>
   <div class="pfoot"><button class="btn" id="prefsReset" data-fr="Réglages par défaut" data-en="Reset to defaults">Réglages par défaut</button></div>
@@ -395,9 +425,9 @@
     <div id="files"></div>
     <div id="hl"></div>
     <canvas id="gantt" height="90"></canvas>
-    <div id="toasts" role="status" aria-live="polite"><div class="toast offer" id="vOffer" style="display:none"><span id="vOfferT"></span><button class="btn" id="vOfferB"></button><button class="ic" id="vOfferX" aria-label="Close">✕</button></div><div class="toast offer" id="packNote" style="display:none"><span id="packNoteT"></span><button class="btn" id="packNoteB"></button><button class="ic" id="packNoteX" aria-label="Close">✕</button></div><div class="toast offer" id="trNote" style="display:none"><span id="trNoteT"></span><button class="btn" id="trNoteOk"></button><button class="btn" id="trNoteOff"></button></div></div><div id="visit" role="status" aria-live="polite"></div>
+    <div id="toasts" role="status" aria-live="polite"><div class="toast offer" id="vOffer" style="display:none"><span id="vOfferT"></span><button class="btn" id="vOfferB"></button><button class="ic" id="vOfferX" aria-label="Close">✕</button></div><div class="toast offer" id="packNote" style="display:none"><span id="packNoteT"></span><button class="btn" id="packNoteB"></button><button class="ic" id="packNoteX" aria-label="Close">✕</button></div><div class="toast offer" id="trNote" style="display:none"><span id="trNoteT"></span><button class="btn" id="trNoteOk"></button><button class="btn" id="trNoteOff"></button></div></div><div id="visit" role="status" aria-live="polite"></div><div id="askc" role="region" aria-live="polite"></div>
     <div id="empty"><h2 id="eT"></h2><p id="eP"></p><button class="cta" id="eDemo"></button></div>
-    <div id="gate"><h2 id="gT"></h2><p id="gP"></p><button class="cta" id="gB"></button></div>
+    <div id="gate"><button class="cta" id="gB"></button></div>
     <div id="detail"><div class="hd"><b id="dname"></b><button class="ic" id="dclose">✕</button></div><div id="dbody"></div></div>
   </section>
   <aside><h2 id="logH">Transcript</h2><input id="logQ" type="search" placeholder="Search…" aria-label="Search the transcript" style="margin:8px 10px;width:calc(100% - 20px)"><div id="log"></div></aside>
@@ -436,12 +466,14 @@ const SUPPORT = { url: 'https://www.buymeacoffee.com/bored_dev_and_his_robots' }
 const CID = Math.random().toString(36).slice(2, 12);   // identifies this window for the audio-ownership handshake
 const Q = new URLSearchParams(location.search);
 const EMBED = Q.get('embed') === '1' || window.parent !== window;
+const APP = window.AS_APP && typeof window.AS_APP === 'object' && typeof window.AS_APP.rate === 'string' ? window.AS_APP : { kind: '', rate: 'https://github.com/Atoll92/agent-standup' };   // where this page runs (appKind in server.js)
 
-let prefs = { lang: 'en', voice: true, roster: true, banter: true, reactions: false, office: false, officeVol: 0.8, vstyle: 'kokoro', notify: false, epi: false, vanish: true, music: false, station: 'fip', musicVol: 0.35, view: 'call', hideCode: false, ownNames: true, visits: true, followTab: true, files: true, callTr: true };
+let prefs = { lang: 'en', voice: true, roster: true, banter: true, reactions: false, office: false, officeVol: 0.8, vstyle: 'kokoro', notify: false, epi: false, vanish: true, music: false, station: 'fip', musicVol: 0.35, view: 'call', hideCode: false, ownNames: true, visits: true, askCard: false, followTab: true, files: true, callTr: true };
 const PREF_DEFAULTS = { ...prefs };   // for ⚙ → All settings → Reset to defaults
 { let loc = {}; try { loc = JSON.parse(localStorage.getItem('cc.prefs') || '{}') || {}; } catch {}   // the settings file (shared by every window) and this origin's copy: the more recent one wins
   const sv = window.SAVED_PREFS && typeof window.SAVED_PREFS === 'object' ? window.SAVED_PREFS : {}; Object.assign(prefs, (sv._t || 0) > (loc._t || 0) ? sv : loc); }
 const HAD_PREFS = !!prefs._t;   // someone who used the app before this page: shown once where the settings went
+if (!HAD_PREFS) prefs.menuTipSeen = true;   // a first visit: the menu was never anywhere else for this person, so the tip is not shown on the next visits either
 if (prefs.vstyle === 'babble') prefs.vstyle = 'animal', prefs.vstyleChosen = true;
 // Two styles since 1.32.0: the natural voices (the model, the default, which babble until they are installed) and the Animal Crossing babble. The cartoon voices, Simlish and the plain system voices are no longer offered:
 // whoever had Simlish is on the other babble, everyone else on the natural voices. The cartoon voices read the words with no install, so the call offers the real ones once more to who had closed that line.
@@ -546,7 +578,7 @@ function shopWait(name) {   // after the payment page was opened: every few seco
   shopPoll = setInterval(async () => { if (Date.now() > until) return clearInterval(shopPoll); const r = await shopAsk('claim', { pack: name }); if (r.ok) { clearInterval(shopPoll); shopDone(name); } }, 4000);
 }
 function renderShop(el, name, shop) {
-  el.innerHTML = `<img src="pack-${esc(name)}.jpg" alt="" style="display:block;width:100%;border-radius:8px;margin-bottom:8px">${esc(L('Des personnages d’Halloween dessinés à la main, chacun dans sa pièce.', 'Hand-drawn Halloween characters, each in its own room.'))}<br>${esc(L('Un seul paiement, par carte, sur une page Stripe. Sans compte.', 'One payment, by card, on a Stripe page. No account.'))}<br>${esc(L('2 € minimum : vous pouvez donner plus sur la page de paiement, si vous le souhaitez.', '2 € minimum: you can pay more on the payment page if you like.'))}${shop.artist ? `<br>${esc(L('Dessinés par', 'Drawn by'))} <a href="#" class="artist">${esc(shop.artist)}</a>` : ''}
+  el.innerHTML = `<img src="pack-${esc(name)}.jpg" alt="" style="display:block;width:100%;border-radius:8px;margin-bottom:8px">${esc(L('Des personnages d’Halloween dessinés à la main, chacun dans sa pièce.', 'Hand-drawn Halloween characters, each in its own room.'))}<br>${esc(L('Entièrement facultatif : l’app reste gratuite. C’est une façon de soutenir l’artiste et le développeur.', 'Entirely optional: the app stays free. It is a way to support the artist and the developer.'))}<br>${esc(L('Un seul paiement, par carte, sur une page Stripe. Sans compte.', 'One payment, by card, on a Stripe page. No account.'))}<br>${esc(L('2 € minimum : vous pouvez donner plus sur la page de paiement, si vous le souhaitez.', '2 € minimum: you can pay more on the payment page if you like.'))}${shop.artist ? `<br>${esc(L('Dessinés par', 'Drawn by'))} <a href="#" class="artist">${esc(shop.artist)}</a>` : ''}
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn" id="shopBuy" style="background:var(--accent);border-color:transparent;color:#10131c;font-weight:600">${esc(L('Acheter', 'Buy'))} · ${esc(shop.price)}</button><button class="btn" id="shopHave">${esc(L('Je l’ai déjà acheté', 'I already bought it'))}</button></div>
     <div id="shopCode" style="display:none;gap:6px;margin-top:8px"><input id="shopKey" aria-label="${esc(L('Code d’achat', 'Purchase code'))}" placeholder="${esc(L('Code d’achat', 'Purchase code'))}" autocomplete="off" spellcheck="false" style="flex:1;min-width:0;font:inherit;color:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px"><button class="btn" id="shopGo">${esc(L('Installer', 'Install'))}</button></div>
     <div id="shopMsg" role="status" style="margin-top:8px"></div>`;
@@ -622,7 +654,8 @@ function renderFolder(el, mine) {   // one's own pictures: where they are, a but
   $('#charReload').onclick = () => reloadChars(); if ($('#charOpen')) $('#charOpen').onclick = () => window.parent.postMessage({ agentStandup: 'openCharacters' }, '*');
 }
 function packNote() {   // once, to someone who is the vampire without the pack: where the rest of the cast is
-  const on = CHARS.youFrom === 'vampire' && !prefs.vampSeen && !Q.get('demo') && !(SHOP.halloween && SHOP.halloween.n), el = $('#packNote'); if (!el) return; el.style.display = on ? '' : 'none'; if (!on) return;
+  const d = new Date(), season = d.getMonth() === 9 || (d.getMonth() === 10 && d.getDate() <= 2);   // its words say “this Halloween”: they stop on 2 November, the pack stays in ⚙ → Characters
+  const on = CHARS.youFrom === 'vampire' && !prefs.vampSeen && !Q.get('demo') && !(SHOP.halloween && SHOP.halloween.n) && season && !firstDay() && !askedToday('pack') && $('#vOffer').style.display === 'none', el = $('#packNote'); if (!el) return; el.style.display = on ? '' : 'none'; if (!on) return; noteAsk('pack');
   $('#packNoteT').textContent = L('Pour Halloween, vous êtes le vampire. Le reste de l’équipe est dans le pack Halloween.', 'This Halloween, you are the vampire. The rest of the cast is in the Halloween pack.'); $('#packNoteB').textContent = L('Voir le pack', 'See the pack');
 }
 function persona(a) { const p = persona0(a); p.custom = customFor(a.id); return p; }
@@ -867,7 +900,7 @@ function updateHint() {
 // =====================================================================
 const AUD = {
   ctx: null, muted: false, live: new Set(), lastClick: 0,
-  off() { return this.muted || !!(S.owner && S.owner !== CID); },   // muted here, or another window holds the sound
+  off() { return this.muted || !!S.hush || !!(S.owner && S.owner !== CID); },   // muted here, not turned on yet (S.hush: no click since the page opened), or another window holds the sound
   init() {
     if (this.ctx) { this.ctx.resume(); return; }
     let c; try { c = this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
@@ -1179,7 +1212,7 @@ function pieces(text) {
 const capTimers = new Map();   // agent id → timers that advance its subtitle
 function captionClear(id) { (capTimers.get(id) || []).forEach(clearTimeout); capTimers.delete(id); }
 function setCaption(id, text) {
-  const t = $('#t-' + id), b = t && t.querySelector('.bubble'), say = S.say[id]; if (!b || !say) return;
+  const t = document.getElementById('t-' + id), b = t && t.querySelector('.bubble'), say = S.say[id]; if (!b || !say) return;   // by id: a visitor's id holds a session path (":" and "/"), which a selector cannot take
   b.innerHTML = (say.label ? `<small>${esc(say.label)}</small>` : '') + esc(text); if (S.present === id) $('#pcap').textContent = text;
 }
 function captionRun(id, text, totalMs, from = 0) {   // from: how far into the line the voice already is, when the timing is corrected along the way
@@ -1236,7 +1269,7 @@ function buildStage() {   // the tiles, and the presenter camera with them: a ch
   const pr = S.present && S.agents[S.present]; if (pr) { $('#pcam').innerHTML = avatarSVG(pr, undefined, 'c' + pr.gid + '_') + `<div class="tag"><b>${esc(pr.name)}</b><span class="tk"></span></div>`; S.camFor = pr.id; camTok(); }
 }
 const layout = () => {
-  const st = $('#stage'), w = st.clientWidth - 28 || 600, nar = $('#center').clientWidth < 480, cols = nar ? (w >= 300 ? 2 : 1) : Math.max(1, Math.floor((w + 12) / 212)), colw = (w - 12 * (cols - 1)) / cols;
+  const st = $('#stage'), w = st.clientWidth - 28 || 600, nar = $('#center').clientWidth < 480, foc = !nar && document.body.classList.contains('focusl'), cols = nar ? (w >= 300 ? 2 : 1) : Math.max(1, Math.floor((w + 12) / (foc ? 162 : 212))), colw = (w - 12 * (cols - 1)) / cols;   // foc: ⚙ → Focus layout, small cameras and no big spotlight tile
   const rh = Math.round(colw * (nar ? 0.66 : 0.74)); st.style.setProperty('--cols', cols); st.style.setProperty('--rh', rh + 'px'); // Spotlight size: the biggest block (k columns × fr rows) that stays close to 3:2 and leaves room beside it for the others.
   const maxRows = Math.max(cols > 1 ? 2 : 1, Math.floor((st.clientHeight * 0.7 + 12) / (rh + 12)));   // the stage scrolls, so the spotlight may be a bit taller than the free space
   let k = 1, fr = 1, best = -1;
@@ -1246,11 +1279,17 @@ const layout = () => {
     if (area > best) { best = area; k = kk; fr = rr; }
   }
   if (nar) { k = cols; fr = cols > 1 ? 2 : 1; }   // side panel: small tiles, a banner-sized spotlight
+  else if (foc) { k = 1; fr = 1; }
   else if (best < 0) { k = Math.min(2, cols); fr = Math.min(2, maxRows); }
   st.style.setProperty('--fcols', k); st.style.setProperty('--fr', fr); st.classList.toggle('one', cols === 1);
   document.body.classList.toggle('narrow', $('#center').clientWidth <= 480); document.body.classList.toggle('compact', $('#center').clientWidth <= 480 && !$('#roster').offsetWidth); document.body.classList.toggle('tiny', $('#center').clientWidth < 300); drawGantt();
 };
 new ResizeObserver(layout).observe($('#center'));
+function placeToasts() {   // the toasts and the offers sit just above what is under the stage (the line of files, the highlights, the timeline), never over it
+  const v = ['#stage', '#tree', '#boardv'].map((q) => $(q)).find((x) => x && x.offsetParent); if (!v) return; const gap = $('#center').clientHeight - (v.offsetTop + v.offsetHeight), b = Math.max(12, Math.round(gap) + 12) + 'px';
+  if ($('#toasts').style.bottom !== b) $('#toasts').style.bottom = b;
+}
+for (const q of ['#stage', '#tree', '#boardv', '#center']) new ResizeObserver(() => requestAnimationFrame(placeToasts)).observe($(q));
 
 function logRow(i) {
   const e = S.events[i], arrow = e.to ? ` <span class="arrow">→</span> <span class="who">${esc(nameOf(e.to))}</span>` : '';
@@ -1291,7 +1330,7 @@ const applyStatus = (ev) => {
 };
 function recomputeStatus(upTo) {
   S.files = new Map(); S.cands = new Map(); S.turnN = 0; S.turnSaid = ''; S.arts = new Map(); S.artCalls = new Map();
-  S.term = {}; S.todos = {}; S.run = {}; S.act = {}; S.usage = {}; S.errs = {}; S.lastAct = {}; S.waitOn = {}; S.orderTs = {}; S.prevState = {}; S.lastTool = {}; S.mainBusyAt = 0; S.turnOver = false; S.th = {}; S.ctx = {}; S.model = {}; S.cw = {}; S.compacts = {}; S.ctxWarned = {}; S.rep = {}; S.loops = {}; S.recomputing = true; document.querySelectorAll('.tile').forEach((t) => { clearTimeout(t._byeT); t.classList.remove('bye'); }); hidePresent();
+  S.term = {}; S.todos = {}; S.run = {}; S.act = {}; S.usage = {}; S.errs = {}; S.lastAct = {}; S.waitOn = {}; S.orderTs = {}; S.prevState = {}; S.lastTool = {}; S.mainBusyAt = 0; S.turnOver = false; S.th = {}; S.ctx = {}; S.model = {}; S.cw = {}; S.compacts = {}; S.ctxWarned = {}; S.rep = {}; S.loops = {}; S.wst = {}; S.errList = {}; S.callById = new Map(); S.recomputing = true; document.querySelectorAll('.tile').forEach((t) => { clearTimeout(t._byeT); t.classList.remove('bye'); }); hidePresent();
   S.status = {}; S.tc = {}; S.doneAt = {}; S.gone.clear(); S.leaving.clear(); document.querySelectorAll('.tile.vanishing').forEach((t) => t.classList.remove('vanishing')); const doneIdx = {}; document.querySelectorAll('.ticker').forEach((x) => { x.classList.remove('on'); x.innerHTML = ''; });
   for (let i = 0; i < upTo; i++) {
     const e = S.events[i]; applyStatus(e); tally(e); if (e.kind === 'tools') S.tc[e.agent] = (S.tc[e.agent] || 0) + e.tools.length;
@@ -1311,7 +1350,7 @@ function syncUI() {
 
 // ---------- tool ticker, shared screen, flying messages ----------
 // ---------- what each agent is doing: tool calls with their real outputs ----------
-S.term = {}; S.todos = {}; S.run = {}; S.act = {}; S.usage = {}; S.errs = {}; S.lastAct = {}; S.waitOn = {}; S.orderTs = {}; S.prevState = {}; S.ctx = {}; S.model = {}; S.cw = {}; S.compacts = {}; S.ctxWarned = {}; S.rep = {}; S.loops = {}; S.present = null; S.camFor = null; let presentTimer = null;
+S.term = {}; S.todos = {}; S.run = {}; S.act = {}; S.usage = {}; S.errs = {}; S.lastAct = {}; S.waitOn = {}; S.orderTs = {}; S.prevState = {}; S.ctx = {}; S.model = {}; S.cw = {}; S.compacts = {}; S.ctxWarned = {}; S.rep = {}; S.loops = {}; S.wst = {}; S.errList = {}; S.callById = new Map(); S.present = null; S.camFor = null; let presentTimer = null;
 S.files = new Map(); S.cands = new Map(); S.turnN = 0; S.turnSaid = ''; S.fgone = new Set(); S.fmade = new Map(); S.arts = new Map(); S.artCalls = new Map(); S.artOk = new Map(); S.artPin = null; S.artWhole = null; S.wholeSeen = new Set();   // files: path → the Write call that created it, in the order they were written · cands: the documents the commands name (see candFile) · turnN: how many orders you gave so far · turnSaid: what you and the lead said in this turn · fgone: the files found missing on a click · fmade: what the server answered about a document a command names
 const later = (k, fn, ms = 160) => { later.p = later.p || {}; if (later.p[k]) return; later.p[k] = setTimeout(() => { later.p[k] = 0; fn(); }, ms); };   // coalesce bursts of repaints
 const fmtTok = (n) => (n < 1000 ? String(n) : n < 1e6 ? (n / 1000).toFixed(n < 1e4 ? 1 : 0) + 'k' : (n / 1e6).toFixed(n < 1e7 ? 2 : 1) + 'M');
@@ -1327,9 +1366,72 @@ function loopStep(R, ev) {   // R: per-agent repetition state; returns a detecti
 }
 const WIN1M = /(opus-4-[78]|opus-5|sonnet-5|fable-5)/;
 function ctxWin(model, ctx) { const base = WIN1M.test(model || '') ? 1e6 : 2e5; return ctx > base ? 1e6 : base; }   // the transcript does not say which window is in use: infer it, a bigger observed context proves the 1M window
+// Repeated work, from the session's own records and no model call: a file read again with no change in between, a file another agent has already read, the same search run twice, a failing command run again unchanged
+const fileOf = (f) => String(f || '').split(/[\\/]/).pop();
+function wasteStep(W, ev) {   // W: the session's state (S.wst, or a fresh one for the recap); true when something was noted
+  if (!W.reads) { const N = () => Object.create(null); Object.assign(W, { reads: N(), finds: N(), calls: N(), failed: N(), items: N() }); }   /* no prototype: a file or a search named __proto__ is just a name */
+  const a = ev.agent; let hit = false; const note = (it) => { const l = (W.items[a] = W.items[a] || []); l.push({ ...it, ts: ev.ts }); if (l.length > 60) l.shift(); hit = true; };
+  if (ev.kind === 'tools') for (const t of ev.tools) { const d = t.d || {};
+    if (d.kind === 'read' && d.file) { const m = (W.reads[d.file] = W.reads[d.file] || Object.create(null)), part = (d.offset || '') + ':' + (d.limit || ''), o = Object.keys(m).find((x) => x !== a);   /* a part of a long file is another read */
+      if (m[a] && m[a].has(part)) note({ k: 'again', f: d.file }); else if (o) note({ k: 'other', f: d.file, by: o }); (m[a] = m[a] || new Set()).add(part); }
+    else if ((d.kind === 'edit' || d.kind === 'write') && d.file) delete W.reads[d.file];   /* a file that changed is read again for a good reason */
+    else if ((d.kind === 'grep' || d.kind === 'glob') && d.pattern) { const key = d.kind + '\u0000' + d.pattern + '\u0000' + (d.path || '') + '\u0000' + (d.glob || ''), m = (W.finds[key] = W.finds[key] || Object.create(null)), o = Object.keys(m).find((x) => x !== a);
+      if (m[a]) note({ k: 'find', q: d.pattern }); else if (o) note({ k: 'findOther', q: d.pattern, by: o }); m[a] = 1; }
+    else if (d.kind === 'cmd' && d.text && !POLLY.test(d.text)) { const key = a + '\u0000' + d.text.trim(); W.calls[t.id] = key; if (W.failed[key]) note({ k: 'retry', c: d.text.trim().split('\n')[0].slice(0, 80) }); }
+  }
+  else if (ev.kind === 'results') for (const it of ev.items) { const key = W.calls[it.id]; if (!key) continue; delete W.calls[it.id]; if (it.err) W.failed[key] = 1; else delete W.failed[key]; }
+  return hit;
+}
+const wasteLine = (it) => it.k === 'again' ? L('relu : {0}', 'read again: {0}').replace('{0}', () => fileOf(it.f)) : it.k === 'other' ? L('déjà lu par {0} : {1}', 'already read by {0}: {1}').replace('{0}', () => nameOf(it.by)).replace('{1}', () => fileOf(it.f))
+  : it.k === 'find' ? L('même recherche relancée : {0}', 'same search again: {0}').replace('{0}', () => '“' + it.q + '”') : it.k === 'findOther' ? L('même recherche que {0} : {1}', 'same search as {0}: {1}').replace('{0}', () => nameOf(it.by)).replace('{1}', () => '“' + it.q + '”')
+  : L('relance une commande qui a échoué : {0}', 'reran a failing command: {0}').replace('{0}', () => it.c);
+// The badges' card: on hover (or a tap), what is behind ✗ ♻ 🔁 ⏳ 💤, read from the session alone.
+function noteCalls(ev) {
+  if (!S.callById) { S.callById = new Map(); S.errList = {}; }
+  if (ev.kind === 'tools') for (const t of ev.tools) { S.callById.set(t.id, { name: t.name, arg: t.arg, d: t.d, ts: ev.ts }); if (S.callById.size > 3000) S.callById.delete(S.callById.keys().next().value); }
+  else if (ev.kind === 'results') for (const it of ev.items) { if (it.err) { const l = (S.errList[ev.agent] = S.errList[ev.agent] || []); l.push({ ts: ev.ts, call: S.callById.get(it.id), out: it.out }); if (l.length > 40) l.shift(); } S.callById.delete(it.id); }
+}
+var BT = { el: null, h: 0 }; const toolShort = (n) => (String(n || '').startsWith('mcp__') ? String(n).split('__').pop() : String(n || ''));
+const clockOf = (ts) => { try { return ts ? new Date(ts).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' }) : ''; } catch { return ''; } };
+const callText = (c) => String((c && ((c.d && (c.d.text || c.d.file || c.d.pattern || c.d.url || c.d.query)) || c.arg)) || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+const errBit = (o) => { const ls = String(o || '').replace(/\x1b\[[0-9;]*m/g, '').split('\n').map((x) => x.trim()).filter(Boolean), i = Math.max(0, ls.findIndex((x) => /error|fail|denied|not found|no such|exception|cannot|refused|invalid|expected|✗|●/i.test(x))); return ls.slice(i, i + 3).map((x) => x.slice(0, 160)); };
+const wasteParts = (it) => { const path = String(it.f || '').split(/[\\/]/).slice(-2).join('/');
+  return it.k === 'again' ? [L('Relu', 'Read again'), path] : it.k === 'other' ? [L('Déjà lu par {0}', 'Already read by {0}').replace('{0}', () => nameOf(it.by)), path]
+    : it.k === 'find' ? [L('Même recherche relancée', 'Same search again'), '“' + it.q + '”'] : it.k === 'findOther' ? [L('Même recherche que {0}', 'Same search as {0}').replace('{0}', () => nameOf(it.by)), '“' + it.q + '”'] : [L('Relance une commande en échec', 'Reran a failing command'), it.c || '']; };
+function tipHtml(k, id) {
+  const head = (icon, title, n) => `<div class="bh"><span class="bi">${icon}</span><span class="bt">${esc(title)}</span>${n ? `<span class="bn">${esc(String(n))}</span>` : ''}<span class="ba">${esc(nameOf(id))}</span></div>`;
+  const foot = (t) => (t ? `<div class="bf">${esc(t)}</div>` : ''), more = (n) => foot(n > 0 ? L('+ {0} plus tôt', '+ {0} earlier').replace('{0}', () => n) : '');
+  const row = (name, time, txt, extra) => `<li><div class="r1">${name}<span class="rt">${esc(time)}</span></div>${txt ? `<code>${esc(txt)}</code>` : ''}${extra || ''}</li>`;
+  if (k === 'e') { const l = (S.errList && S.errList[id]) || [], n = S.errs[id] || l.length, sh = l.slice(-4).reverse(); if (!n) return '';
+    return head('✗', L('Appels en échec', 'Failed calls'), n) + (sh.length ? `<ul>${sh.map((x) => { const bit = errBit(x.out); return row((x.call && x.call.name ? `<span class="pill">${esc(toolShort(x.call.name))}</span>` : '') + (x.call && x.call.d && x.call.d.note ? `<span class="rn">${esc(x.call.d.note)}</span>` : ''), clockOf(x.ts), callText(x.call), bit.length ? `<div class="ro">${bit.map((x) => `<div>${esc(x)}</div>`).join('')}</div>` : ''); }).join('')}</ul>` : '') + more(n - sh.length); }
+  if (k === 'w') { const l = (S.wst.items && S.wst.items[id]) || [], sh = l.slice(-5).reverse(); if (!l.length) return '';
+    return head('♻', L('Travail répété', 'Repeated work'), l.length) + `<ul>${sh.map((it) => { const [lab, sub] = wasteParts(it); return row(`<span class="rk">${esc(lab)}</span>`, clockOf(it.ts), sub); }).join('')}</ul>` + more(l.length - sh.length) + foot(L('Repéré dans la session elle-même, sans appel au modèle.', 'Spotted in the session itself, with no model call.')); }
+  if (k === 'l') { const x = S.loops[id]; if (!x) return ''; const errs = x.kind === 'errors';
+    return head('🔁', errs ? L('Échecs répétés', 'Repeated failures') : L('Même appel répété', 'Same call repeated'), '×' + x.n) + foot((errs ? L('{0} échecs d’affilée', '{0} failures in a row') : L('{0} fois d’affilée', '{0} times in a row')).replace('{0}', () => x.n) + (x.tool ? ' · ' + toolShort(x.tool) : '')); }
+  if (k === 's') { const r = S.run[id]; if (!r) return ''; const c = S.callById && S.callById.get(r.id);
+    return head('⏳', L('Commande longue', 'Long-running command'), r.ts ? fmtShort(Date.now() - r.ts) : '') + `<ul>${row(r.name ? `<span class="pill">${esc(toolShort(r.name))}</span>` : '', clockOf(r.ts), callText(c) || (c && c.d && c.d.note) || '')}</ul>`; }
+  if (k === 'q') return S.lastAct[id] ? head('💤', L('Silencieux', 'Gone quiet'), '') + foot(L('Aucune activité depuis {0}.', 'No activity for {0}.').replace('{0}', () => fmtShort(Date.now() - S.lastAct[id]))) : '';
+  return '';
+}
+function showTip(el) {
+  const t = el.closest('.tile'), b = $('#btip'); if (!t) return; const id = t.id.slice(2), k = el.dataset.tip, h = tipHtml(k, id); if (!h) return hideTip();
+  clearTimeout(BT.h); const was = b.classList.contains('on') && BT.el; BT.el = el; if (b.innerHTML !== h) b.innerHTML = h; b.className = 'k-' + k + (was ? ' on' : ''); placeTip(); if (!was) requestAnimationFrame(() => BT.el && b.classList.add('on'));
+}
+function placeTip() {
+  const b = $('#btip'), r = BT.el.getBoundingClientRect(), w = b.offsetWidth, h = b.offsetHeight;
+  let top = r.bottom + 8; if (top + h > innerHeight - 8 && r.top - h - 8 > 8) top = r.top - h - 8;
+  b.style.left = Math.round(Math.max(8, Math.min(r.right - w, innerWidth - w - 8))) + 'px'; b.style.top = Math.round(Math.max(8, top)) + 'px';
+}
+function hideTip() { clearTimeout(BT.h); BT.el = null; $('#btip').classList.remove('on'); }
+function refreshTip() { const k = BT.el.dataset.tip, t = document.getElementById(BT.el._tile || ''), el = BT.el.isConnected ? BT.el : t && t.querySelector('.tbadge [data-tip="' + k + '"]'); if (el) { el._tile = BT.el._tile; showTip(el); } else hideTip(); }   /* the badges were drawn again: follow the new one, or close */
+document.addEventListener('mouseover', (e) => { const el = e.target.closest && e.target.closest('.tbadge [data-tip]'); if (el) { el._tile = el.closest('.tile') && el.closest('.tile').id; showTip(el); } });
+document.addEventListener('mouseout', (e) => { const el = e.target.closest && e.target.closest('.tbadge [data-tip]'); if (el && !(e.relatedTarget && el.contains(e.relatedTarget))) { clearTimeout(BT.h); BT.h = setTimeout(hideTip, 120); } });
+document.addEventListener('click', (e) => { const el = e.target.closest && e.target.closest('.tbadge [data-tip]'); if (el) { e.stopPropagation(); e.preventDefault(); el._tile = el.closest('.tile') && el.closest('.tile').id; showTip(el); } else if (BT.el) hideTip(); }, true);   /* a tap shows it on a touch screen, and does not open the agent */
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && BT.el) hideTip(); }); addEventListener('resize', () => BT.el && hideTip()); addEventListener('scroll', () => BT.el && hideTip(), true);
 function tally(ev) {   // numbers that pile up over a session: token usage, errors, last sign of life, the files it created
   noteFiles(ev);
   if (ev.kind === 'compact') { S.compacts[ev.agent] = (S.compacts[ev.agent] || 0) + 1; delete S.ctxWarned[ev.agent]; }
+  noteCalls(ev); if (wasteStep(S.wst, ev)) later('badges', renderBadges, 300);
   const det = loopStep(S.rep, ev); if (det) { S.loops[ev.agent] = det; later('badges', renderBadges, 300); } else if (S.loops[ev.agent] && (ev.kind === 'results' ? (S.loops[ev.agent].kind === 'errors' && ev.items.every((it) => !it.err)) : (ev.kind === 'tools' && S.rep[ev.agent].n < 2))) { delete S.loops[ev.agent]; later('badges', renderBadges, 300); }
   if (ev.kind === 'usage') { const c = ev.u.i + ev.u.r + ev.u.w; if (c > 0 && ev.model !== '<synthetic>') { S.ctx[ev.agent] = c; S.model[ev.agent] = ev.model; if (ev.cw) S.cw[ev.agent] = ev.cw; } const u = (S.usage[ev.agent] = S.usage[ev.agent] || { i: 0, o: 0, r: 0, w: 0 }); u.i += ev.u.i; u.o += ev.u.o; u.r += ev.u.r; u.w += ev.u.w; later('tok', renderTokens, 300); }   // which also redraws the context chips. Asking for those first, under the same name, left this one unasked: the counts on the tiles and in the header stood still during a live call
   else if (ev.kind === 'results') ev.items.forEach((it) => { if (it.err) { S.errs[ev.agent] = (S.errs[ev.agent] || 0) + 1; later('badges', renderBadges, 300); oops(ev.agent); noteTrouble(ev.agent, false); } else noteTrouble(ev.agent, true); });
@@ -1347,11 +1449,11 @@ function renderCtx() {   // "context N% full": per agent chip (from 50%), a head
   const lead = ctxInfo('main'), cp = $('#ctxp'); if (lead) { cp.style.display = ''; cp.textContent = `ctx ${lead.p}%`; cp.className = 'ctxp ' + lead.lvl; cp.title = `${L('Contexte du chef', 'Lead context')}: ${fmtTok(lead.c)} / ${fmtTok(lead.w)}${S.compacts.main ? ' · ' + S.compacts.main + '×🗜' : ''}`; } else cp.style.display = 'none';
 }
 function renderTokens() {
-  renderCtx();
+  renderCtx(); const mix = mixedModels();
   const all = { i: 0, o: 0, r: 0, w: 0 }; for (const id in S.usage) for (const k in all) all[k] += S.usage[id][k];
   const b = $('#tok'), tot = tokTotal(all); b.style.display = tot ? '' : 'none';
-  if (tot) { b.textContent = `⚡ ${fmtTok(tot)} ${L('jetons', 'tokens')}`; b.title = tokTip(all) + '\n' + Object.keys(S.usage).filter((id) => S.agents[id] && tokTotal(S.usage[id])).sort((x, y) => tokTotal(S.usage[y]) - tokTotal(S.usage[x])).slice(0, 14).map((id) => `\n${nameOf(id)} ⚡${fmtTok(tokTotal(S.usage[id]))}`).join(''); }   // and who used what, the biggest first
-  for (const id in S.agents) { const t = $('#t-' + id); if (!t) continue; const u = S.usage[id], el = t.querySelector('.tk'); el.textContent = u && tokTotal(u) ? `⚡${fmtTok(tokTotal(u))}` : ''; el.dataset.w = L('jetons', 'tokens'); if (u) t.title = tokTip(u); }
+  if (tot) { b.textContent = `⚡ ${fmtTok(tot)} ${L('jetons', 'tokens')}`; b.title = tokTip(all) + '\n' + Object.keys(S.usage).filter((id) => S.agents[id] && tokTotal(S.usage[id])).sort((x, y) => tokTotal(S.usage[y]) - tokTotal(S.usage[x])).slice(0, 14).map((id) => `\n${nameOf(id)} ⚡${fmtTok(tokTotal(S.usage[id]))}${modelShort(S.model[id]) ? ' · ' + modelShort(S.model[id]) : ''}`).join(''); }   // and who used what, the biggest first
+  for (const id in S.agents) { const t = $('#t-' + id); if (!t) continue; const u = S.usage[id], el = t.querySelector('.tk'); el.textContent = u && tokTotal(u) ? `⚡${fmtTok(tokTotal(u))}${mix && modelShort(S.model[id]) ? ' · ' + modelShort(S.model[id]).split(' ')[0] : ''}` : ''; el.dataset.w = L('jetons', 'tokens'); if (u) t.title = tokTip(u) + modelTip(id); }
   camTok(); if (S.events.length && document.body.classList.contains('rost')) paintStates();   // the list of agents carries the counts too
 }
 function camTok() {   // the one who shares a screen: what it has used so far, next to its name in the camera, as on its tile
@@ -1363,13 +1465,14 @@ const NEEDS_OK = /^(Edit|Write|MultiEdit|NotebookEdit|AskUserQuestion|ExitPlanMo
 const atTail = () => S.idx >= S.events.length - 3;   // only trust wall-clock ages when playback has caught up with the live end
 function agentState(id, now) {
   let s = S.status[id]; const r = S.run[id], w = S.waitOn[id], la = S.lastAct[id];
+  if (id === 'main' && S.live && atTail()) { const row = rowOf(S.cur); if (row && row.state === 'blocked' && row.since && !(la > S.rowsAt)) return { k: 'blocked', txt: '✋ ' + (row.sure ? L('vous attend ', 'needs you ') : L('attend vous ? ', 'needs you? ')) + fmtShort(Math.max(0, now - row.since)), ask: row.ask || '', sure: !!row.sure, since: row.since }; }   // what the server knows: a menu open in the session (a Bash approval looks like a running command here), and the question or command it waits on; unless the session moved since that answer. Before "your turn": a menu left open for longer than the lead's quiet time still needs you
   if (id === 'main' && !s) {   // the lead is at work until the message that closes its turn, even while it thinks, and from its first turn on (the server says which transcripts carry that mark); one without it falls back on "quiet for 25 s", and a turn cut short on 3 minutes of silence
     const open = S.live && la && (S.sawEnd ? !S.turnOver && now - la < 180000 : now - la < 25000);
-    if (r || (w && w.size) || open) s = 'working'; else if (S.live && la) return { k: 'done', txt: '✓ ' + L('à vous', 'your turn') };
+    if (r || (w && w.size) || open) s = 'working'; else if (S.live && la) return { k: 'done', txt: '✓ ' + L('à vous', 'your turn') + ' · ' + fmtShort(Math.max(0, now - la)) };
   }
   if (s === 'done') return { k: 'done', txt: '✓ ' + L('terminé', 'done') };
   if (!s) return { k: 'idle', txt: '' };
-  if (S.live && atTail() && r && r.ts && r.name && NEEDS_OK.test(r.name)) { const age = now - r.ts; if (age > (ASKS.test(r.name) ? 4000 : 15000)) return { k: 'blocked', txt: '✋ ' + L('attend vous ? ', 'needs you? ') + fmtShort(age) }; }
+  if (S.live && atTail() && r && r.ts && r.name && NEEDS_OK.test(r.name)) { const age = now - r.ts; if (age > (ASKS.test(r.name) ? 4000 : 15000)) return { k: 'blocked', txt: '✋ ' + L('attend vous ? ', 'needs you? ') + fmtShort(age), since: r.ts }; }
   if (w && w.size) {   // really waiting only while the lead has a sub-agent call pending, or while those agents are still active (background agents never block the lead)
     const pendingSub = r && /^(Task|Agent)$/.test(r.name), open = [...w].filter((c) => S.status[c] !== 'done' && (pendingSub || !S.live || now - Math.max(S.lastAct[c] || 0, S.orderTs[c] || 0) < 120000));
     if (open.length) {
@@ -1380,25 +1483,50 @@ function agentState(id, now) {
   return { k: 'working', txt: '⚙ ' + (S.act[id] || L('au travail', 'working')) };
 }
 const STATE_CLASSES = ['working', 'waiting', 'blocked', 'stalled', 'done'];
+// The menu the followed session waits on, in the lead's words, word for word: the questions and their options numbered as in the menu, the command, the file, the plan.
+// It stays until the menu is answered (where Claude Code runs: nothing is answered from here); ✕ puts it away until the next one. Off unless ⚙ → All settings turns it on: the header, the card and the board already say a menu waits.
+const ASKC = { off: '' };
+function askHtml(m, p) {
+  const who = esc(p.name), pre = (x) => (x ? '<pre>' + esc(x) + '</pre>' : ''); let head, body = '';
+  if (m.kind === 'question') { head = '💬 ' + who + ' ' + (m.questions.length > 1 ? L('vous pose plusieurs questions', 'has several questions for you') : L('vous pose une question', 'has a question for you'));
+    body = m.questions.map((q, k, all) => '<div class="aqs' + (q.multi ? ' multi' : '') + '"><div class="aqh">' + (all.length > 1 ? '<span class="anum">' + (k + 1) + '/' + all.length + '</span>' : '') + (q.head ? '<b class="atag">' + esc(q.head) + '</b>' : '') + '<span>' + (q.multi ? L('un ou plusieurs choix', 'one or more') : L('un seul choix', 'pick one')) + '</span></div><p class="aq">' + esc(q.q) + '</p>'
+      + (q.options.length ? '<ol class="aops">' + q.options.map((o, j) => '<li><i>' + (j + 1) + '</i><div><b>' + esc(o.label) + '</b>' + (o.about ? '<span>' + esc(o.about) + '</span>' : '') + '</div></li>').join('') + '</ol>' : '') + '</div>').join(''); }   // each question apart: its number, the short label Claude Code gives it, then each option on its own row with what it means under it
+  else if (m.kind === 'plan') { head = '📋 ' + who + ' ' + L('vous propose ce plan', 'proposes this plan'); body = pre(m.text); }
+  else if (m.kind === 'command') { head = '🔐 ' + who + ' ' + (m.sure ? L('demande à lancer cette commande', 'asks to run this command') : L('attend peut-être votre feu vert pour cette commande', 'may be waiting for your go-ahead on this command')); body = (m.about ? '<div class="aab">' + esc(m.about) + '</div>' : '') + pre(m.cmd); }
+  else if (m.kind === 'edit') { head = '🔐 ' + who + ' ' + (m.sure ? L('demande à modifier ce fichier', 'asks to edit this file') : L('attend peut-être votre feu vert pour modifier ce fichier', 'may be waiting for your go-ahead to edit this file')); body = pre(m.file); }
+  else if (m.kind === 'menu') { head = '✋ ' + who + ' ' + L('attend votre réponse', 'is waiting for your answer'); body = '<div class="aab">' + L('Un menu est ouvert dans Claude Code.', 'A menu is open in Claude Code.') + '</div>'; }
+  else if (m.kind === 'fetch') { head = '🔐 ' + who + ' ' + L('demande à ouvrir cette page', 'asks to open this page'); body = pre(m.url); }
+  else { head = '🔐 ' + who + ' ' + L('demande la permission d\'utiliser', 'asks permission to use') + ' ' + esc(m.tool || ''); }
+  const foot = L('À répondre dans Claude Code', 'Answer it in Claude Code') + (m.kind === 'question' ? ' · ' + L('les numéros sont ceux du menu', 'the numbers match the menu') : '');
+  return '<div class="awho">' + avatarSVG(p, undefined, 'ak' + p.gid + '_') + '</div><div class="asay"><div class="ahd"><span>' + head + '</span><span class="ak-t"></span><button class="ax" aria-label="' + esc(L('Masquer jusqu\'à la prochaine question', 'Hide until the next question')) + '">✕</button></div>' + (body ? '<div class="abody">' + body + '</div>' : '') + '<div class="afoot">' + foot + '</div></div>';
+}
+function paintAsk(now) {
+  const el = $('#askc'); if (!el) return; let row = null; try { row = rowOf(S.cur); } catch {}
+  const m = row && row.menu, p = S.agents.main, show = !!(prefs.askCard && m && p && S.live && !S.demo && ASKC.off !== m.id && agentState('main', now).k === 'blocked');
+  if (!show) { if (el.dataset.k) { el.className = ''; el.innerHTML = ''; el.dataset.k = ''; } return; }
+  if (el.dataset.k !== m.id) { el.dataset.k = m.id; el.className = 'on'; el.setAttribute('aria-label', L('Ce que la session attend de vous', 'What the session is waiting for from you')); el.innerHTML = askHtml(m, p); }   // built once per menu, so it is announced once
+  const t = el.querySelector('.ak-t'); if (t) t.textContent = fmtShort(Math.max(0, now - (row.since || now)));
+}
+$('#askc').onclick = (e) => { if (e.target.closest('.ax')) { ASKC.off = $('#askc').dataset.k; paintAsk(Date.now()); } };
 function paintStates() {
   const now = Date.now(), n = { working: 0, waiting: 0, blocked: 0, stalled: 0, done: 0 }, ros = [], attn = [];
   for (const p of Object.values(S.agents)) {
     if (p.id === 'user') continue; const t = $('#t-' + p.id); if (!t) continue;
     const st = agentState(p.id, now), shown = t.style.display !== 'none'; if (shown && n[st.k] !== undefined && !S.gone.has(p.id)) { n[st.k]++; if (st.k === 'blocked' || st.k === 'stalled') attn.push(p.id); }
     STATE_CLASSES.forEach((c) => t.classList.toggle(c, st.k === c));
-    const el = t.querySelector('.status'); if (el.textContent !== st.txt) el.textContent = st.txt; el.className = 'status ' + st.k + (isTurn(p.id, st) ? ' turn' : '');
+    const el = t.querySelector('.status'); if (el.textContent !== st.txt) { el.textContent = st.txt; const tb = t.querySelector('.tbadge'); if (tb) tb.style.top = el.offsetHeight > 26 ? el.offsetTop + el.offsetHeight + 4 + 'px' : ''; } /* a status on two lines: the badges under it move down */ el.className = 'status ' + st.k + (isTurn(p.id, st) ? ' turn' : '');
     const pr = t.querySelector('.prop'), want = { blocked: '✋', stalled: '😰', waiting: '⌛' }[st.k] || '', was = S.prevState[p.id];   // a raised hand, a sweat drop, an hourglass: the call metaphor for "needs you / stuck / waiting"
     if (st.k === 'done' && was && was !== 'done' && was !== 'idle') { pr.textContent = '🎉'; pr.className = 'prop cheer'; setTimeout(() => { if (pr.classList.contains('cheer')) { pr.textContent = ''; pr.className = 'prop'; } }, 1200); }
     else if (!pr.classList.contains('cheer')) { if (pr.textContent !== want) pr.textContent = want; pr.className = 'prop ' + (want ? st.k : ''); }
     if (shown && !S.gone.has(p.id)) ros.push({ p, st });
-    if (p.id === 'main' && st.k === 'done' && was && was !== 'done' && was !== 'idle' && S.live && S.playing) { S.wrap = was; if (Date.now() - (S.mainBusyAt || 0) > 45000) confetti(); }   // the lead is done, its face says so: it always has a word for it (see wrapUp, which needs to know what it was doing just before), and confetti after a long turn
+    if (p.id === 'main' && st.k === 'done' && was && was !== 'done' && was !== 'idle' && S.live && S.playing) { S.wrap = was; if (Date.now() - (S.mainBusyAt || 0) > 45000) confetti(); if (S.mainBusyAt) coffeeAsk(S.mainBusyAt); }   // the lead is done, its face says so: it always has a word for it (see wrapUp, which needs to know what it was doing just before), and confetti after a long turn
     if (p.id === 'main') { if (st.k === 'working' || st.k === 'waiting') S.mainBusyAt = S.mainBusyAt || Date.now(); else if (st.k === 'done') S.mainBusyAt = 0; }
     S.prevState[p.id] = st.k; const tip = `${p.name} — ${p.role}${st.txt ? '\n' + st.txt : ''}${S.lastTool[p.id] ? '\n' + S.lastTool[p.id] : ''}`; if (t.title !== tip) t.title = tip;
   }
   paintPill();
-  const b = $('#board'), parts = [['working', '⚙', L('au travail', 'working')], ['waiting', '🔗', L('en attente', 'waiting')], ['blocked', '✋', L('vous attendent', 'need you')], ['stalled', '⚠', L('bloqués', 'stalled')], ['done', '✓', L('terminés', 'done')]]
+  const b = $('#board'), parts = [['working', '⚙', L('au travail', 'working')], ['waiting', '🔗', L('attendent leurs sous-agents', 'on sub-agents')], ['blocked', '✋', L('vous attendent', 'need you')], ['stalled', '⚠', L('bloqués', 'stalled')], ['done', '✓', L('terminés', 'done')]]
     .filter(([k]) => n[k] && !S.pillSess).map(([k, i, l]) => `<span class="${k}" title="${n[k]} ${l}">${i} ${n[k]}<em> ${l}</em></span>`).join('');
-  if (b.innerHTML !== parts) b.innerHTML = parts; fitBoard(); S.nBlocked = n.blocked + n.stalled; S.attn = attn; paintRoster(ros); paintFiles(); return n;
+  if (b.innerHTML !== parts) b.innerHTML = parts; fitBoard(); S.nBlocked = n.blocked + n.stalled; S.attn = attn; paintRoster(ros); paintFiles(); paintAsk(now); paintAttn(now); return n;
 }
 function fitBoard(force) {   // the chips lose their words when they do not all fit (a long language, a narrower window): a chip is never cut mid-word. Tried again with the words only when the window or the texts around have changed
   const b = $('#board'), key = innerWidth + '|' + b.textContent.length + '|' + $('#pill').textContent.length + '|' + $('#subtitle').textContent.length;
@@ -1437,11 +1565,14 @@ $('#say').onsubmit = async (ev) => {
 };
 $('#sayT').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#say').requestSubmit(); } };   // Shift+Enter: a new line, flattened by the server
 $('#sayT').oninput = () => { sayGrow(); SAY.draft = $('#sayT').value ? SAY.draft || (S.cur && S.cur.id) || '' : ''; };
-const rosTok = (id) => { const u = S.usage[id]; return u && tokTotal(u) ? `<span class="rt" title="${esc(tokTip(u))}">⚡${fmtTok(tokTotal(u))}</span>` : ''; };
+const modelShort = (m) => { const v = String(m || ''); if (!v || v[0] === '<') return ''; const c = /(opus|sonnet|haiku|fable)[-_ ]?(\d{1,2})(?:[-.](\d{1,2})(?!\d))?(?!\d)/i.exec(v); const o = /claude-(\d)(?:-(\d))?-(opus|sonnet|haiku)/i.exec(v), cap = (w) => w[0].toUpperCase() + w.slice(1).toLowerCase(); if (o) return cap(o[3]) + ' ' + o[1] + (o[2] ? '.' + o[2] : ''); return c ? cap(c[1]) + ' ' + c[2] + (c[3] ? '.' + c[3] : '') : v.replace(/^.*\//, '').replace(/-\d{8}$/, '').slice(0, 24); };   /* older ids put the version first: claude-3-5-sonnet → Sonnet 3.5 */   // claude-haiku-4-5-20251001 → Haiku 4.5
+const mixedModels = () => new Set(Object.keys(S.usage).filter((id) => S.agents[id] && S.model[id] && tokTotal(S.usage[id])).map((id) => modelShort(S.model[id])).filter(Boolean)).size > 1;   // only then is the model worth a place next to the count
+const modelTip = (id) => (S.model[id] && modelShort(S.model[id]) ? '\n' + L('Modèle', 'Model') + ' · ' + S.model[id] : '');
+const rosTok = (id) => { const u = S.usage[id]; return u && tokTotal(u) ? `<span class="rt" title="${esc(tokTip(u) + modelTip(id))}">⚡${fmtTok(tokTotal(u))}${mixedModels() && modelShort(S.model[id]) ? ' · ' + esc(modelShort(S.model[id])) : ''}</span>` : ''; };
 function paintRoster(ros) {   // a fixed list beside the call: who is doing what, urgent first, readable even with dozens of agents
   const box = $('#roster'); if (!box || !document.body.classList.contains('rost')) return;
   ros.sort((a, b) => (a.p.id === 'main' ? -1 : b.p.id === 'main' ? 1 : (RORDER[a.st.k] - RORDER[b.st.k]) || (S.lastAct[b.p.id] || 0) - (S.lastAct[a.p.id] || 0)));
-  const rows = ros.slice(0, 60).map(({ p, st }) => `<div class="rr k-${st.k}${isTurn(p.id, st) ? ' turn' : ''}${S.focus === p.id ? ' sel' : ''}${S.speakers.has(p.id) ? ' speaking' : ''}" data-id="${esc(p.id)}" tabindex="0" role="button" aria-label="${esc(p.name)}, ${esc(st.txt || '')}"><div class="n"><span class="dot" style="background:${p.shirt}"></span><b>${esc(p.name)}</b><span class="ro">${esc(p.role + leadTool(p))}</span>${rosTok(p.id)}</div><div class="st">${esc(st.txt || L('en veille', 'standing by'))}${S.loops[p.id] ? ' 🔁' : ''}</div></div>`).join('');
+  const rows = ros.slice(0, 60).map(({ p, st }) => `<div class="rr k-${st.k}${isTurn(p.id, st) ? ' turn' : ''}${S.focus === p.id ? ' sel' : ''}${S.speakers.has(p.id) ? ' speaking' : ''}" data-id="${esc(p.id)}" tabindex="0" role="button" aria-label="${esc(p.name)}, ${esc(st.txt || '')}" title="${esc(p.name + ' — ' + p.role + leadTool(p) + (st.txt ? '\n' + st.txt : '') + (S.lastTool[p.id] ? '\n' + S.lastTool[p.id] : ''))}"><div class="n"><span class="dot" style="background:${p.shirt}"></span><b>${esc(p.name)}</b><span class="ro">${esc(p.role + leadTool(p))}</span>${rosTok(p.id)}</div><div class="st">${esc(st.txt || L('en veille', 'standing by'))}${S.loops[p.id] ? ' 🔁' : ''}${S.wst.items && S.wst.items[p.id] && S.wst.items[p.id].length ? ' ♻' + S.wst.items[p.id].length : ''}</div></div>`).join('');
   const left = Object.values(S.agents).filter((p) => S.gone.has(p.id) && p.id !== 'main' && p.id !== 'user').sort((a, b) => (S.lastAct[b.id] || 0) - (S.lastAct[a.id] || 0));   // a finished agent's tile leaves the stage: its line stays here, with what it used
   const gone = left.slice(0, 40).map((p) => `<div class="rr left" data-id="${esc(p.id)}" tabindex="0" role="button" aria-label="${esc(p.name)}"><div class="n"><span class="dot" style="background:${p.shirt}"></span><b>${esc(p.name)}</b><span class="ro">${esc(p.role)}</span>${rosTok(p.id)}</div></div>`).join('');
   const html = `<h3>${L('Agents', 'Agents')} · ${ros.length}</h3>${rows}${ros.length > 60 ? `<div class="ro" style="padding:4px 8px">+${ros.length - 60}</div>` : ''}${left.length ? `<h3 style="margin-top:8px">${L('terminés', 'done')} · ${left.length}</h3>${gone}` : ''}`;
@@ -1454,15 +1585,17 @@ function renderBadges() {   // per tile: failed tool calls, a command that has b
   const now = Date.now();
   for (const id in S.agents) {
     const t = $('#t-' + id); if (!t) continue; const b = t.querySelector('.tbadge'), parts = []; let slow = false, quiet = false;
-    if (S.errs[id]) parts.push(`<span class="e">✗ ${S.errs[id]}</span>`);
-    if (S.loops[id]) parts.push(`<span class="l" title="${esc(S.loops[id].kind === 'errors' ? L('Échecs répétés', 'Repeated failures') : L('Même appel répété', 'Same call repeated'))}">🔁 ×${S.loops[id].n}</span>`);
+    if (S.errs[id]) parts.push(`<span class="e" title="" data-tip="e">✗ ${S.errs[id]}</span>`);
+    const ws = S.wst.items && S.wst.items[id]; if (ws && ws.length) parts.push(`<span class="w" title="" data-tip="w">♻ ${ws.length}</span>`);
+    if (S.loops[id]) parts.push(`<span class="l" title="" data-tip="l">🔁 ×${S.loops[id].n}</span>`);
     if (S.live && S.status[id] === 'working') {
       const r = S.run[id];
-      if (r && r.ts && atTail() && now - r.ts > 60000) { slow = true; parts.push(`<span class="s">⏳ ${fmtShort(now - r.ts)}</span>`); }
-      else if (!r && S.lastAct[id] && now - S.lastAct[id] > 180000) { quiet = true; parts.push(`<span class="q">💤 ${fmtShort(now - S.lastAct[id])}</span>`); }
+      if (r && r.ts && atTail() && now - r.ts > 60000) { slow = true; parts.push(`<span class="s" title="" data-tip="s">⏳ ${fmtShort(now - r.ts)}</span>`); }
+      else if (!r && S.lastAct[id] && now - S.lastAct[id] > 180000) { quiet = true; parts.push(`<span class="q" title="" data-tip="q">💤 ${fmtShort(now - S.lastAct[id])}</span>`); }
     }
     t.classList.toggle('slow', slow); t.classList.toggle('quiet', quiet); const h = parts.join(''); if (b.innerHTML !== h) b.innerHTML = h;
   }
+  if (BT && BT.el) refreshTip();
 }
 const fmtShort = (ms) => { const s = Math.round(ms / 1000); return s < 90 ? `${s}s` : `${Math.round(s / 60)} min`; };
 function askNotify() { try { if (!EMBED && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {} AUD.init(); AUD.alert(); }
@@ -1498,7 +1631,7 @@ function activityLabel(t) {   // the short "what is on their screen" tag
     case 'read': return L('Lit ', 'Reading ') + f;
     case 'edit': return L('Modifie ', 'Editing ') + f;
     case 'write': return L('Crée ', 'Writing ') + f;
-    case 'cmd': { const n = (d.note || '').trim(); if (n) return n.slice(0, 36); return L('Exécute ', 'Running ') + d.text.trim().split(/\s+/).slice(0, 2).join(' ').slice(0, 26); }
+    case 'cmd': { const n = (d.note || '').trim(), w = d.text.trim().split(/\s+/); if (n) return n.length > 36 ? n.slice(0, 36).replace(/\s+\S*$/, '') + '…' : n; return L('Exécute ', 'Running ') + w.slice(0, 2).join(' ').slice(0, 26) + (w.length > 2 ? '…' : ''); }   /* cut at a word, and said to be cut */
     case 'grep': return L('Cherche « ', 'Searching “') + String(d.pattern || '').slice(0, 22) + L(' »', '”');
     case 'glob': return L('Liste ', 'Listing ') + String(d.pattern || '').slice(0, 24);
     case 'todo': return L('Met à jour sa todo', 'Updating todo list');
@@ -1637,7 +1770,7 @@ function artModel(a, id) {
 function artHtml(m) {
   const a = m.a, ok = m.st && m.st.ok, libs = ok && m.st.net && !prefs.artNet, open = esc(L('Ouvrir sur claude.ai', 'Open on claude.ai'));
   const nav = m.pinned && m.n > 1 ? `<button class="pnb" data-go="-1">‹</button><span class="pnn">${m.i + 1}/${m.n}</span><button class="pnb" data-go="1">›</button>` : '';
-  const bar = `<div class="pnav">${nav}<span class="purl">🔒 ${esc(a.url.replace(/^https:\/\//, ''))}</span>${ok && m.st.pages > 1 ? `<span class="pnn">${esc(m.whole ? L(`${m.st.pages} pages`, `${m.st.pages} pages`) : m.st.label)}</span>` : ''}${a.v > 1 ? `<span class="pnn">v${a.v}</span>` : ''}${libs ? `<button class="pnb lib" data-lib title="${esc(L('Cette page utilise des bibliothèques hébergées ailleurs : elles ne sont chargées que si vous le demandez', 'This page uses libraries kept on other servers: they are loaded only if you ask'))}">${esc(L('Charger ses bibliothèques', 'Load its libraries'))}</button>` : ''}<button class="pnb" data-open title="${open}" aria-label="${open}">↗</button>${m.pinned ? `<button class="pnb" data-x title="${esc(L('Fermer', 'Close'))}" aria-label="${esc(L('Fermer', 'Close'))}">✕</button>` : ''}</div>`;
+  const bar = `<div class="pnav">${nav}<span class="purl">🔒 ${esc(a.url.replace(/^https:\/\//, ''))}</span>${ok && m.st.pages > 1 ? `<span class="pnn">${esc(m.whole ? m.st.pages + ' ' + L('pages', 'pages') : m.st.label)}</span>` : ''}${a.v > 1 ? `<span class="pnn">v${a.v}</span>` : ''}${libs ? `<button class="pnb lib" data-lib title="${esc(L('Cette page utilise des bibliothèques hébergées ailleurs : elles ne sont chargées que si vous le demandez', 'This page uses libraries kept on other servers: they are loaded only if you ask'))}">${esc(L('Charger ses bibliothèques', 'Load its libraries'))}</button>` : ''}<button class="pnb" data-open title="${open}" aria-label="${open}">↗</button>${m.pinned ? `<button class="pnb" data-x title="${esc(L('Fermer', 'Close'))}" aria-label="${esc(L('Fermer', 'Close'))}">✕</button>` : ''}</div>`;
   const page = ok ? `<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="${esc(a.title)}" src="${esc(artSrc(a) + (prefs.artNet ? '&net=1' : '') + (m.whole ? '&whole=1' + (m.pinned ? '&fit=w' : '') : ''))}"></iframe>` + (m.pinned ? '' : `<button class="pzoom" data-pin title="${esc(L('Cliquer pour agrandir', 'Click to enlarge'))}" aria-label="${esc(L('Cliquer pour agrandir', 'Click to enlarge'))}"></button>`)
     : `<div class="pcard"><i>🌐</i><b>${esc(a.title)}</b>${a.note ? `<p>${esc(a.note)}</p>` : ''}${m.st ? `<em>${esc(L('Pas d’aperçu ici : la page est sur claude.ai', 'No preview here: the page is on claude.ai'))}</em><button class="pnb" data-open>${open} ↗</button>` : '<span class="spin"></span>'}</div>`;
   return bar + `<div class="pweb">${page}</div>`;
@@ -1890,7 +2023,7 @@ function renderTree() {
   }
   const node = (id) => {
     const p = S.agents[id], st = S.status[id], k = kids[id] || [], open = !S.collapsed.has(id), lt = last[id]; if (!p) return '';
-    return `<li><span class="caret" data-c="${id}">${k.length ? (open ? '▾' : '▸') : ''}</span><span class="node ${st || ''} ${S.speakers.has(id) ? 'speaking' : ''}" data-n="${id}">
+    return `<li><span class="caret" data-c="${esc(id)}">${k.length ? (open ? '▾' : '▸') : ''}</span><span class="node ${st || ''} ${S.speakers.has(id) ? 'speaking' : ''}" data-n="${esc(id)}">
       <span class="dot" style="background:${p.shirt}"></span><b>${esc(p.name)}</b><span class="r">${esc(p.role)}</span>${(() => { const a = agentState(id, Date.now()); return a.k !== 'idle' ? `<span class="stc ${a.k}">${esc(a.txt)}</span>` : ''; })()}
       ${cnt[id] ? `<span class="r">🔧${cnt[id]}</span>` : ''}${k.length ? `<span class="r">👥${k.length}</span>` : ''}${lt && st === 'working' ? `<span class="tl">${esc(lt.name)} ${esc(lt.arg || '')}</span>` : ''}</span>
       ${k.length && open ? `<ul>${k.map(node).join('')}</ul>` : ''}</li>`;
@@ -1932,7 +2065,7 @@ function renderDetail() {
   if (!S.detail) return; const id = S.detail, evs = S.events.slice(0, S.idx + 1).filter((e) => e.agent === id || e.to === id);
   const order = evs.find((e) => e.kind === 'order' && e.to === id), tools = evs.filter((e) => e.agent === id && e.kind === 'tools').flatMap((e) => e.tools);
   const counts = {}; tools.forEach((t) => (counts[t.name] = (counts[t.name] || 0) + 1));
-  const u = S.usage[id], tokHtml = u && tokTotal(u) ? `<h3>${L('Jetons', 'Tokens')} · ⚡ ${fmtTok(tokTotal(u))}</h3><div class="dim">${L('entrée', 'input')} ${fmtTok(u.i)} · ${L('sortie', 'output')} ${fmtTok(u.o)} · ${L('écriture cache', 'cache write')} ${fmtTok(u.w)} · ${L('lecture cache', 'cache read')} ${fmtTok(u.r)}</div>` : '';
+  const u = S.usage[id], tokHtml = u && tokTotal(u) ? `<h3>${L('Jetons', 'Tokens')} · ⚡ ${fmtTok(tokTotal(u))}</h3><div class="dim">${L('entrée', 'input')} ${fmtTok(u.i)} · ${L('sortie', 'output')} ${fmtTok(u.o)} · ${L('écriture cache', 'cache write')} ${fmtTok(u.w)} · ${L('lecture cache', 'cache read')} ${fmtTok(u.r)}${modelShort(S.model[id]) ? ` · ${L('Modèle', 'Model')} ${esc(S.model[id])}` : ''}</div>` : '';
   $('#dbody').innerHTML = tokHtml + (order ? `<h3>${L('Consigne de', 'Prompt from')} ${esc(nameOf(order.agent))}</h3><pre>${esc(order.text)}</pre>` : '') +
     (id === 'user' ? (S.idleHtml = (S.idleFor === S.detailOpen && S.idleHtml) || idleHtml(), S.idleFor = S.detailOpen, S.idleHtml) : `<h3>${L('Outils', 'Tools')} (${tools.length})</h3><div>${Object.entries(counts).map(([n, c]) => `${esc(n)} ×${c}`).join(' · ') || '—'}</div>` +
     `<h3>${L('Activité récente', 'Recent activity')}</h3>` + (S.term[id] || []).slice(-30).reverse().map((e) => `<details><summary>${e.end == null ? '⠋' : e.err ? '✗' : '✓'} ${esc(e.tool.name)} <span class="dim">${e.end != null ? fmtDur(e.end - e.ts) : L('en cours', 'running')}</span> — ${esc((e.tool.arg || '').slice(-60))}</summary><pre>${esc((e.tool.d && e.tool.d.kind === 'cmd' ? '$ ' + e.tool.d.text + '\n' : '') + (e.out || ''))}</pre>${e.img && S.cur ? `<img class="dimg" src="${esc(mediaUrl(id, e.id, 0))}" alt="" loading="lazy">` : ''}</details>`).join('')) +
@@ -1973,10 +2106,57 @@ const coffeeMsg = () => L('Ce développeur a été remplacé par ses propres age
 function openExternal(url) { if (EMBED) window.parent.postMessage({ agentStandup: 'openExternal', url }, '*'); else window.open(url, '_blank', 'noopener'); }   // VS Code webviews must ask the extension
 function renderCoffee() {
   const on = !!SUPPORT.url, b = $('#mCoffee'); b.style.display = on ? '' : 'none'; $('#mCoffeeT').textContent = L('☕ Offrir un café au développeur', '☕ Buy the (replaced) dev a coffee'); b.title = coffeeMsg();
-  const h = $('#bCoffee'); h.style.display = on ? '' : 'none'; h.title = coffeeMsg(); h.setAttribute('aria-label', coffeeMsg());
+  const h = $('#bCoffee'); h.style.display = on && !firstDay() ? '' : 'none'; /* the gold cup in the header: not on the first day, which is for the call */ h.title = coffeeMsg(); h.setAttribute('aria-label', coffeeMsg());
+  $('#mRateT').textContent = APP.kind === 'editor' ? L('⭐ Noter Agent Standup', '⭐ Rate Agent Standup') : L('⭐ Une étoile pour Agent Standup sur GitHub', '⭐ Star Agent Standup on GitHub');
 }
 $('#bCoffee').onclick = () => openExternal(SUPPORT.url);
 $('#mCoffee').onclick = () => { $('#menu').classList.remove('on'); openExternal(SUPPORT.url); };
+// ⚙ › Rate: the review page of the store the editor installs from, or a star on GitHub for the desktop app and the command line, which have no store (AS_APP: appKind in server.js).
+// In the editor, the extension opens the page itself (the store it installs from) and stops asking. The desktop app and the command line ask here, once: on the third day the page
+// is in view, a tip by the menu; "Later" asks again a week later, one time; the star and "No thanks" end it. The days are kept in the settings file; nothing is sent.
+$('#mRate').onclick = () => { $('#menu').classList.remove('on'); rateGo(); };
+function rateGo() { rateEnd(); if (EMBED && APP.kind === 'editor') window.parent.postMessage({ agentStandup: 'rate' }, '*'); else openExternal(APP.rate); }
+const rateEnd = () => { prefs.rateDone = utcDay(); savePrefs(); $('#rateTip').style.display = 'none'; };
+const RATE_ASKS = (APP.kind === 'desktop' || APP.kind === 'cli') && !EMBED && !Q.get('demo'), utcDay = () => new Date().toISOString().slice(0, 10);
+// One ask a day at most, and none the first day the call is in view (prefs.firstDay): the star, the coffee and the pack each wait for a day nothing else was asked (prefs.askDay, and which one in askWhat, so the same ask can show again that day).
+// The real voices are not an ask but an offer of the app itself: they keep their line until answered, and the pack waits while it shows.
+const firstDay = () => !prefs.firstDay || prefs.firstDay >= utcDay(), askedToday = (k) => prefs.askDay === utcDay() && prefs.askWhat !== k;
+const noteAsk = (k) => { if (prefs.askDay !== utcDay() || prefs.askWhat !== k) { prefs.askDay = utcDay(); prefs.askWhat = k; savePrefs(); } };
+function rateDay() {   // a day of use: the page in view that day
+  if (!RATE_ASKS || prefs.rateDone || document.hidden) return;
+  const day = utcDay(); if (prefs.rateLast !== day) { prefs.rateLast = day; prefs.rateDays = (+prefs.rateDays || 0) + 1; savePrefs(); }
+  rateTip();
+}
+function rateTip() {
+  const t = $('#rateTip'); if (!RATE_ASKS || prefs.rateDone || firstDay() || askedToday('rate') || (+prefs.rateDays || 0) < 3 || (prefs.rateLater && utcDay() < prefs.rateLater) || $('#menuTip').style.display !== 'none' || $('#menu').classList.contains('on')) { t.style.display = 'none'; return; }
+  const r = $('#bMenu').getBoundingClientRect(); if (!r.width) return;
+  $('#rateTipT').textContent = L('Agent Standup vous plaît ? Une étoile sur GitHub aide d’autres personnes à le trouver.', 'Enjoying Agent Standup? A star on GitHub helps other people find it.');
+  $('#rateYes').textContent = L('⭐ Mettre une étoile', '⭐ Star it'); $('#rateLater').textContent = L('Plus tard', 'Later'); $('#rateNo').textContent = L('Non merci', 'No thanks');
+  rateTip.seen = utcDay(); noteAsk('rate'); t.style.display = ''; t.style.top = Math.round(r.bottom + 10) + 'px'; t.style.right = Math.max(8, Math.round(innerWidth - r.right - 6)) + 'px'; t.style.setProperty('--ax', Math.max(8, Math.round(r.width / 2 - 2)) + 'px');
+}
+$('#rateYes').onclick = rateGo; $('#rateNo').onclick = rateEnd;
+$('#rateLater').onclick = () => { if (prefs.rateLater) return rateEnd(); prefs.rateLater = new Date(Date.parse(utcDay()) + 7 * 864e5).toISOString().slice(0, 10); savePrefs(); $('#rateTip').style.display = 'none'; };
+document.addEventListener('visibilitychange', rateDay); setInterval(rateDay, 3600e3);   // the desktop window can stay open for days
+// ☕ Once, at the end of a long run the call followed live (the lead at work for 10 minutes, or 3 agents at work in that turn), from the second day the call has been in view.
+// Never twice ("No thanks", the coffee or nothing at all end it), never the day the star is asked, never in a demo. The days are kept in the settings file; nothing is sent.
+function coffeeDay() { if (document.hidden || !SUPPORT.url || prefs.coffeeAsked || prefs.useFirst) return; prefs.useFirst = utcDay(); savePrefs(); }   /* one write, ever: the first day the call is in view (a window left open overnight must not write its old settings over newer ones) */
+function coffeeAsk(busyAt) {
+  if (!SUPPORT.url || prefs.coffeeAsked || Q.get('demo') || firstDay() || askedToday('coffee') || !prefs.useFirst || prefs.useFirst >= utcDay() || document.hidden) return;
+  const now = Date.now(), team = Object.keys(S.agents).filter((id) => id !== 'main' && id !== 'user' && S.lastAct[id] >= busyAt).length;
+  if (!(now - busyAt >= 10 * 60e3 || (team >= 3 && now - busyAt >= 2 * 60e3))) return;
+  if ($('#rateTip').style.display !== 'none' || rateTip.seen === utcDay() || prefs.rateDone === utcDay() || (RATE_ASKS && !prefs.rateDone && prefs.rateLast === utcDay() && (+prefs.rateDays || 0) >= 3)) return;   /* the star shown, given or declined today */
+  clearTimeout(coffeeAsk.t); coffeeAsk.t = setTimeout(() => { if (prefs.coffeeAsked || document.hidden || $('#menu').classList.contains('on') || $('#menuTip').style.display !== 'none' || $('#rateTip').style.display !== 'none' || agentState('main', Date.now()).k !== 'done') return; coffeeTip(); }, 8000);   /* after the confetti and the lead's last word */
+}
+function coffeeTip() {
+  const at = [$('#bCoffee'), $('#bMenu')].find((b) => b.getBoundingClientRect().width), t = $('#coffeeTip'); if (!at) return;
+  prefs.coffeeAsked = utcDay(); noteAsk('coffee'); savePrefs(); const r = at.getBoundingClientRect();
+  $('#coffeeTipT').textContent = L('{0} et l’équipe ont fini. Si l’appel vous a aidé à suivre ce long travail, un café aide Agent Standup à continuer. (On ne le demande qu’une fois.)', '{0} and the team are done. If the call helped you follow this long run, a coffee keeps Agent Standup going. (We only ask once.)').replace('{0}', () => nameOf('main'));
+  $('#coffeeYes').textContent = L('☕ Offrir un café', '☕ Buy a coffee'); $('#coffeeNo').textContent = L('Non merci', 'No thanks');
+  t.style.display = ''; t.style.top = Math.round(r.bottom + 10) + 'px'; t.style.right = Math.max(8, Math.round(innerWidth - r.right - 6)) + 'px'; t.style.setProperty('--ax', Math.max(8, Math.round(r.width / 2 - 2)) + 'px');
+  clearTimeout(coffeeTip.t); coffeeTip.t = setTimeout(() => (t.style.display = 'none'), 60000);
+}
+$('#coffeeYes').onclick = () => { $('#coffeeTip').style.display = 'none'; openExternal(SUPPORT.url); }; $('#coffeeNo').onclick = () => ($('#coffeeTip').style.display = 'none');
+document.addEventListener('visibilitychange', coffeeDay); setInterval(coffeeDay, 3600e3);
 
 // =====================================================================
 //  recap
@@ -2012,8 +2192,9 @@ function renderHighlights() {
 }
 $('#hl').onclick = (e) => { const b = e.target.closest('.hlc'); if (b && !S.live) seekTo(+b.dataset.i); };
 function openRecap() {
-  const per = {}, files = {}; let tools = 0, cmds = 0, errs = 0; const tk = {}, A = (id) => (per[id] = per[id] || { id, tools: 0, files: new Set(), t0: null, t1: null });
+  const per = {}, files = {}, mdl = {}; let tools = 0, cmds = 0, errs = 0; const tk = {}, A = (id) => (per[id] = per[id] || { id, tools: 0, files: new Set(), t0: null, t1: null });
   S.events.forEach((e) => {
+    if (e.kind === 'usage' && e.model && e.model[0] !== '<') mdl[e.agent] = e.model;   /* not <synthetic>, as in tally */
     if (e.kind === 'usage') { const u = (tk[e.agent] = tk[e.agent] || { i: 0, o: 0, r: 0, w: 0 }); u.i += e.u.i; u.o += e.u.o; u.r += e.u.r; u.w += e.u.w; }
     if (e.kind === 'results') e.items.forEach((it) => { if (it.err) errs++; });
     if (e.kind === 'order') A(e.to).t0 = e.t; if (e.kind === 'report') A(e.agent).t1 = e.t;
@@ -2022,11 +2203,13 @@ function openRecap() {
   });
   const last = S.events.length ? S.events[S.events.length - 1].t : 0, rows = Object.values(per).filter((a) => a.id !== 'user' && S.agents[a.id]).sort((a, b) => b.tools - a.tools).slice(0, 18), fl = Object.entries(files).sort((a, b) => b[1].n - a[1].n).slice(0, 25);
   const k = (v, l) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`, totTok = Object.values(tk).reduce((n, u) => n + tokTotal(u), 0);
+  const RW = {}; S.events.forEach((e) => wasteStep(RW, e)); const wl = Object.entries(RW.items || {}).filter(([id]) => S.agents[id]).flatMap(([id, l]) => l.map((it) => [id, it]));
   $('#recap .box').innerHTML = `<h1>${L('Récap de l’épisode', 'Episode recap')}</h1>
-    <div class="kpis">${k(Math.max(0, Object.keys(S.agents).length - 2), 'agents')}${k(tools, L('appels d’outils', 'tool calls'))}${k(cmds, L('commandes', 'commands'))}${k(errs, L('outils en erreur', 'tool errors'))}${totTok ? k('⚡ ' + fmtTok(totTok), L('jetons', 'tokens')) : ''}${k(Object.keys(files).length, L('fichiers modifiés', 'files changed'))}${k(fmt(last), L('durée', 'duration'))}</div>
-    <h3>${L('Agents les plus actifs', 'Busiest agents')}</h3><table><tr><th></th><th>${L('Rôle', 'Role')}</th><th>${L('Outils', 'Tools')}</th><th>${L('Fichiers', 'Files')}</th><th>${L('Jetons', 'Tokens')}</th><th>${L('Durée', 'Time')}</th></tr>
-    ${rows.map((a) => `<tr><td><b>${esc(nameOf(a.id))}</b></td><td>${esc(S.agents[a.id].role)}</td><td>${a.tools}</td><td>${a.files.size || ''}</td><td title="${tk[a.id] ? esc(tokTip(tk[a.id])) : ''}">${tk[a.id] ? '⚡ ' + fmtTok(tokTotal(tk[a.id])) : ''}</td><td>${a.t0 != null && a.t1 != null ? fmt(a.t1 - a.t0) : ''}</td></tr>`).join('')}</table>
+    <div class="kpis">${k(Math.max(0, Object.keys(S.agents).length - 2), 'agents')}${k(tools, L('appels d’outils', 'tool calls'))}${k(cmds, L('commandes', 'commands'))}${k(errs, L('outils en erreur', 'tool errors'))}${wl.length ? k('♻ ' + wl.length, L('travail répété', 'repeated work')) : ''}${totTok ? k('⚡ ' + fmtTok(totTok), L('jetons', 'tokens')) : ''}${k(Object.keys(files).length, L('fichiers modifiés', 'files changed'))}${k(fmt(last), L('durée', 'duration'))}</div>
+    <h3>${L('Agents les plus actifs', 'Busiest agents')}</h3><table><tr><th></th><th>${L('Rôle', 'Role')}</th><th>${L('Outils', 'Tools')}</th><th>${L('Fichiers', 'Files')}</th><th>${L('Jetons', 'Tokens')}</th><th>${L('Modèle', 'Model')}</th><th>${L('Durée', 'Time')}</th></tr>
+    ${rows.map((a) => `<tr><td><b>${esc(nameOf(a.id))}</b></td><td>${esc(S.agents[a.id].role)}</td><td>${a.tools}</td><td>${a.files.size || ''}</td><td title="${tk[a.id] ? esc(tokTip(tk[a.id])) : ''}">${tk[a.id] ? '⚡ ' + fmtTok(tokTotal(tk[a.id])) : ''}</td><td>${esc(modelShort(mdl[a.id]))}</td><td>${a.t0 != null && a.t1 != null ? fmt(a.t1 - a.t0) : ''}</td></tr>`).join('')}</table>
     <h3>${L('Fichiers touchés', 'Files touched')}</h3>${fl.length ? `<table>${fl.map(([f, v]) => `<tr><td class="f">${esc(f)}</td><td>×${v.n}</td><td>${esc([...v.who].join(', '))}</td></tr>`).join('')}</table>` : `<div class="dim">${L('Aucune modification.', 'No edits.')}</div>`}
+    ${wl.length ? `<h3>${L('Travail répété', 'Repeated work')}</h3><table>${wl.slice(0, 30).map(([id, it]) => `<tr><td><b>${esc(nameOf(id))}</b></td><td>${esc(wasteLine(it))}</td></tr>`).join('')}</table>` : ''}
     ${SUPPORT.url ? `<div class="coffee"><span>${esc(coffeeMsg())}</span><button class="btn" id="recapCoffee">☕ ${L('Offrir un café', 'Buy a coffee')}</button></div>` : ''}
     <p style="text-align:right;margin:18px 0 0"><button class="btn" id="recapMd">📋 ${L('Copier en Markdown', 'Copy as Markdown')}</button> <button class="cta" id="recapx">${L('Fermer', 'Close')}</button></p>`;
   const md = [`# Agent Standup — ${S.title || L('épisode', 'session')}`, `_${new Date().toLocaleString()}_ · ${Math.max(0, Object.keys(S.agents).length - 2)} agents · ${tools} ${L('appels d’outils', 'tool calls')} · ${cmds} ${L('commandes', 'commands')} · ${errs} ${L('erreurs', 'errors')}${totTok ? ' · ⚡ ' + fmtTok(totTok) + ' tokens' : ''}`, '', '## Standup'];
@@ -2423,7 +2606,7 @@ async function followCurrent() {
   const cur = await (await fetch('/api/current?proj=' + enc(watch) + (at ? '&pproj=' + enc(at.proj || watch) + '&pid=' + enc(at.id) + (at.since != null ? '&since=' + at.since : '') + (at.pin ? '&pin=1' : '') : '') + (S.cur ? '&sproj=' + enc(S.cur.proj) + '&sid=' + enc(S.cur.id) : ''))).json();
   if (S.pick !== at) return false;   // asked before a click or a tab sent the call elsewhere: the answer to act on is the one asked since. This one undid the click
   if (!cur.pick) { S.pick = null; S.wide = !!cur.wide; } else if (at.since == null) at.since = cur.asked || 0;   /* not kept there any more: you typed somewhere since, or that session is gone · wide: the folder the call follows has no session, the server looked everywhere, and so do the tabs (inWatch). An answer about a session you went to says nothing of that folder · since: the latest order there was when you went there, which a later one is told from */
-  if (!cur.id) { $('#empty').classList.add('on'); return false; } $('#empty').classList.remove('on');
+  if (!cur.id) { $('#empty').classList.add('on'); return false; } $('#empty').classList.remove('on'); if (S.why !== (cur.why || '')) { S.why = cur.why || ''; paintTabs(); }   // why the call is in this session: said at the end of the row of tabs
   if (S.cur && S.cur.id === cur.id && S.cur.proj === cur.proj) return false;
   const key = cur.proj + '/' + cur.id, was = S.lastKey, moved = !!was && was !== key && !S.locked; if (moved) S.left[was] = Date.now();   // what was said of the session the call leaves is not said again when it comes back to it
   if (!(await loadSession(cur.proj, cur.id))) return false;
@@ -2450,9 +2633,11 @@ function amend(e, was) {   // the server corrected an event the call already has
   }
   if (e.end && !was.end && (e._n != null || e._as || past)) { let k = S.events.length - 1; while (k > i && !(S.events[k].kind === 'user' || (S.events[k].agent === 'main' && /^(say|tools|order)$/.test(S.events[k].kind) && !S.events[k].wf))) k--; if (k === i) S.turnOver = true; }   // only if nothing came after it
 }
-let polling = false;
+let polling = false, polledAt = 0;
 setInterval(async () => {
-  if (!S.live || polling) return; polling = true;
+  if (!S.live || polling) return;
+  if (document.hidden && AUD.off() && Date.now() - polledAt < 2500) return;   // hidden and not heard (muted, or another window has the sound): every 2.5 s is enough for the alerts; a call you listen to keeps its pace
+  polling = true; polledAt = Date.now();
   try {
     const switched = await followCurrent(); if (S.offline) { S.offline = false; syncUI(); }
     if (switched || !S.cur) return;
@@ -2498,18 +2683,25 @@ const BSTATE = { blocked: ['✋', 'needs you?', 'attend vous ?'], working: ['⚙
 const BORDER = ['blocked', 'working', 'waiting', 'turn', 'idle'];
 const agoStr = (ms) => (ms < 90e3 ? Math.max(1, Math.round(ms / 1000)) + 's' : ms < 5400e3 ? Math.round(ms / 60e3) + ' min' : Math.round(ms / 3600e3) + ' h');
 const BGROUP = ['blocked', 'turn', 'working', 'waiting', 'idle'];   // the board is in sections, what waits for you first
-let boardBusy = false, boardAll = null, boardDoneOpen = false;
+let boardBusy = false, boardAll = null, boardDoneOpen = false, boardIdleOpen = false;
+const BTOOLS = [['claude', 'Claude Code'], ['_codex', 'Codex'], ['_vibe', 'Mistral Vibe'], ['_cowork', 'Cowork']], toolOf = (r) => (BTOOLS.some(([k]) => k === r.proj) ? r.proj : 'claude');   // the filter at the top of the board, shown when sessions of two tools or more are listed
 const isDone = (r) => !!r.done;   // put away by you, until the session moves again: the server says so, to every window
 function bcard(r, now, done) {
-  const [ic, en, fr] = BSTATE[r.state], extra = r.state === 'blocked' ? ` · ${r.ask ? '' : esc(r.tool) + ' '}${agoStr(r.ageMs)}` : r.state === 'working' && r.tool ? ` · ${esc(r.tool)}` : r.state === 'idle' || r.state === 'turn' ? ` · ${agoStr(now - r.mtime)}` : '';
+  const [ic, en0, fr0] = BSTATE[r.state], [en, fr] = r.state === 'blocked' && r.sure ? ['needs you', 'vous attend'] : [en0, fr0], waited = r.since ? now - r.since : r.state === 'blocked' ? r.ageMs : now - r.mtime, mine = r.state === 'blocked' || r.state === 'turn';   // how long it has waited on you
+  const head = r.state === 'blocked' ? [r.ask ? '' : esc(r.tool), r.ran ? '' : agoStr(waited)].filter(Boolean).join(' ') : r.state === 'working' && r.tool ? esc(r.tool) : r.state === 'idle' || (r.state === 'turn' && !r.ran) ? agoStr(waited) : '', extra = head ? ' · ' + head : '';
+  const took = mine && r.ran ? `⏱ ${L('a travaillé', 'worked')} ${agoStr(r.ran)} · ${L('vous attend depuis', 'waiting on you for')} ${agoStr(waited)}` : r.state === 'working' && r.asked ? `⏱ ${L('au travail depuis', 'working for')} ${agoStr(Math.max(0, now - r.asked))}` : '';   // the time it worked, apart from the time it has waited on you
   const pr = r.pr ? `<button class="bpr" data-url="${esc(r.pr.url)}" title="${esc(L('Ouvrir la pull request', 'Open the pull request'))}">PR #${+r.pr.n} ↗</button>` : '';
   const put = done ? `<button class="bdo" data-undo="1" title="${esc(L('Rouvrir', 'Reopen'))}" aria-label="${esc(L('Rouvrir', 'Reopen'))}">↩</button>` : r.state === 'turn' || r.state === 'idle' ? `<button class="bdo" title="${esc(L('Marquer comme traitée', 'Mark as done'))}" aria-label="${esc(L('Marquer comme traitée', 'Mark as done'))}">✓</button>` : '';
-  return `<div class="bcard ${r.state}" tabindex="0" role="button" data-p="${esc(r.proj)}" data-i="${esc(r.id)}"><div class="bh"><span class="stc ${r.state}">${ic} ${L(fr, en)}${extra}</span>${pr}${put}</div><div class="bt">${esc(/^[0-9a-f]{8}-[0-9a-f-]{27}$/.test(r.title) ? L('Session sans titre', 'Untitled session') : r.title)}</div>${r.ask ? `<div class="bq">${esc(r.ask)}</div>` : ''}<div class="bp">${esc(niceProj(r.proj))}</div>${r.subTotal ? `<div class="bm">👥 ${r.subActive}/${r.subTotal} ${L('sous-agents actifs', 'sub-agents active')}</div>` : ''}</div>`;
+  return `<div class="bcard ${r.state}" tabindex="0" role="button" data-p="${esc(r.proj)}" data-i="${esc(r.id)}"><div class="bh"><span class="stc ${r.state}">${ic} ${L(fr, en)}${extra}</span>${pr}${put}</div><div class="bt">${esc(/^[0-9a-f]{8}-[0-9a-f-]{27}$/.test(r.title) ? L('Session sans titre', 'Untitled session') : r.title)}</div>${r.ask ? `<div class="bq">${esc(r.ask)}</div>` : ''}<div class="bp">${esc(niceProj(r.proj))}</div>${took ? `<div class="bm">${took}</div>` : ''}${r.subTotal ? `<div class="bm">👥 ${r.subActive}/${r.subTotal} ${L('sous-agents actifs', 'sub-agents active')}</div>` : ''}</div>`;
 }
 function paintBoard() {
   if (!boardAll || !document.body.classList.contains('board')) return; const now = Date.now(), recent = (a, b) => b.mtime - a.mtime;
-  const live = boardAll.filter((r) => !isDone(r)), done = boardAll.filter(isDone).sort(recent), head = (k, label, n) => `${BSTATE[k] ? BSTATE[k][0] : '✓'} <span class="bl">${label}</span><i>${n}</i>`;
-  const secs = BGROUP.map((k) => [k, live.filter((r) => r.state === k).sort(recent)]).filter(([, rs]) => rs.length).map(([k, rs]) => `<section class="bsec"><h3 class="bhd ${k}">${head(k, L(BSTATE[k][2], BSTATE[k][1]), rs.length)}</h3><div class="bgrid">${rs.map((r) => bcard(r, now, false)).join('')}</div></section>`).join('');
+  const kinds = BTOOLS.filter(([k]) => boardAll.some((r) => toolOf(r) === k)), pick = kinds.some(([k]) => k === prefs.boardTool) ? prefs.boardTool : '', mine = boardAll.filter((r) => !pick || toolOf(r) === pick);
+  const filt = kinds.length < 2 ? '' : `<div class="bfilt" role="group" aria-label="${esc(L('Outil', 'Tool'))}">${[['', L('Tous', 'All')], ...kinds].map(([k, n]) => `<button class="bft${k === pick ? ' on' : ''}" data-tool="${esc(k)}" aria-pressed="${k === pick}">${esc(n)} <i>${k ? boardAll.filter((r) => toolOf(r) === k).length : boardAll.length}</i></button>`).join('')}</div>`;
+  const live = mine.filter((r) => !isDone(r)), done = mine.filter(isDone).sort(recent), head = (k, label, n) => `${BSTATE[k] ? BSTATE[k][0] : '✓'} <span class="bl">${label}</span><i>${n}</i>`;
+  const secs = filt + BGROUP.map((k) => [k, live.filter((r) => r.state === k).sort(recent)]).filter(([, rs]) => rs.length).map(([k, rs]) => k === 'idle'   /* idle: folded into one line, opened on demand (and kept open while the board is painted again) */
+    ? `<details class="bsec bidle"${boardIdleOpen ? ' open' : ''}><summary class="bhd ${k}">${head(k, L(BSTATE[k][2], BSTATE[k][1]), rs.length)}</summary><div class="bgrid">${rs.map((r) => bcard(r, now, false)).join('')}</div></details>`
+    : `<section class="bsec"><h3 class="bhd ${k}">${head(k, L(BSTATE[k][2], BSTATE[k][1]), rs.length)}</h3><div class="bgrid">${rs.map((r) => bcard(r, now, false)).join('')}</div></section>`).join('');
   const put = done.length ? `<details class="bsec bdone"${boardDoneOpen ? ' open' : ''}><summary class="bhd">${head('', L('Traitées', 'Done'), done.length)}</summary><div class="bgrid">${done.map((r) => bcard(r, now, true)).join('')}</div></details>` : '';
   $('#boardv').innerHTML = secs + put || `<div class="bsum"><span>${L('Aucune session récente', 'No recent session')}</span></div>`;
 }
@@ -2520,13 +2712,14 @@ async function renderBoardView() {
     paintBoard();
   } catch {} finally { boardBusy = false; }
 }
-$('#boardv').addEventListener('toggle', (e) => { if (e.target.classList && e.target.classList.contains('bdone')) boardDoneOpen = e.target.open; }, true);
+$('#boardv').addEventListener('toggle', (e) => { if (e.target.classList && e.target.classList.contains('bdone')) boardDoneOpen = e.target.open; if (e.target.classList && e.target.classList.contains('bidle')) boardIdleOpen = e.target.open; }, true);
 $('#boardv').onkeydown = (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('bcard')) { e.preventDefault(); e.target.click(); } };
 async function openSession(proj, id) {
   if (!TOOL[proj]) prefs.proj = proj; S.pick = { proj, id }; savePrefs(); setView('call');   // a Vibe or Codex session is listed under its tool, which is not a folder to follow: kept as the project, it left a window with no folder showing that tool's sessions only, for good
   if (S.live || S.demo) { if (S.demo) await setMode('live'); S.cur = null; fillProjects(); await followCurrent(); } else await setMode('live');
 }
 $('#boardv').onclick = (e) => {
+  const ft = e.target.closest('.bft'); if (ft) { prefs.boardTool = ft.dataset.tool; savePrefs(); paintBoard(); return; }
   const pr = e.target.closest('.bpr'), put = e.target.closest('.bdo'), c = e.target.closest('.bcard'); if (pr) return openExternal(pr.dataset.url); if (!c) return;
   if (put) { const proj = c.dataset.p, id = c.dataset.i, on = !put.dataset.undo;   // shown at once here, and told to the server, which the other windows ask
     for (const list of [boardAll || [], S.rows]) { const r = list.find((x) => x.proj === proj && x.id === id); if (r) { if (on) r.done = 1; else delete r.done; } }
@@ -2569,9 +2762,14 @@ function paintTabs() {
   const html = by.size < 2 ? '' : ks.map((k) => { const r = by.get(k), on = k === ck, st = BSTATE[r.state];   // one session: no row, there is nothing to tell apart
     const pinned = on && !!S.pick && !!S.pick.pin && sessKey(S.pick) === k, tip = tabName(r) + '\n' + niceProj(r.proj) + (st ? ' · ' + L(st[2], st[1]) : '') + (pinned ? '\n' + L('Épinglé : cliquez pour désépingler', 'Pinned: click to unpin') : '');
     return `<button class="stab ${r.state}${on ? ' on' : ''}" role="tab" aria-selected="${on}" data-k="${esc(k)}" title="${esc(tip)}">${st ? st[0] : ''}${TOOL[r.proj] ? `<i>${TOOL[r.proj]}</i>` : ''}<span>${esc(tabName(r))}</span>${pinned ? '📌' : ''}</button>`; }).join('')
-    + `<button class="stab all" title="${esc(L('Aller à une session', 'Go to a session'))} (Cmd / Ctrl + K)" aria-label="${esc(L('Aller à une session', 'Go to a session'))}">⋯</button>`;
+    + `<button class="stab all" title="${esc(L('Aller à une session', 'Go to a session'))} (Cmd / Ctrl + K)" aria-label="${esc(L('Aller à une session', 'Go to a session'))}">⋯</button>` + (by.size < 2 ? '' : whyTag());
   if (html === paintTabs.html) return; if (!html) paintTabs.cur = ''; el.innerHTML = paintTabs.html = html;
   if (paintTabs.cur !== ck) { paintTabs.cur = ck; const on = el.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+}
+function whyTag() {   // which rule put the call in this session (currentSession in server.js): the call moves by itself, and this says why it is here
+  const w = { pin: ['📌 ', L('épinglée par vous', 'pinned by you')], pick: ['↪ ', L('vous y êtes allé', 'you went there')], typed: ['⌨ ', L('là où vous avez écrit en dernier', 'where you last typed')], busy: ['⚙ ', L('là où l’on travaille', 'where the work is')], stay: ['· ', L('personne au travail : l’appel reste ici', 'nobody at work: the call stays')], latest: ['· ', L('la dernière session écrite', 'the latest session written')] }[S.why];
+  if (!w) return ''; const tip = L('L’appel suit la session où vous avez écrit en dernier. Un clic sur un onglet l’y emmène ; un second clic l’y épingle. G : ce qui a besoin de vous.', 'The call follows the session you last typed in. A click on a tab takes it there; a second click pins it there. G: what needs you.');
+  return `<span class="why" title="${esc(tip)}">${w[0]}${esc(L('Suivie : ', 'Following: ') + w[1])}</span>`;
 }
 function goSession(proj, id, pin) {   // you go to this session: the call is kept there until you type somewhere (since: filled by the first answer, see followCurrent)
   // pin: by a click on its tab. The call is pinned there (📌): it stays while you go through the Claude Code tabs of the editor and while you type in it, until you ask something in another session. A click on that tab again unpins it
@@ -2617,7 +2815,7 @@ async function visitSay(v, token) {
 $('#visit').onclick = (e) => { const v = S.visit; if (!v) return; if (e.target.closest('.vx')) hideVisit(); else goSession(v.r.proj, v.r.id); };
 async function sessPoll() {
   if (!S.live || S.demo || document.hidden || sessPoll.busy) return; sessPoll.busy = true;
-  try { const rows = await (await fetch('/api/board')).json(); if (Array.isArray(rows) && S.live && !S.demo) { S.rows = rows; knocks(); paintTabs(); } } catch {} finally { sessPoll.busy = false; }
+  try { const t0 = Date.now(), rows = await (await fetch('/api/board')).json(); if (Array.isArray(rows) && S.live && !S.demo) { S.rows = rows; S.rowsAt = t0; knocks(); paintTabs(); paintAttn(); } } catch {} finally { sessPoll.busy = false; }
 }
 setInterval(sessPoll, 3000);
 async function setMode(m) {
@@ -2635,7 +2833,7 @@ async function setMode(m) {
   $('#liveProj').style.display = 'none';
   const rows = await (await fetch('/api/sessions')).json();
   $('#sessions').innerHTML = rows.map((r) => { const d = new Date(r.mtime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    return `<option value="${esc(r.proj)}|${r.id}" data-title="${esc(r.title)}">${r.agents ? '👥' + r.agents + ' · ' : ''}${esc(r.title.slice(0, 40))} (${d})</option>`; }).join('');
+    return `<option value="${esc(r.proj)}|${esc(r.id)}" data-title="${esc(r.title)}">${r.agents ? '👥' + r.agents + ' · ' : ''}${esc(r.title.slice(0, 40))} (${d})</option>`; }).join('');
   $('#empty').classList.remove('on'); const pick = rows.find((r) => r.id === Q.get('pin')) || rows.find((r) => r.agents) || rows[0]; if (!pick) { $('#empty').classList.add('on'); return; }
   $('#sessions').value = `${pick.proj}|${pick.id}`; await openSelected();
 }
@@ -2729,22 +2927,23 @@ async function exportVideo(from = 0, to = 0, clip = 0) {   // clip: length in ms
 //  UI wiring
 // =====================================================================
 function applyLang() {
-  renderCharInfo(); packNote(); menuTip();
+  renderCharInfo(); packNote(); menuTip(); rateDay(); coffeeDay();
+  try { for (const id in S.act) { const b = S.term[id], t = b && b[b.length - 1]; if (t && t.tool) S.act[id] = activityLabel(t.tool); } if (S.live) fillProjects(); } catch {}   // what each agent is doing, and the list of projects, were written in the language before
   document.documentElement.lang = (LANGS.find((l) => l[0] === prefs.lang) || LANGS[0])[2];
   document.querySelectorAll('[data-fr]').forEach((el) => (el.textContent = FR() ? el.dataset.fr : tr(el.dataset.en)));
   document.querySelectorAll('#viewSeg button').forEach((b) => { b.title = b.textContent; });   // in a narrow window they are icons: the name stays as a tooltip
   $('#callTrMi').style.display = CALL_LANG[prefs.lang] && !FR() ? '' : 'none';
   const sel = $('#langSel'); if (!sel.options.length) sel.innerHTML = LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join(''); sel.value = prefs.lang;
-  [['#bPlay', L('Pause / Lecture (espace)', 'Pause / Play (space)')], ['#bLog', 'Transcript'], ['#bMute', L('Son (touche M)', 'Sound (M key)')], ['#bMenu', L('Réglages', 'Settings')], ['#dclose', L('Fermer', 'Close')], ['#officeVol', L('Volume de l’ambiance', 'Ambience volume')], ['#musicVol', L('Volume de la musique', 'Music volume')], ['#liveProj', L('Projet à suivre', 'Project to follow')], ['#reactBar', L('Réactions', 'Reactions')], ['#logQ', L('Rechercher dans la transcription', 'Search the transcript')], ['#roster', L('Agents', 'Agents')]].forEach(([q, t]) => { const el = $(q); if (!el) return; el.title = t; el.setAttribute('aria-label', t); }); $('#logQ').placeholder = L('Rechercher…', 'Search…'); $('#menuQ').placeholder = L('Chercher un réglage…', 'Search settings…'); document.querySelectorAll('#reactBar button').forEach((b) => b.setAttribute('aria-label', b.dataset.e));
-  $('#gT').textContent = L('Rejoindre l’appel', 'Join the call'); $('#gP').textContent = L('Cliquez pour activer le son et suivre votre session Claude Code en direct.', 'Click to enable sound and follow your Claude Code session live.'); $('#gB').textContent = L('▶ Rejoindre', '▶ Join');
-  $('#eDemo').textContent = L('▶ Voir la démo', '▶ Watch the demo'); $('#eT').textContent = L('En attente d’une session', 'Waiting for a session'); $('#eP').innerHTML = watched() ? esc(L('Lancez Claude Code dans {0} : l’appel démarrera tout seul.', 'Start Claude Code in {0} — the call will start by itself.')).replace('{0}', `<b>${esc(watched())}</b>`) : esc(L('Lancez Claude Code dans ce dossier : l’appel démarrera tout seul.', 'Start Claude Code in this folder — the call will start by itself.'));
+  [['#bPlay', L('Pause / Lecture (espace)', 'Pause / Play (space)')], ['#bLog', 'Transcript'], ['#bMute', L('Son (touche M)', 'Sound (M key)')], ['#bMenu', L('Réglages', 'Settings')], ['#dclose', L('Fermer', 'Close')], ['#officeVol', L('Volume de l’ambiance', 'Ambience volume')], ['#musicVol', L('Volume de la musique', 'Music volume')], ['#liveProj', L('Projet à suivre', 'Project to follow')], ['#reactBar', L('Réactions', 'Reactions')], ['#logQ', L('Rechercher dans la transcription', 'Search the transcript')], ['#roster', L('Agents', 'Agents')]].forEach(([q, t]) => { const el = $(q); if (!el) return; el.title = t; el.setAttribute('aria-label', t); }); $('#logQ').placeholder = L('Rechercher…', 'Search…'); $('#menuQ').placeholder = L('Chercher un réglage…', 'Search settings…'); $('#menuQ').setAttribute('aria-label', $('#menuQ').placeholder); $('#sps').setAttribute('aria-label', L('Vitesses prédéfinies', 'Speed presets')); document.querySelectorAll('#reactBar button').forEach((b) => b.setAttribute('aria-label', b.dataset.e));
+  $('#gB').textContent = L('🔊 Activer le son', '🔊 Turn on sound'); $('#gB').title = L('Ou cliquez n’importe où dans l’appel', 'Or click anywhere in the call');
+  $('#eDemo').textContent = L('▶ Voir la démo', '▶ Watch the demo'); $('#eT').textContent = L('En attente d’une session', 'Waiting for a session'); $('#eP').innerHTML = watched() ? esc(L('Aucune session pour l’instant. Lancez Claude Code, Codex ou Mistral Vibe dans {0} : l’appel démarrera tout seul.', 'No session yet. Start Claude Code, Codex or Mistral Vibe in {0}: the call will start by itself.')).replace('{0}', () => `<b>${esc(watched())}</b>`) : esc(L('Aucune session sur cet ordinateur pour l’instant. Lancez Claude Code, Codex ou Mistral Vibe (ou une tâche Cowork) : l’appel démarrera tout seul.', 'No session on this computer yet. Start Claude Code, Codex or Mistral Vibe (or a Cowork task): the call will start by itself.'));
   for (const id in S.agents) { const p = persona(S.agents[id]); Object.assign(S.agents[id], { name: p.name, role: p.role }); const t = $('#t-' + id); if (t) { t.querySelector('.tag span').textContent = p.role; t.querySelector('.tag b').textContent = p.name; if (id === 'main' || id === 'user') t.querySelector('.tag span').textContent = p.role; } }
   document.querySelectorAll('#menu .mi[data-t], #prefs .mi[data-t]').forEach((b) => b.querySelector('.sw').classList.toggle('on', !!prefs[b.dataset.t])); renderCoffee(); renderTokens(); updateHint(); renderLog(true); syncUI();
 }
 const elsewhere = () => !!(S.owner && S.owner !== CID);
 function applyMute() {
-  const b = $('#bMute'); b.textContent = AUD.muted ? '🔇' : elsewhere() ? '🔈' : '🔊';
-  b.title = elsewhere() ? L('Le son est joué dans une autre fenêtre — cliquer pour le reprendre ici', 'Sound is playing in another window — click to take it over here') : L('Son (touche M)', 'Sound (M key)');
+  const b = $('#bMute'); b.textContent = AUD.muted || S.hush ? '🔇' : elsewhere() ? '🔈' : '🔊';
+  b.title = S.hush ? L('Le son s’active à votre premier clic dans l’appel', 'Sound turns on with your first click in the call') : elsewhere() ? L('Le son est joué dans une autre fenêtre — cliquer pour le reprendre ici', 'Sound is playing in another window — click to take it over here') : L('Son (touche M)', 'Sound (M key)');
   AUD.apply(); if (AUD.off()) { synth && synth.cancel(); AUD.stopAll(); }
 }
 async function audioSync(claim) {   // heartbeat + ownership: avoids two Agent Standup windows talking at the same time
@@ -2755,7 +2954,7 @@ async function audioSync(claim) {   // heartbeat + ownership: avoids two Agent S
 }
 const claimAudio = () => { S.owner = CID; applyMute(); audioSync(true); };
 setInterval(() => audioSync(false), 1500);
-function toggleMute() { if (elsewhere()) { AUD.muted = false; claimAudio(); return; } AUD.muted = !AUD.muted; applyMute(); }
+function toggleMute() { if (S.hush) return joinSound(); if (elsewhere()) { AUD.muted = false; claimAudio(); return; } AUD.muted = !AUD.muted; applyMute(); }
 function setView(v) { prefs.view = v; savePrefs(); document.body.classList.toggle('tree', v === 'tree'); document.body.classList.toggle('board', v === 'board'); if (v === 'board') renderBoardView(); document.querySelectorAll('#viewSeg button').forEach((b) => b.classList.toggle('on', b.dataset.v === v)); renderTree(); }
 
 $('#viewSeg').onclick = (e) => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); };
@@ -2771,7 +2970,7 @@ async function reloadChars() { await loadChars(); for (const k in imgCache) dele
 $('#charPick').onclick = () => { $('#menu').classList.remove('on'); CHPICK.more = ''; openChars(); };
 $('#packNoteB').onclick = () => { prefs.vampSeen = true; savePrefs(); packNote(); CHPICK.more = 'halloween'; openChars(); };
 $('#packNoteX').onclick = () => { prefs.vampSeen = true; savePrefs(); packNote(); };
-$('#modeSeg').onclick = (e) => { const b = e.target.closest('button'); if (b) setMode(b.dataset.m); };
+$('#modeSeg').onclick = async (e) => { const b = e.target.closest('button'); if (!b) return; await setMode(b.dataset.m); if (b.dataset.m === 'demo' && S.demo && !S.playing) togglePlay(); };   // the demo plays at once, as from the empty state
 // ⚙ menu: sections that fold (remembered) and a search box
 function menuInit() {
   const m = $('#menu'), secs = []; let cur = null;
@@ -2790,14 +2989,15 @@ function menuInit() {
     $('#menuNone').style.display = q && !far.length && !secs.some((sc) => sc.items.some((e) => !e.classList.contains('mhide'))) ? '' : 'none';
   };
 }
-const onSwitch = (e) => { const b = e.target.closest('.mi[data-t]'); if (!b) return; prefs[b.dataset.t] = !prefs[b.dataset.t]; savePrefs(); if (prefs[b.dataset.t] && ['voice', 'office', 'music', 'notify'].includes(b.dataset.t)) claimAudio(); b.querySelector('.sw').classList.toggle('on', prefs[b.dataset.t]); AUD.apply(); if (b.dataset.t === 'office') $('#officeBox').style.display = prefs.office ? '' : 'none'; if (b.dataset.t === 'callTr') { prefs.callTrSeen = true; savePrefs(); setLang(prefs.lang); } if (b.dataset.t === 'voice') voiceOffer(); if (b.dataset.t === 'customLaptop') { for (const k in imgCache) delete imgCache[k]; buildStage(); paintStatus(); } if (b.dataset.t === 'files') paintFiles(); if (b.dataset.t === 'artNet' && S.present) renderPresent(); if (b.dataset.t === 'ownNames') renameAll(); if (b.dataset.t === 'reactions') document.body.classList.toggle('react', prefs.reactions); if (b.dataset.t === 'roster') { document.body.classList.toggle('rost', prefs.roster); paintStates(); } if (b.dataset.t === 'notify') { prefs.notifyChosen = true; savePrefs(); } if (b.dataset.t === 'notify' && prefs.notify) askNotify(); if (b.dataset.t === 'vanish' && !prefs.vanish) { S.gone.clear(); paintStatus(); }
+const onSwitch = (e) => { const b = e.target.closest('.mi[data-t]'); if (!b) return; prefs[b.dataset.t] = !prefs[b.dataset.t]; savePrefs(); if (prefs[b.dataset.t] && ['voice', 'office', 'music', 'notify'].includes(b.dataset.t)) claimAudio(); b.querySelector('.sw').classList.toggle('on', prefs[b.dataset.t]); AUD.apply(); if (b.dataset.t === 'office') $('#officeBox').style.display = prefs.office ? '' : 'none'; if (b.dataset.t === 'callTr') { prefs.callTrSeen = true; savePrefs(); setLang(prefs.lang); } if (b.dataset.t === 'voice') voiceOffer(); if (b.dataset.t === 'customLaptop') { for (const k in imgCache) delete imgCache[k]; buildStage(); paintStatus(); } if (b.dataset.t === 'files') paintFiles(); if (b.dataset.t === 'artNet' && S.present) renderPresent(); if (b.dataset.t === 'ownNames') renameAll(); if (b.dataset.t === 'reactions') document.body.classList.toggle('react', prefs.reactions); if (b.dataset.t === 'focusLayout') { document.body.classList.toggle('focusl', !!prefs.focusLayout); layout(); } if (b.dataset.t === 'roster') { document.body.classList.toggle('rost', prefs.roster); paintStates(); } if (b.dataset.t === 'notify') { prefs.notifyChosen = true; savePrefs(); } if (b.dataset.t === 'notify' && prefs.notify) askNotify(); if (b.dataset.t === 'vanish' && !prefs.vanish) { S.gone.clear(); paintStatus(); }
+  if (b.dataset.t === 'askCard') paintAsk(Date.now());
   if (b.dataset.t === 'music') { $('#musicBox').style.display = prefs.music ? '' : 'none'; if (prefs.music) { AUD.init(); AUD.apply(); } } };
 $('#menu').onclick = onSwitch; $('#prefs').onclick = (e) => { if (e.target === $('#prefs')) return closePrefs(); onSwitch(e); setTimeout(syncSwitches); };
 function openPrefs(target) {   // ⚙ → All settings; target: one of its settings, found by the search of the menu, shown and lit up
   $('#menu').classList.remove('on'); $('#prefs').classList.add('on'); syncSwitches(); document.querySelectorAll('#prefs .mi[data-t]').forEach((b) => b.querySelector('.sw').classList.toggle('on', !!prefs[b.dataset.t]));
   if (target) { target.scrollIntoView({ block: 'center' }); target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash'); (target.matches('.mi') ? target : target.querySelector('select, input, button') || target).focus(); } else $('#prefsX').focus();
 }
-const PANEL_KEYS = ['office', 'officeVol', 'music', 'station', 'musicVol', 'notify', 'customLaptop', 'ownNames', 'roster', 'reactions', 'banter', 'chat', 'vanish', 'epi', 'files', 'artNet', 'visits', 'followTab'];   // what the panel holds, and so what Reset puts back
+const PANEL_KEYS = ['office', 'officeVol', 'music', 'station', 'musicVol', 'notify', 'customLaptop', 'ownNames', 'roster', 'reactions', 'banter', 'chat', 'vanish', 'epi', 'files', 'artNet', 'visits', 'askCard', 'followTab'];   // what the panel holds, and so what Reset puts back
 $('#prefsReset').onclick = async () => {
   const b = $('#prefsReset'); if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = L('Cliquez encore pour tout remettre', 'Click again to reset them all'); setTimeout(() => { b.classList.remove('sure'); b.textContent = L('Réglages par défaut', 'Reset to defaults'); }, 4000); return; }   // two clicks: nothing is lost by a stray one
   for (const k of PANEL_KEYS) { if (k in PREF_DEFAULTS) prefs[k] = PREF_DEFAULTS[k]; else delete prefs[k]; } delete prefs.notifyChosen;   // notifyChosen too: the default of notifications is decided at start-up from it
@@ -2815,7 +3015,8 @@ $('#menuTipOk').onclick = menuTipDone;
 function closePrefs() { $('#prefs').classList.remove('on'); $('#bMenu').focus(); }
 $('#prefsX').onclick = closePrefs; $('#mPrefs').onclick = () => openPrefs();
 function renderMenuShop() {   // in the menu, under Characters: the Halloween pack for those who do not have it. Emptied while the Characters window shows the same panel (one set of ids at a time)
-  const el = $('#menuShop'), sp = SHOP.halloween; if (!el) return; if (!sp || sp.n || $('#recap.on #chdlg')) { el.innerHTML = ''; return; } renderShop(el, 'halloween', sp);
+  const el = $('#menuShop'), sp = SHOP.halloween; if (!el) return; if (!sp || sp.n || $('#recap.on #chdlg')) { el.innerHTML = ''; return; }   // one line: the pictures, the price and the buttons are in the Characters window
+  el.innerHTML = `<button class="btn" id="menuShopGo" style="width:100%;text-align:left">🎃 ${esc(L('Le pack Halloween, dessiné à la main', 'The hand-drawn Halloween pack'))} ›</button>`; $('#menuShopGo').onclick = () => { $('#menu').classList.remove('on'); CHPICK.more = 'halloween'; openChars(); };
 }
 $('#station').innerHTML = STATIONS.map((s) => `<option value="${s.id}">📻 ${s.name}</option>`).join('');
 $('#station').value = prefs.station; $('#musicVol').value = prefs.musicVol; $('#musicBox').style.display = prefs.music ? '' : 'none';
@@ -2842,7 +3043,7 @@ kokoroUI();
 // to them once they are ready, not before); ✕ and the line never comes back. Not in the scripted demo (?demo=1), which is what the pictures and videos are made from.
 let offerTimer = null;
 async function voiceOffer() {
-  const el = $('#vOffer'), hide = () => { el.style.display = 'none'; clearInterval(offerTimer); offerTimer = null; };
+  const el = $('#vOffer'), hide = () => { const was = el.style.display !== 'none'; el.style.display = 'none'; clearInterval(offerTimer); offerTimer = null; if (was) packNote(); };   // one offer at a time: the pack's line waits for this one
   if (!prefs.voice || prefs.voiceOffer === 'no' || Q.get('demo')) return hide();
   let st; try { st = await (await fetch('/api/kokoro')).json(); } catch { return; }
   const add = st.installed && st.ready && !st.g2p && !!CALL_LANG[prefs.lang] && prefs.vstyle === 'kokoro';   // the voices are there, from before French, Spanish and Portuguese were added: one small package more, said on the call where one of them is the language of the interface (⚙ said it, and nothing else)
@@ -2851,7 +3052,7 @@ async function voiceOffer() {
   if (busy && !st.installing && !voiceOffer.woke) { voiceOffer.woke = true; fetch('/api/voices?engine=kokoro').catch(() => {}); }   // installed in an earlier run, closed before the model was ready: nothing else starts the engine while another style is in use, and the line would say “Downloading” for good
   if ((st.installed && !busy && !add) || !st.npm) return hide();   // they have them; or cannot have them (no npm), which ⚙ explains
   $('#vOfferT').textContent = busy ? L('Téléchargement des vraies voix… vous pouvez continuer.', 'Downloading the real voices… you can carry on.') : st.error || (add ? L('Voix prêtes en anglais. Le français est encore lu par les voix du système.', 'Voices ready in English. This language is still read by the system voices.') : L('Vos agents peuvent parler avec de vraies voix.', 'Your agents can speak with real voices.'));
-  $('#vOfferB').style.display = busy ? 'none' : ''; $('#vOfferB').textContent = add ? L('Ajouter les voix françaises', 'Add the voices of this language') + L(` (${st.g2pMb} Mo)`, ` (${st.g2pMb} MB)`) : L('Installer', 'Install') + L(` (${st.sizeMb} Mo)`, ` (${st.sizeMb} MB)`); el.style.display = '';
+  $('#vOfferB').style.display = busy ? 'none' : ''; $('#vOfferB').textContent = add ? L('Ajouter les voix françaises', 'Add the voices of this language') + L(` (${st.g2pMb} Mo)`, ` (${st.g2pMb} MB)`) : L('Installer', 'Install') + L(` (${st.sizeMb} Mo)`, ` (${st.sizeMb} MB)`); el.style.display = ''; if ($('#packNote').style.display !== 'none') $('#packNote').style.display = 'none';
   if (busy && !offerTimer) offerTimer = setInterval(voiceOffer, 2500); if (!busy && offerTimer) { clearInterval(offerTimer); offerTimer = null; }
 }
 $('#vOfferB').onclick = async () => { prefs.voiceOffer = 'want'; savePrefs(); try { await fetch('/api/kokoro/install', { method: 'POST' }); } catch {} voiceOffer(); kokoroUI(); };
@@ -2880,11 +3081,36 @@ $('#mClip').onclick = () => { $('#menu').classList.remove('on'); exportVideo(0, 
 $('#mBrowser').onclick = () => { $('#menu').classList.remove('on'); window.parent.postMessage({ agentStandup: 'openBrowser' }, '*'); };
 $('#seek').oninput = (e) => seekTo(+e.target.value);
 $('#eDemo').onclick = async () => { await setMode('demo'); if (S.demo && !S.playing) togglePlay(); };   // "Watch the demo" plays it
-$('#gB').onclick = () => {
-  claimAudio(); AUD.init(); AUD.apply(); S.locked = false; $('#gate').classList.remove('on'); syncUI();
+// The live call plays as soon as the page opens, silent: a browser lets a page make sound only after a click or a key. The first one, anywhere, turns the sound on (the chip at the top says so).
+// The mute button and its M key are left to themselves: they turn the sound on too (toggleMute), instead of the click turning it on and the button turning it straight off again.
+function joinSound() {
+  if (!S.hush) return; S.hush = false; $('#gate').classList.remove('on'); claimAudio(); AUD.init(); AUD.apply(); applyMute(); syncUI();
   if (synth && !EMBED) { try { synth.speak(new SpeechSynthesisUtterance('')); } catch {} }   // unlock browser speech
-  S.since = 0; if (S.live && S.events.length) run(liveStart());   // what arrived while the door was closed is past too
-};
+}
+$('#gB').onclick = joinSound;
+addEventListener('pointerdown', (e) => { if (S.hush && !(e.target.closest && e.target.closest('#bMute'))) joinSound(); }, true);
+addEventListener('keydown', (e) => { if (S.hush && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() !== 'm' && e.key !== 'Escape' && !/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) { joinSound(); if (e.key === ' ') { e.preventDefault(); e.stopImmediatePropagation(); } } }, true);   // the first Space turns the sound on, as Join did, without pausing the call too
+// The strip under the header: what needs you, in the call's session first (its agents), then in the other sessions (the list the tabs come from). Live only, in every view.
+// Certain when Claude Code says a menu is open there (sure); a guess otherwise, from how long a call has waited ("may need you"). A click, or G, goes to the next one.
+function attnItems(now) {
+  if (!S.live || S.demo || !S.cur) return []; const ck = sessKey(S.cur), out = [];
+  for (const id of S.attn || []) { const st = agentState(id, now); if (st.k === 'blocked') out.push({ id, who: nameOf(id), what: st.ask || S.lastTool[id] || (S.run[id] && S.run[id].name) || '', sure: !!st.sure, since: st.since || 0 }); }
+  for (const r of S.rows) if (r.state === 'blocked' && !r.done && sessKey(r) !== ck && inWatch(r)) out.push({ r, who: '“' + tabName(r) + '”', what: r.ask || r.tool || '', sure: !!r.sure, since: r.since || now - (r.ageMs || 0) });
+  return out;
+}
+function paintAttn(now = Date.now()) {
+  const el = $('#attn'), a = attnItems(now), f = a[0];
+  const html = f ? `<span class="aw">✋ <b>${esc(f.who)}</b> ${esc(f.sure ? L('vous attend', 'needs you') : L('vous attend peut-être', 'may need you'))}${f.what ? ' · ' + esc(f.what.replace(/\s+/g, ' ').slice(0, 120)) : ''}${f.since ? ' · ' + agoStr(Math.max(0, now - f.since)) : ''}</span>${a.length > 1 ? `<span class="am">+${a.length - 1}</span>` : ''}<span class="ak">G</span>` : '';
+  if (html !== paintAttn.html) { paintAttn.html = html; el.innerHTML = html; el.hidden = !f; el.title = a.map((x) => x.who + (x.what ? ' · ' + x.what : '')).join('\n'); }
+}
+function goAttn() {   // the next thing that needs you: an agent of this session, or another session (which the call goes to)
+  const a = attnItems(Date.now()); if (!a.length) { toast(L('Personne n’a besoin de vous pour le moment', 'Nobody needs you right now')); return; }
+  goAttn.i = ((goAttn.i || 0) + (goAttn.at && Date.now() - goAttn.at < 30000 ? 1 : 0)) % a.length; goAttn.at = Date.now(); const x = a[goAttn.i];
+  if (x.r) { goAttn.i = 0; setView('call'); goSession(x.r.proj, x.r.id); return; }
+  if (document.body.classList.contains('tree') || document.body.classList.contains('board')) setView('call');
+  S.focusLock = Date.now() + 25000; setFocus(x.id); const t = $('#t-' + x.id); if (t) { t.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); popTile(x.id); }
+}
+$('#attn').onclick = goAttn;
 // J / K (or a click on the “need you” chip) jump to the agents that need you or are stalled, one after the other
 function jumpAttn(dir = 1) {
   const a = (S.attn || []).filter((id) => $('#t-' + id));
@@ -2916,7 +3142,7 @@ function paintPill() {
     sess = true; const st = {}, by = { working: [], waiting: [], blocked: [], stalled: [], done: [], idle: [] };
     for (const id in S.agents) if (id !== 'user' && !S.gone.has(id) && (id === 'main' || S.status[id])) { st[id] = agentState(id, now); by[st[id].k].push(id); }
     const what = (id) => `${nameOf(id)} — ${st[id].txt.replace(/^\S+\s/, '')}`, more = (a) => (a.length > 1 ? ` +${a.length - 1}` : ''), lead = st.main || { k: 'idle' };
-    if (by.blocked.length) { cls = 'blocked'; to = by.blocked[0]; txt = '✋ ' + what(to) + more(by.blocked); }
+    if (by.blocked.length) { cls = 'blocked'; to = by.blocked[0]; const q = st[to].ask || ''; txt = '✋ ' + what(to) + more(by.blocked) + (q ? ' · ' + (q.length > 110 ? q.slice(0, 108).replace(/\s+\S*$/, '') + '…' : q) : ''); if (q) tip = q; }   // the question or the command it waits on, next to its timer
     else if (by.stalled.length) { cls = 'stalled'; to = by.stalled[0]; txt = '⚠ ' + what(to) + more(by.stalled); }
     else if (by.working.length || by.waiting.length) {   // "2 working · Margot — waiting on Ken, Mira", or what the only one at work is doing
       const w = by.working, wt = lead.k === 'waiting' ? 'main' : w.length ? '' : by.waiting[0]; cls = 'working'; to = wt || (w.length === 1 ? w[0] : 'main');
@@ -2947,7 +3173,7 @@ for (const q of ['#gate', '#empty']) new MutationObserver(focusDoor).observe($(q
 function syncSwitches() { document.querySelectorAll('#menu .mi[data-t], #prefs .mi[data-t]').forEach((b) => { b.setAttribute('role', 'switch'); b.setAttribute('aria-checked', String(!!prefs[b.dataset.t])); }); }
 new MutationObserver(() => {   // the menu opens under the header and the status line, not over them
   const m = $('#menu'), on = m.classList.contains('on'), h = Math.round($('main').getBoundingClientRect().top); $('#bMenu').setAttribute('aria-expanded', String(on)); if (!on) return;
-  syncSwitches(); menuTipDone(); if (!$('#menuShop').innerHTML) renderMenuShop(); m.style.top = h + 3 + 'px'; m.style.maxHeight = `calc(100dvh - ${h + 13}px)`;
+  syncSwitches(); menuTipDone(); $('#rateTip').style.display = 'none'; $('#coffeeTip').style.display = 'none'; if (!$('#menuShop').innerHTML) renderMenuShop(); m.style.top = h + 3 + 'px'; m.style.maxHeight = `calc(100dvh - ${h + 13}px)`;
 }).observe($('#menu'), { attributes: true, attributeFilter: ['class'] });
 $('#menu').addEventListener('click', () => setTimeout(syncSwitches)); $('#bMenu').setAttribute('aria-expanded', 'false'); syncSwitches();
 addEventListener('keydown', (e) => {   // on the way down: Escape also works from the search box and the selects of the menu, which the shortcuts below ignore
@@ -2984,8 +3210,8 @@ setInterval(() => {
   if (pos[k] !== S.idx) { delete pos[k]; pos[k] = S.idx; const ks = Object.keys(pos); while (ks.length > 40) delete pos[ks.shift()]; savePrefs(); }
 }, 3000);
 function openKeys() {
-  const rows = [['Space', L('Pause / lecture', 'Pause / play')], ['← / →', L('Replay : événement précédent / suivant', 'Replay: previous / next event')], ['N / Shift+N', L('Replay : moment clé suivant / précédent', 'Replay: next / previous highlight')], ['M', L('Son coupé / activé', 'Mute / unmute')], ['T', L('Vue arbre ↔ appel', 'Tree view ↔ call')], ['R', L('Récapitulatif', 'Recap')], ['L', L('Transcription', 'Transcript')], ['J / K', L('Agent suivant / précédent qui a besoin de vous', 'Next / previous agent that needs you')], ['Cmd / Ctrl + K', L('Aller à une session', 'Go to a session')], ['?', L('Cette aide', 'This help')], ['Esc', L('Fermer', 'Close')]];
-  $('#recap .box').innerHTML = `<h1>${L('Raccourcis clavier', 'Keyboard shortcuts')}</h1><table>${rows.map(([k, d]) => `<tr><td class="f"><b>${esc(k)}</b></td><td>${esc(d)}</td></tr>`).join('')}</table><h3>${L('Les états', 'What the states mean')}</h3><table>${[['⚙', L('au travail', 'working')], ['🔗', L('attend un autre agent', 'waiting on another agent')], ['✋', L('attend peut-être votre feu vert', 'may be waiting for your approval')], ['⚠', L('bloqué : un sous-agent est silencieux depuis longtemps', 'stalled: a sub-agent has been silent for a long time')], ['✓', L('terminé', 'done')]].map(([k, d]) => `<tr><td class="f">${k}</td><td>${esc(d)}</td></tr>`).join('')}</table><p class="dim" style="margin:14px 0 0;font-size:12px">${L('Les vues Appel, Arbre et Sessions se changent aussi en haut de la fenêtre.', 'You can also switch between Call, Tree and Sessions at the top of the window.')}</p><div style="margin-top:14px"><button class="btn" id="recapx">${L('Fermer', 'Close')}</button></div>`;
+  const rows = [['Space', L('Pause / lecture', 'Pause / play')], ['← / →', L('Replay : événement précédent / suivant', 'Replay: previous / next event')], ['N / Shift+N', L('Replay : moment clé suivant / précédent', 'Replay: next / previous highlight')], ['M', L('Son coupé / activé', 'Mute / unmute')], ['T', L('Vue arbre ↔ appel', 'Tree view ↔ call')], ['R', L('Récapitulatif', 'Recap')], ['L', L('Transcription', 'Transcript')], ['G', L('Aller à ce qui a besoin de vous (ici ou dans une autre session)', 'Go to what needs you (here or in another session)')], ['J / K', L('Agent suivant / précédent qui a besoin de vous', 'Next / previous agent that needs you')], ['Cmd / Ctrl + K', L('Aller à une session', 'Go to a session')], ['?', L('Cette aide', 'This help')], ['Esc', L('Fermer', 'Close')]];
+  $('#recap .box').innerHTML = `<h1>${L('Raccourcis clavier', 'Keyboard shortcuts')}</h1><table>${rows.map(([k, d]) => `<tr><td class="f"><b>${esc(k)}</b></td><td>${esc(d)}</td></tr>`).join('')}</table><h3>${L('Les états', 'What the states mean')}</h3><table>${[['⚙', L('au travail', 'working')], ['🔗', L('attend un autre agent', 'waiting on another agent')], ['✋', L('attend votre réponse ou votre feu vert (avec « ? » : sans doute, d’après le temps écoulé)', 'waits for your answer or approval (with “?”: probably, from how long it has waited)')], ['⚠', L('bloqué : un sous-agent est silencieux depuis longtemps', 'stalled: a sub-agent has been silent for a long time')], ['✓', L('terminé', 'done')]].map(([k, d]) => `<tr><td class="f">${k}</td><td>${esc(d)}</td></tr>`).join('')}</table><p class="dim" style="margin:14px 0 0;font-size:12px">${L('Les vues Appel, Arbre et Sessions se changent aussi en haut de la fenêtre.', 'You can also switch between Call, Tree and Sessions at the top of the window.')}</p><div style="margin-top:14px"><button class="btn" id="recapx">${L('Fermer', 'Close')}</button></div>`;
   $('#recapx').onclick = () => $('#recap').classList.remove('on'); $('#recap').classList.add('on');
 }
 $('#mKeys').onclick = () => { $('#menu').classList.remove('on'); openKeys(); };
@@ -3016,13 +3242,14 @@ addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSwitcher(); return; }
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;   // browser shortcuts (Cmd+R, Ctrl+N…) stay the browser's
   if (e.key === '?') { openKeys(); return; }
-  if (e.key === ' ') { if (e.target.closest && e.target.closest('button, .tile, .rr, .bcard, a, [role=button]')) return; e.preventDefault(); togglePlay(); } else if (e.key.toLowerCase() === 'm') toggleMute(); else if (e.key.toLowerCase() === 't') { const toTree = !document.body.classList.contains('tree'); setView(toTree ? 'tree' : 'call'); if (toTree) toast(L('Vue arbre : T pour revenir, ? pour l’aide', 'Tree view: T to go back, ? for help')); } else if (e.key.toLowerCase() === 'r') openRecap(); else if (e.key.toLowerCase() === 'l') $('#bLog').click(); else if (e.key === 'ArrowRight' && !S.live) { e.preventDefault(); stepEvent(1); } else if (e.key === 'ArrowLeft' && !S.live) { e.preventDefault(); stepEvent(-1); } else if (e.key.toLowerCase() === 'n') stepHighlight(e.shiftKey ? -1 : 1); else if (e.key.toLowerCase() === 'j') jumpAttn(1); else if (e.key.toLowerCase() === 'k') jumpAttn(-1); else if (e.key === 'Escape') { $('#recap').classList.remove('on'); $('#menu').classList.remove('on'); }
+  if (e.key === ' ') { if (e.target.closest && e.target.closest('button, .tile, .rr, .bcard, a, [role=button]')) return; e.preventDefault(); togglePlay(); } else if (e.key.toLowerCase() === 'm') toggleMute(); else if (e.key.toLowerCase() === 't') { const toTree = !document.body.classList.contains('tree'); setView(toTree ? 'tree' : 'call'); if (toTree) toast(L('Vue arbre : T pour revenir, ? pour l’aide', 'Tree view: T to go back, ? for help')); } else if (e.key.toLowerCase() === 'r') openRecap(); else if (e.key.toLowerCase() === 'l') $('#bLog').click(); else if (e.key === 'ArrowRight' && !S.live) { e.preventDefault(); stepEvent(1); } else if (e.key === 'ArrowLeft' && !S.live) { e.preventDefault(); stepEvent(-1); } else if (e.key.toLowerCase() === 'n') stepHighlight(e.shiftKey ? -1 : 1); else if (e.key.toLowerCase() === 'g') goAttn(); else if (e.key.toLowerCase() === 'j') jumpAttn(1); else if (e.key.toLowerCase() === 'k') jumpAttn(-1); else if (e.key === 'Escape') { $('#recap').classList.remove('on'); $('#menu').classList.remove('on'); }
 });
 if (EMBED) $('#mBrowser').style.display = $('#mFollowTab').style.display = '';
 
 (async function init() {
+  if (!prefs.firstDay) { prefs.firstDay = HAD_PREFS ? '2000-01-01' : new Date().toISOString().slice(0, 10); savePrefs(); }   // the first day the call is in view asks nothing (see firstDay); someone who used the app before has had theirs
   if (!LANGS.some((l) => l[0] === prefs.lang)) prefs.lang = 'en'; await loadLocale(prefs.lang); voiceOffer(); kokoroUI(); await loadChars();
-  document.body.classList.toggle('rost', prefs.roster !== false); document.body.classList.toggle('react', !!prefs.reactions); setView(prefs.view); menuInit(); addEventListener('click', () => { try { if (prefs.notify && !EMBED && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {} }, { once: true }); applyLang(); applyMute(); TTS.init().then(updateHint);
+  document.body.classList.toggle('rost', prefs.roster !== false); document.body.classList.toggle('react', !!prefs.reactions); document.body.classList.toggle('focusl', !!prefs.focusLayout); setView(prefs.view); menuInit(); addEventListener('click', () => { try { if (prefs.notify && !EMBED && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {} }, { once: true }); applyLang(); applyMute(); TTS.init().then(updateHint);
   loadHealth().then(() => {   // French by default only if translation can actually work; otherwise stay in English without a warning
     const h = S.health || {};
     if (!prefs.langChosen && FR() && h.claude === null && !h.apiKey) { prefs.lang = 'en'; applyLang(); }
@@ -3036,7 +3263,7 @@ if (EMBED) $('#mBrowser').style.display = $('#mFollowTab').style.display = '';
     return;
   }
   S.live = Q.get('live') !== '0'; document.querySelectorAll('#modeSeg button').forEach((b) => b.classList.toggle('on', b.dataset.m === (S.live ? 'live' : 'replay')));
-  if (S.live) { S.locked = true; $('#gate').classList.add('on'); S.cur = null; syncUI(); fillProjects(); await followCurrent(); } else { S.live = true; await setMode('replay'); if (Q.get('at') != null && S.events.length) seekTo(Math.max(0, Math.min(S.events.length - 1, +Q.get('at') || 0))); }
+  if (S.live) { S.hush = true; S.locked = false; $('#gate').classList.add('on'); applyMute(); S.cur = null; syncUI(); fillProjects(); await followCurrent(); } else { S.live = true; await setMode('replay'); if (Q.get('at') != null && S.events.length) seekTo(Math.max(0, Math.min(S.events.length - 1, +Q.get('at') || 0))); }
   syncUI();
 })();
 </script>

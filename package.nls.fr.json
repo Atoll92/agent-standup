@@ -14,5 +14,6 @@
   "config.vibe.description": "Afficher aussi les sessions Mistral Vibe (lues dans ~/.vibe/logs/session, ou $VIBE_HOME). Désactivez pour ne pas les afficher.",
   "config.reply.description": "Permettre à l’appel de taper votre message dans le panneau tmux de la session Claude Code suivie (Linux uniquement, désactivé par défaut). Toute personne pouvant lancer des commandes sous votre compte peut alors taper dans vos sessions.",
   "config.claudePath.description": "Chemin complet de l’exécutable Claude Code, s’il n’est pas trouvé automatiquement (utilisé pour la traduction).",
-  "config.charactersPath.description": "Dossier contenant vos propres images de personnages (PNG, GIF ou WebP, 300 Ko maximum chacune). Vide : ~/.agent-standup/characters. lead.png est le chef, you.png est vous, toute autre image est un sous-agent, nom-talk.png est une image facultative bouche ouverte."
+  "config.charactersPath.description": "Dossier contenant vos propres images de personnages (PNG, GIF ou WebP, 300 Ko maximum chacune). Vide : ~/.agent-standup/characters. lead.png est le chef, you.png est vous, toute autre image est un sous-agent, nom-talk.png est une image facultative bouche ouverte.",
+  "config.notifyNeedsYou.description": "Afficher une notification quand une session de cet espace de travail se met à vous attendre (une question, une autorisation, un plan), avec le nom de la session et ce qu’elle demande, puis une fois encore si elle attend toujours 5 minutes plus tard. Rien tant que l’appel est à l’écran."
 }
