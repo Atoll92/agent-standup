@@ -110,3 +110,9 @@ test('/api/reply: off by default, token, cross-site and peer guards, answers', l
     assert.deepEqual(calls().filter((a) => a[0] === 'send-keys').map((a) => a.at(-1)), ['hi', 'Enter']);
   } finally { delete process.env.AGENT_STANDUP_REPLY; srv.close(); server.shutdown(); }
 });
+
+test('off Linux, lookup and send say platform and call no tmux', async () => {
+  const real = Object.getOwnPropertyDescriptor(process, 'platform'); fs.rmSync(LOG, { force: true });
+  Object.defineProperty(process, 'platform', { ...real, value: process.platform === 'darwin' ? 'win32' : 'darwin' });
+  try { assert.deepEqual(await reply.lookup(ID), { ok: false, why: 'platform' }); assert.deepEqual(await reply.send(ID, 'hi'), { error: 'platform' }); assert.deepEqual(calls(), []); } finally { Object.defineProperty(process, 'platform', real); }
+});

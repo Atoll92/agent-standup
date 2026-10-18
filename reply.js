@@ -16,6 +16,7 @@ function session(id) {   // the running session with this id, or null
 const stat = (pid) => { try { const st = fs.readFileSync(`/proc/${pid}/stat`, 'utf8'); return st.slice(st.lastIndexOf(')') + 2).split(' '); } catch { return []; } };   // fields from 3 on; the name in field 2 may hold spaces and brackets
 const ppid = (pid) => +stat(pid)[1] || 0;   // field 4
 async function lookup(id) {
+  if (process.platform !== 'linux') return { ok: false, why: 'platform' };   // the pane is found through /proc: Linux only for now
   const s = ID.test(String(id || '')) ? session(id) : null; if (!s) return { ok: false, why: 'none' };
   if (stat(s.pid)[19] !== String(s.procStart)) return { ok: false, why: 'none' };   // field 22 is the start time: a different one means the pid now belongs to another process
   const who = { status: String(s.status || ''), name: String(s.name || '') }, out = await tmux(['list-panes', '-a', '-F', '#{pane_id} #{pane_pid}']);
@@ -26,6 +27,7 @@ async function lookup(id) {
 }
 const clean = (t) => (typeof t === 'string' ? t.replace(/[\u0000-\u001f\u007f-\u009f]+/g, ' ').trim() : '');   // a newline would send a second message, an escape sequence would drive the terminal
 async function send(id, text) {
+  if (process.platform !== 'linux') return { error: 'platform' };
   let t = clean(text); if (!t || t.length > 4000) return { error: 'text' };
   if (t.endsWith(';')) t += ' ';   // tmux reads a final ; of an argument as the end of the command
   const r = await lookup(id); if (!r.ok) return { error: r.why };

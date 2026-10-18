@@ -390,5 +390,6 @@
  "To ": "宛先： ",
  "Claude is working: you can write when it is done": "Claude は作業中です。終わったら書き込めます",
  "The session changed while sending: the text stayed in the terminal, without Enter": "送信中にセッションが変わりました。テキストは Enter なしでターミナルに残っています",
- "Refused: only the user who started Agent Standup can write": "拒否されました：Agent Standup を起動したユーザーだけが書き込めます"
+ "Refused: only the user who started Agent Standup can write": "拒否されました：Agent Standup を起動したユーザーだけが書き込めます",
+ "Sending works only on Linux for now": "送信は今のところ Linux でのみ動作します"
 }

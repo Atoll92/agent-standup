@@ -390,5 +390,6 @@
  "To ": "An ",
  "Claude is working: you can write when it is done": "Claude arbeitet: du kannst schreiben, wenn er fertig ist",
  "The session changed while sending: the text stayed in the terminal, without Enter": "Die Sitzung hat sich beim Senden geändert: der Text blieb im Terminal, ohne Enter",
- "Refused: only the user who started Agent Standup can write": "Abgelehnt: nur der Benutzer, der Agent Standup gestartet hat, kann schreiben"
+ "Refused: only the user who started Agent Standup can write": "Abgelehnt: nur der Benutzer, der Agent Standup gestartet hat, kann schreiben",
+ "Sending works only on Linux for now": "Senden funktioniert vorerst nur unter Linux"
 }
