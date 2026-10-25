@@ -61,7 +61,12 @@ function headOf(text, capped) {
   let out = { ok: false, cwd: '', dir: '', child: false };
   if (!text) return out;   // not written yet: looked at again next time
   let p = null; try { const r = JSON.parse(text); if (r && r.type === 'session_meta' && r.payload && typeof r.payload === 'object') p = r.payload; } catch {}
-  if (p) out = { ok: true, cwd: typeof p.cwd === 'string' ? p.cwd : '', child: !!p.parent_thread_id || !!(p.source && typeof p.source === 'object' && p.source.subagent) };
+  if (p) {
+    const sub = p.source && typeof p.source === 'object' && p.source.subagent, spawn = sub && typeof sub.thread_spawn === 'object' && sub.thread_spawn;
+    out = { ok: true, cwd: typeof p.cwd === 'string' ? p.cwd : '', child: !!p.parent_thread_id || !!sub };
+    if (spawn) Object.assign(out, { parent: String(spawn.parent_thread_id || p.parent_thread_id || '').toLowerCase(), born: Date.parse(p.timestamp) || 0,
+      name: String(p.agent_nickname || spawn.agent_nickname || ''), role: String(p.agent_role || spawn.agent_role || 'agent'), task: String(spawn.agent_path || '').split('/').pop() || '' });
+  }
   else if (capped && /^\{"timestamp":"[^"]*","(?:ordinal":\d+,")?type":"session_meta"/.test(text)) {   // a first line longer than what was read: the two facts, without the rest
     const cwd = text.match(/"cwd":"((?:[^"\\]|\\.)*)"/); let c = ''; try { c = cwd ? JSON.parse('"' + cwd[1] + '"') : ''; } catch {}
     out = { ok: true, cwd: c, child: /"parent_thread_id":"[^"]+"/.test(text) || /"source":\{"subagent"/.test(text) };
@@ -69,10 +74,31 @@ function headOf(text, capped) {
   out.dir = dirKey(out.cwd);
   return out;
 }
+// Only explicit thread_spawn relationships are team members. Guardian/approval reviews and unrelated sessions never join a call.
+let familyMemo = { scan: null, children: new Map() };
+function descendants(id) {
+  const s = scan();
+  if (familyMemo.scan !== s) {
+    const children = new Map();
+    for (const r of s.rows) { const h = head(r.file); if (!h.parent || h.parent === r.id) continue; const list = children.get(h.parent) || []; list.push({ ...r, h }); children.set(h.parent, list); }
+    familyMemo = { scan: s, children };
+  }
+  const out = [], seen = new Set([id]), pending = [id];
+  for (let i = 0; i < pending.length; i++) for (const r of familyMemo.children.get(pending[i]) || []) {
+    if (seen.has(r.id)) continue; seen.add(r.id); pending.push(r.id); out.push(r);
+  }
+  return out.sort((a, b) => a.h.born - b.h.born || a.id.localeCompare(b.id));
+}
+function subFiles(id) {
+  const out = descendants(id).map((r) => ({ file: r.file, aid: r.id, mtime: r.mtime,
+    meta: { agentType: r.h.role, description: r.h.task || r.h.role, name: r.h.name || r.h.task, parent: r.h.parent === id ? 'main' : r.h.parent, startedAt: r.h.born },
+    ...(r.zst ? { st: state(r.id, r.id) } : {}) }));
+  out.dirs = []; out.journals = []; return out;
+}
 // The threads a person started, newest first. A thread started by another thread (Codex's review of a command before it runs, a sub-agent) is not a session of its own.
 function sessions(limit = 80) {
-  const out = []; for (const r of scan().rows) { const h = head(r.file); if (!h.ok || h.child) continue; out.push({ ...r, cwd: h.cwd, dir: h.dir }); if (out.length >= limit) break; }
-  return out;
+  const out = []; for (const r of scan().rows) { const h = head(r.file); if (!h.ok || h.child) continue; out.push({ ...r, mtime: Math.max(r.mtime, ...descendants(r.id).map((k) => k.mtime)), cwd: h.cwd, dir: h.dir }); }
+  return out.sort((a, b) => b.mtime - a.mtime).slice(0, limit);
 }
 const under = (cwd, key) => { for (let d = String(cwd || ''); d;) { if (dirKey(d) === key) return true; const up = path.dirname(d); if (up === d) return false; d = up; } return false; };   // key is the folder itself or one above it: a dashed name alone cannot tell app/old (inside app) from app-old (beside it)
 const inProject = (id, key) => { const r = row(id); if (!r || !key) return false; if (key === PROJ) return true; const h = head(r.file), d = h.dir; return d === key || (d.startsWith(key + '-') && under(h.cwd, key)); };
@@ -132,7 +158,7 @@ const title = (r) => threadNames().get(r.id) || firstPrompt(r) || r.id;
 
 // ---- the board: is the agent in the middle of a turn, or is it the person's turn? Read from the end of the file.
 const tailCache = new Map();
-function boardRow(r, now) {
+function tailState(r) {
   const sig = r.mtime + ':' + r.size; let t = r.zst ? zFacts(r.file) || { turn: 'closed', asked: 0 } : tailCache.get(r.file);   // a compressed thread not read yet: Codex compresses only a thread nobody uses
   if (!r.zst && (!t || t.sig !== sig)) {
     t = { sig, turn: '', asked: (t && t.asked) || 0 };   // asked: when the person last typed something there, which is what moves the live call (see currentSession in server.js)
@@ -142,8 +168,12 @@ function boardRow(r, now) {
     } catch {}
     if (tailCache.size > 200) tailCache.delete(tailCache.keys().next().value); tailCache.set(r.file, t);
   }
-  const age = now - r.mtime, state = age >= 30 * 60e3 ? 'idle' : t.turn === 'closed' ? 'turn' : age < 10 * 60e3 ? 'working' : 'idle';
-  return { proj: PROJ, id: r.id, title: title(r), mtime: r.mtime, state, tool: '', ageMs: age, subActive: 0, subTotal: 0, asked: t.asked, dir: r.dir, source: 'codex' };
+  return t;
+}
+function boardRow(r, now) {
+  const t = tailState(r), kids = descendants(r.id), subActive = kids.filter((k) => now - k.mtime < 10 * 60e3 && tailState(k).turn !== 'closed').length;
+  const mtime = Math.max(r.mtime, ...kids.map((k) => k.mtime)), age = now - mtime, state = subActive ? 'working' : age >= 30 * 60e3 ? 'idle' : t.turn === 'closed' ? 'turn' : age < 10 * 60e3 ? 'working' : 'idle';
+  return { proj: PROJ, id: r.id, title: title(r), mtime, state, tool: '', ageMs: age, subActive, subTotal: kids.length, asked: t.asked, dir: r.dir, source: 'codex' };
 }
 function tailOf(text, t) {   // the end of a file: whether the last turn is open or over (t.turn), and when the person last typed something (t.asked)
   for (const l of text.split('\n')) { const m = /"type":"(task_started|task_complete|turn_started|turn_complete|turn_aborted)"/.exec(l.slice(0, 400)); if (m && l.includes('"event_msg"')) t.turn = /started/.test(m[1]) ? 'open' : 'closed';
@@ -186,17 +216,17 @@ function zNext() {   // one file at a time
 }
 let made = null;   // the record reader server.js made with parser(): a compressed thread goes through it here, whole
 const zStates = new Map();   // compressed file → { sig, st }: the events of the last two threads read
-function state(id) {   // null: a plain file, which server.js reads line by line itself
+function state(id, agent = 'main') {   // null: a plain file, which server.js reads line by line itself
   const r = row(id); if (!r || !r.zst || !made) return null;
-  const sig = r.mtime + ':' + r.size, hit = zStates.get(r.file); if (hit && hit.sig === sig) { zStates.delete(r.file); zStates.set(r.file, hit); return hit.st; }
-  const st = { agent: 'main', file: r.file, journal: false, raw: [], toolName: {}, msgUsage: new Map() };   // what server.js's own reader would make of the plain file
+  const sig = r.mtime + ':' + r.size, key = r.file + ':' + agent, hit = zStates.get(key); if (hit && hit.sig === sig) { zStates.delete(key); zStates.set(key, hit); return hit.st; }
+  const st = { agent, file: r.file, journal: false, raw: [], toolName: {}, msgUsage: new Map() };   // what server.js's own reader would make of the plain file
   let buf = null; try { buf = unzst(r.file); } catch {} if (!buf) return st;   // unreadable for now: an empty session, never the compressed bytes taken for lines
   for (let at = 0; at < buf.length;) {
     let nl = buf.indexOf(10, at); if (nl < 0) nl = buf.length;
     if (nl > at) { let j = null; try { j = JSON.parse(buf.toString('utf8', at, nl)); } catch {} if (j && typeof j === 'object') { try { made(st, j); } catch {} } }   // one odd record must not take the whole timeline down
     at = nl + 1;
   }
-  zStates.set(r.file, { sig, st }); while (zStates.size > 2) zStates.delete(zStates.keys().next().value);
+  zStates.set(key, { sig, st }); while (zStates.size > 2) zStates.delete(zStates.keys().next().value);
   return st;
 }
 
@@ -215,13 +245,15 @@ function parser({ toolLabel, clip, clipOut = clip, testsOf = () => null, diffOf 
   };
   const NO_RESULT = new Set(['TodoWrite']);
   return (made = function record(st, r) {
+    if (r.type === 'session_meta') { const h = headOf(JSON.stringify(r)); if (st.agent !== 'main' && h.parent) st.birth = h.born; return; }
     if (r.type !== 'event_msg' && r.type !== 'response_item' && r.type !== 'turn_context' && r.type !== 'compacted') return;
+    if (st.birth && Date.parse(r.timestamp) < st.birth) return;   // a fork may include its parent's earlier history: it is not work this child did
     const agent = st.agent, p = r.payload && typeof r.payload === 'object' ? r.payload : {}, cx = st.cx || (st.cx = { items: false, model: '', n: 0, tot: null, last: 0, userAt: -1 });
     const ts = Math.max(Date.parse(r.timestamp) || 0, st.lastTs || 0); st.lastTs = ts;   // the lines of one file are in order; a line without a time takes the last one
     const push = (e) => { e.k = agent + ':' + st.raw.length; st.raw.push(e); if (e.ts > cx.last) cx.last = e.ts; return e; };
     const th = () => { const t = st.th; st.th = ''; return t ? { th: t } : {}; };
     const say = (text, final) => { const t = String(text == null ? '' : text).trim(); if (!t) return; const e = push({ ts, agent, kind: 'say', text: t, ...th() }); st.act = st.raw.length - 1; if (final && agent === 'main') e.end = 1; };
-    const user = (text, img, iid) => { const t = typed(text); if (!t) return; push({ ts, agent: 'user', kind: 'user', text: t, ...(img > 0 && typeof iid === 'string' && /^[\w.\-]{6,200}$/.test(iid) ? { img, iid } : {}) }); cx.userAt = st.raw.length - 1; };
+    const user = (text, img, iid) => { const t = typed(text); if (!t) return; if (agent !== 'main') { if (!st.prompt && !/^gAAAAA[\w=-]+$/.test(t)) st.prompt = { ts, text: t }; return; } push({ ts, agent: 'user', kind: 'user', text: t, ...(img > 0 && typeof iid === 'string' && /^[\w.\-]{6,200}$/.test(iid) ? { img, iid } : {}) }); cx.userAt = st.raw.length - 1; };
     const call = (id, name, input, at) => { const when = Math.max(Math.min(at || ts, ts), cx.last); st.toolName[id] = name; push({ ts: when, agent, kind: 'tool', tool: toolLabel({ id, name, input: input || {} }, when), ...th() }); st.act = st.raw.length - 1; };   // a command is placed when it started, never before what the file already said
     const result = (id, out, err, more) => { const n = st.toolName[id]; if (!n || NO_RESULT.has(n)) return; push({ ts, agent, kind: 'results', items: [{ id, err: !!err, out: clipOut(String(out == null ? '' : out).trimEnd(), resultMax[n] || (/^mcp__/.test(n) ? 900 : 600)), ...more }] }); };   // more: what else the screen shows of it (img, tests, diff, search)
     const views = () => { const v = cx.views || []; cx.views = []; return v; };   // the pictures looked at (ImageView) whose output has not come yet
@@ -231,6 +263,7 @@ function parser({ toolLabel, clip, clipOut = clip, testsOf = () => null, diffOf 
     if (r.type === 'turn_context') { if (typeof p.model === 'string') cx.model = p.model; return; }
     if (r.type === 'compacted') { push({ ts, agent, kind: 'compact' }); return; }
     if (r.type === 'event_msg') {
+      if (p.type === 'task_started' || p.type === 'turn_started') { st.completed = false; return; }
       if (p.type === 'item_completed' && p.item && typeof p.item === 'object') {
         const it = p.item, id = String(it.id || 'cx' + st.raw.length), at = +p.started_at_ms || 0; cx.items = true;
         if (it.type === 'UserMessage') { viewed(null); user(partsText(it.content), localImages(it.content), it.id); }
@@ -262,7 +295,7 @@ function parser({ toolLabel, clip, clipOut = clip, testsOf = () => null, diffOf 
         st.msgUsage.set('t' + cx.n++, { ts, u: { i: Math.max(0, (u.input_tokens || 0) - cached - w), o: u.output_tokens || 0, r: cached, w }, model: cx.model || 'codex', ...(info.model_context_window > 0 ? { cw: info.model_context_window } : {}) });   // cw: the size of the context window, which Codex states
         return;
       }
-      if (p.type === 'task_complete' || p.type === 'turn_complete' || p.type === 'turn_aborted') { viewed(null); endTurn(); }
+      if (p.type === 'task_complete' || p.type === 'turn_complete' || p.type === 'turn_aborted') { viewed(null); endTurn(); st.completed = true; st.completedAt = ts; }
       return;
     }
     // response_item: what the model sent, raw
@@ -330,7 +363,8 @@ function findImage(buf, toolId, n, user) {   // { type, data } or null
 }
 const sniff = (b, type) => (b[0] === 0x89 && b[1] === 0x50 ? 'image/png' : b[0] === 0xff && b[1] === 0xd8 ? 'image/jpeg' : b.toString('latin1', 0, 4) === 'GIF8' ? 'image/gif' : b.toString('latin1', 8, 12) === 'WEBP' ? 'image/webp' : type);   // the bytes say what they are: a computer-use screenshot written image/png is often a JPEG
 const imgMemo = new Map();
-function image(id, toolId, n, user) {   // { type, buf } or null
+function image(id, toolId, n, user, agent = 'main') {   // { type, buf } or null
+  if (agent !== 'main' && agent !== 'user') { if (!descendants(id).some((r) => r.id === agent)) return null; id = agent; }
   const r = row(id); if (!r || typeof toolId !== 'string' || toolId.length < 4 || !(n >= 0)) return null;
   const key = r.file + '|' + r.mtime + '|' + toolId + '|' + n + (user ? '|u' : ''); if (imgMemo.has(key)) return imgMemo.get(key);
   let found = null; try { const buf = rollout(r); found = buf ? findImage(buf, toolId, n, !!user) : null; } catch {}
@@ -338,4 +372,4 @@ function image(id, toolId, n, user) {   // { type, buf } or null
   imgMemo.set(key, out); if (imgMemo.size > 12) imgMemo.delete(imgMemo.keys().next().value);
   return out;
 }
-module.exports = { PROJ, SOURCE, home, dirKey, sessions, row, fileOf, cwd, inProject, projectLabel, title, boardRow, state, parser, image };
+module.exports = { PROJ, SOURCE, home, dirKey, sessions, row, fileOf, cwd, inProject, projectLabel, title, boardRow, subFiles, state, parser, image };
