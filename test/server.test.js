@@ -28,6 +28,13 @@ test('settings are kept in a file; cross-site writes are refused', async () => {
       await put({ lang: 'fr', _t: 13, updateNotice: true, updateNoticeT: 400, updateAsked: true }); await put({ lang: 'fr', _t: 14, updateNotice: false, updateNoticeT: 500, updateAsked: true });   // the new-version notice, the same way: turned off in one window
       await put({ lang: 'en', _t: 15, updateNotice: true, updateNoticeT: 400, updateAsked: true }); p = await saved(); assert.equal(p.updateNotice, false, 'a window opened before cannot turn the npm check back on'); assert.equal(p.lang, 'en');
       await put({ lang: 'fr', _t: 16 }); }
+    { const put = (v) => get(port, '/api/prefs', { 'content-type': 'application/json' }, 'PUT', JSON.stringify(v)), saved = async () => JSON.parse((await get(port, '/api/prefs.js')).body.match(/SAVED_PREFS = (.*?); window/)[1]);   // two windows: each sends what it changed, and neither puts back what the other changed
+      await put({ lang: 'fr', _t: 20, music: false, leadName: 'Old' });
+      await put({ _patch: { set: { leadName: 'Bob', _t: 21 }, del: [] } }); await put({ _patch: { set: { music: true, _t: 22 }, del: [] } });
+      let p = await saved(); assert.deepEqual([p.leadName, p.music, p.lang], ['Bob', true, 'fr']);
+      await put({ _patch: { set: { _t: 23 }, del: ['leadName', 'nothing'] } }); p = await saved(); assert.ok(!('leadName' in p), 'a key the page removed'); assert.equal(p.music, true);
+      assert.equal((await put({ _patch: { set: [1], del: 'x' } })).status, 200); assert.equal((await saved()).music, true, 'an odd patch changes nothing');
+      await put({ lang: 'fr', _t: 24 }); assert.ok(!('music' in (await saved())), 'a whole object (an older page) still replaces the file'); }
     assert.equal(JSON.parse((await get(port, '/api/kokoro')).body).installed, false);
     assert.equal((await get(port, '/api/kokoro/install', { 'sec-fetch-site': 'cross-site' }, 'POST')).status, 403);
   } finally { srv.close(); require('../server.js').shutdown(); }

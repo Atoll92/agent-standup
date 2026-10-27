@@ -388,8 +388,8 @@
  "Privacy policy": "개인정보 처리방침",
  "Help count users (1 request a week)": "사용자 수 세기 돕기 (일주일에 요청 1번)",
  "Halloween is coming: dress your agents up as a pumpkin, a ghost, a witch or a skeleton, drawn by hand by Fabien Coupas.": "핼러윈이 다가옵니다: 에이전트에게 호박, 유령, 마녀, 해골 분장을 해 보세요. Fabien Coupas가 손으로 그렸습니다.",
- "Happy Halloween! Your agents can come to the call in costume.": "해피 핼러윈! 에이전트가 분장하고 통화에 올 수 있어요.",
- "Halloween is tomorrow: your agents can come to the call in costume.": "내일은 핼러윈: 에이전트가 분장하고 통화에 올 수 있어요.",
+ "Happy Halloween! Your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "해피 핼러윈! 에이전트들이 호박을 가져왔어요. 의상 전체는 손으로 그린 팩에 있어요.",
+ "Halloween is tomorrow: your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "내일은 핼러윈: 에이전트들이 호박을 가져왔어요. 의상 전체는 손으로 그린 팩에 있어요.",
  "advised by": "조언자",
  "At least: work went on after it last counted.": "최소 금액입니다: 마지막 집계 이후에도 작업이 계속되었습니다.",
  "cost": "비용",
@@ -428,5 +428,7 @@
  "Why?": "왜?",
  "Remove CLAUDE_CODE_SKIP_PROMPT_HISTORY from your shell profile, then start Claude Code again.": "셸 프로필에서 CLAUDE_CODE_SKIP_PROMPT_HISTORY를 지운 다음 Claude Code를 다시 시작하세요.",
  "Lead agent name": "메인 에이전트 이름",
- "Set in the editor’s settings (agentStandup.leadName)": "에디터 설정에서 지정됨 (agentStandup.leadName)"
+ "Set in the editor’s settings (agentStandup.leadName)": "에디터 설정에서 지정됨 (agentStandup.leadName)",
+ "Costume": "의상",
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "당신의 뱀파이어는 Fabien Coupas가 손으로 그린 핼러윈 팩에서 왔어요. 나머지 캐스트도 팩에 있어요."
 }

@@ -388,8 +388,8 @@
  "Privacy policy": "Datenschutzerklärung",
  "Help count users (1 request a week)": "Beim Zählen der Nutzer helfen (1 Anfrage pro Woche)",
  "Halloween is coming: dress your agents up as a pumpkin, a ghost, a witch or a skeleton, drawn by hand by Fabien Coupas.": "Halloween steht vor der Tür: Verkleide deine Agenten als Kürbis, Geist, Hexe oder Skelett, von Hand gezeichnet von Fabien Coupas.",
- "Happy Halloween! Your agents can come to the call in costume.": "Fröhliches Halloween! Deine Agenten können verkleidet zum Call kommen.",
- "Halloween is tomorrow: your agents can come to the call in costume.": "Morgen ist Halloween: Deine Agenten können verkleidet zum Call kommen.",
+ "Happy Halloween! Your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "Fröhliches Halloween! Deine Agenten haben Kürbisse mitgebracht. Die ganzen Kostüme sind im Paket, von Hand gezeichnet.",
+ "Halloween is tomorrow: your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "Morgen ist Halloween: Deine Agenten haben Kürbisse mitgebracht. Die ganzen Kostüme sind im Paket, von Hand gezeichnet.",
  "advised by": "beraten von",
  "At least: work went on after it last counted.": "Mindestens: Nach der letzten Zählung ging die Arbeit weiter.",
  "cost": "Kosten",
@@ -428,5 +428,7 @@
  "Why?": "Warum?",
  "Remove CLAUDE_CODE_SKIP_PROMPT_HISTORY from your shell profile, then start Claude Code again.": "Entferne CLAUDE_CODE_SKIP_PROMPT_HISTORY aus deinem Shell-Profil und starte Claude Code dann neu.",
  "Lead agent name": "Name des Hauptagenten",
- "Set in the editor’s settings (agentStandup.leadName)": "In den Einstellungen des Editors festgelegt (agentStandup.leadName)"
+ "Set in the editor’s settings (agentStandup.leadName)": "In den Einstellungen des Editors festgelegt (agentStandup.leadName)",
+ "Costume": "Kostüm",
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Dein Vampir stammt aus dem Halloween-Paket, von Hand gezeichnet von Fabien Coupas. Der Rest der Besetzung ist auch darin."
 }

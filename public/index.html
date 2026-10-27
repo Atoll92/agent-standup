@@ -401,7 +401,7 @@
   <div class="box" id="menuShop"></div>
   <h4 data-fr="Source" data-en="Source">Source</h4>
   <div class="box"><div class="seg" style="width:100%" id="modeSeg"><button data-m="live" style="flex:1" data-fr="Live" data-en="Live">Live</button><button data-m="replay" style="flex:1" data-fr="Replay" data-en="Replay">Replay</button><button data-m="demo" style="flex:1" data-fr="Démo" data-en="Demo">Demo</button></div>
-    <select id="liveProj" style="display:none;margin-top:6px" title="Project to follow"></select>
+    <label id="liveProjBox" style="display:none;margin-top:6px"><span class="dim" style="display:block;font-size:11.5px;margin:0 0 3px 2px" data-fr="Projet à suivre" data-en="Project to follow">Projet à suivre</span><select id="liveProj" style="width:100%" title="Project to follow"></select></label>
     <select id="sessions" style="display:none"></select></div>
   <h4 data-fr="Plus" data-en="More">Plus</h4>
   <button class="mi" id="mPrefs"><span data-fr="⚙ Tous les réglages (affichage, alertes…)" data-en="⚙ All settings (display, alerts…)">⚙ Tous les réglages (affichage, alertes…)</span><span class="dim" aria-hidden="true">›</span></button>
@@ -508,8 +508,9 @@ const APP = window.AS_APP && typeof window.AS_APP === 'object' && typeof window.
 
 let prefs = { lang: 'en', voice: true, roster: false, banter: true, reactions: false, office: false, officeVol: 0.8, vstyle: 'kokoro', notify: false, epi: false, vanish: true, music: false, station: 'fip', musicVol: 0.35, view: 'call', hideCode: false, ownNames: true, visits: true, askCard: false, followTab: true, files: true, callTr: true, voiceVol: 1 };
 const PREF_DEFAULTS = { ...prefs };   // for ⚙ → All settings → Reset to defaults
+let prefsBase = {};   // the settings file as this page last knew it: a save sends only what changed since (prefsPatch), so another window's newer choices are not written over
 { let loc = {}; try { loc = JSON.parse(localStorage.getItem('cc.prefs') || '{}') || {}; } catch {}   // the settings file (shared by every window) and this origin's copy: the more recent one wins
-  const sv = window.SAVED_PREFS && typeof window.SAVED_PREFS === 'object' ? window.SAVED_PREFS : {}; const won = (sv._t || 0) > (loc._t || 0) ? sv : loc; Object.assign(prefs, won); if (Object.keys(won).length && !('roster' in won)) prefs.roster = true;   /* settings saved before the list could be turned off: it stays as they had it, on */
+  const sv = window.SAVED_PREFS && typeof window.SAVED_PREFS === 'object' ? window.SAVED_PREFS : {}; prefsBase = JSON.parse(JSON.stringify(sv)); const won = (sv._t || 0) > (loc._t || 0) ? sv : loc; Object.assign(prefs, won); if (Object.keys(won).length && !('roster' in won)) prefs.roster = true;   /* settings saved before the list could be turned off: it stays as they had it, on */
   if ((+sv.shareUsageT || 0) > (+prefs.shareUsageT || 0)) { prefs.shareUsage = sv.shareUsage; prefs.shareUsageT = sv.shareUsageT; prefs.usageAsked = sv.usageAsked; } }   // the usage answer: the newest one, as the server keeps it (this origin's copy may hold an older one)
 const HAD_PREFS = !!prefs._t;   // someone who used the app before this page: shown once where the settings went
 if (!HAD_PREFS) prefs.menuTipSeen = true;   // a first visit: the menu was never anywhere else for this person, so the tip is not shown on the next visits either
@@ -524,7 +525,9 @@ let prefsTimer = null;
 let shareWas = prefs.shareUsage, updWas = prefs.updateNotice;   // the usage answer as last saved: when it changes, savePrefs dates it, and the server keeps the newest (another page may write older settings)
 let langKeep = null;   // ?lang=xx shows the page in that language for this visit only: the saved language stays the one the person chose
 const prefsOut = () => JSON.stringify(langKeep == null ? prefs : { ...prefs, lang: langKeep });
-const savePrefs = () => { prefs._t = Date.now(); if (prefs.shareUsage !== shareWas) { shareWas = prefs.shareUsage; prefs.shareUsageT = Date.now(); } if (prefs.updateNotice !== updWas) { updWas = prefs.updateNotice; prefs.updateNoticeT = Date.now(); } try { localStorage.setItem('cc.prefs', prefsOut()); } catch {} clearTimeout(prefsTimer); prefsTimer = setTimeout(() => { fetch('/api/prefs', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: prefsOut() }).catch(() => {}); }, 400); };
+const prefsPatch = () => { const now = JSON.parse(prefsOut()), set = {}, del = []; for (const k in now) if (JSON.stringify(now[k]) !== JSON.stringify(prefsBase[k])) set[k] = now[k]; for (const k in prefsBase) if (!(k in now)) del.push(k); prefsBase = now; return JSON.stringify({ _patch: { set, del } }); };   // what changed: the server merges it into the file
+const putPrefs = () => fetch('/api/prefs', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: prefsPatch() }).then((r) => { if (!r.ok) throw new Error(r.status); return r; }).catch((e) => { prefsBase = {}; throw e; });   // not saved: the next save sends everything again
+const savePrefs = () => { prefs._t = Date.now(); if (prefs.shareUsage !== shareWas) { shareWas = prefs.shareUsage; prefs.shareUsageT = Date.now(); } if (prefs.updateNotice !== updWas) { updWas = prefs.updateNotice; prefs.updateNoticeT = Date.now(); } try { localStorage.setItem('cc.prefs', prefsOut()); } catch {} clearTimeout(prefsTimer); prefsTimer = setTimeout(() => { putPrefs().catch(() => {}); }, 400); };
 // Languages: French and English live in the code as pairs L(french, english); every other language is a catalogue public/locales/<code>.json mapping the English text to its translation.
 // A missing string falls back to English, so a half-translated language still works. See public/locales/README.md to add one.
 const LANGS = [['en', 'English', 'en'], ['fr', 'Français', 'fr'], ['zh-TW', '繁體中文', 'zh-Hant-TW'], ['zh-CN', '简体中文', 'zh-Hans-CN'], ['es', 'Español', 'es'], ['de', 'Deutsch', 'de'], ['da', 'Dansk', 'da'], ['pt-BR', 'Português (Brasil)', 'pt-BR'], ['ja', '日本語', 'ja'], ['ko', '한국어', 'ko']];
@@ -570,7 +573,7 @@ const nameBook = {};   // agent id → unique first name within the session
 // typeof: the landing page reuses this section and has neither prefs nor APP
 const LEAD_NAME = 'Margot', cleanLead = (v) => Array.from(String(v == null ? '' : v).replace(/'/g, '’').replace(/[\u0000-\u001f\u007f-\u009f<>&"`\\]/g, '').replace(/\s+/g, ' ').trim()).slice(0, 24).join('').trim();
 const leadName = () => (typeof APP === 'object' && APP && cleanLead(APP.lead)) || (typeof prefs === 'object' && prefs && cleanLead(prefs.leadName)) || LEAD_NAME;
-const isLeadName = (n) => !!n && String(n).toLocaleLowerCase() === leadName().toLocaleLowerCase();   // whatever the capitals: Ivan and ivan would read as one agent
+const isLeadName = (n) => { const l = leadName().toLocaleLowerCase(), s = String(n || '').toLocaleLowerCase(); return !!n && (s === l || (s.startsWith(l + ' ') && /^\d+$/.test(s.slice(l.length + 1)))); };   // whatever the capitals: Ivan and ivan would read as one agent, and Ivan 2 as a fork of the lead
 function uniqueName(id, h) {
   if (nameBook[id]) return nameBook[id]; const taken = new Set(Object.values(nameBook).map((n) => n.toLocaleLowerCase())), n0 = taken.size; taken.add(leadName().toLocaleLowerCase());   // never the lead's own name: one may be chosen from this list
   for (let k = 0; k < NAMES.length; k++) { const n = NAMES[(h + k) % NAMES.length]; if (!taken.has(n.toLocaleLowerCase())) return (nameBook[id] = n); }
@@ -701,22 +704,22 @@ function renderFolder(el, mine) {   // one's own pictures: where they are, a but
   el.querySelectorAll('[data-rm]').forEach((b) => (b.onclick = async () => { await post('/api/characters/remove', { file: b.dataset.rm }); await reloadChars(); }));
   $('#charReload').onclick = () => reloadChars(); if ($('#charOpen')) $('#charOpen').onclick = () => window.parent.postMessage({ agentStandup: 'openCharacters' }, '*');
 }
-function packNote() {   // the Halloween pack, to someone without it, twice a season at most: one line in October (the vampire's before the 19th, to the vampire only; from the 19th, to everyone), one on the 30th or 31st if the first was 5 days before or more. Never on a first day, nor the first day the usage question shows (usagePending); shown, it stays until ✕ or the button, also after a reload that day
+function packNote() {   // the Halloween pack, to someone without it, twice a season at most: one line in October (the vampire's before the 19th, to the vampire only; from the 19th, to everyone), one on the 30th or 31st if the first was 3 days before or more. Never on a first day, nor the first day the usage question shows (usagePending); shown, it stays until ✕ or the button, also after a reload that day
   const d = new Date(), m = d.getMonth(), dd = d.getDate(), phase = dd >= 30 ? 2 : 1, seen = +prefs.packSeen || (prefs.vampSeen ? 1 : 0), el = $('#packNote'); if (!el) return;   // vampSeen: the vampire's line, closed in 1.33 to 1.38, counts as the first
-  const early = dd < 19 && CHARS.youFrom !== 'vampire', open = prefs.packOpen && prefs.packDay === utcDay(), due = !early && seen < phase && !askedToday('pack') && !firstDay() && !(usagePending() && (!prefs.usageDay || prefs.usageDay >= utcDay())) && $('#usageTip').style.display === 'none' && (!prefs.packDay || Date.parse(utcDay()) - Date.parse(prefs.packDay) >= 5 * 864e5);
+  const early = dd < 19 && CHARS.youFrom !== 'vampire', open = prefs.packOpen && prefs.packDay === utcDay(), due = !early && seen < phase && !askedToday('pack') && !firstDay() && !(usagePending() && (!prefs.usageDay || prefs.usageDay >= utcDay())) && $('#usageTip').style.display === 'none' && (!prefs.packDay || Date.parse(utcDay()) - Date.parse(prefs.packDay) >= 3 * 864e5);
   const on = m === 9 && (open || due) && !Q.get('demo') && !(SHOP.halloween && SHOP.halloween.n) && !voiceOffer.busy; el.style.display = on ? '' : 'none'; if (!on) return;   // busy: the voices are downloading, and their line says so
   if (due && !open) { prefs.packSeen = phase; prefs.packDay = utcDay(); prefs.packOpen = true; savePrefs(); } noteAsk('pack'); $('#vOffer').style.display = 'none';   // one offer at a time: the voices' line comes back when this one is closed
   const price = (SHOP.halloween && SHOP.halloween.price) || '2 €';
-  $('#packNoteT').textContent = dd === 31 ? L('Joyeux Halloween ! Vos agents peuvent venir à l’appel déguisés.', 'Happy Halloween! Your agents can come to the call in costume.') : dd === 30 ? L('Halloween, c’est demain : vos agents peuvent venir à l’appel déguisés.', 'Halloween is tomorrow: your agents can come to the call in costume.')
+  $('#packNoteT').textContent = dd === 31 ? L('Joyeux Halloween ! Vos agents ont sorti les citrouilles. Les costumes complets sont dans le pack, dessinés à la main.', 'Happy Halloween! Your agents brought pumpkins. The full costumes are in the pack, drawn by hand.') : dd === 30 ? L('Halloween, c’est demain : vos agents ont sorti les citrouilles. Les costumes complets sont dans le pack, dessinés à la main.', 'Halloween is tomorrow: your agents brought pumpkins. The full costumes are in the pack, drawn by hand.')
     : dd >= 19 ? L('Halloween approche : déguisez vos agents en citrouille, fantôme, sorcière ou squelette, dessinés à la main par Fabien Coupas.', 'Halloween is coming: dress your agents up as a pumpkin, a ghost, a witch or a skeleton, drawn by hand by Fabien Coupas.') : L('Pour Halloween, vous êtes le vampire. Le reste de l’équipe est dans le pack Halloween.', 'This Halloween, you are the vampire. The rest of the cast is in the Halloween pack.');
   $('#packNoteB').textContent = L('Voir le pack', 'See the pack') + ' · ' + price;
 }
 function persona(a) { const p = persona0(a); p.custom = customFor(p.twin ? 'main' : a.id); return p; }   // a fork wears the lead's own picture too
-const subName = (a, h) => (a.own && prefs.ownNames && !isLeadName(a.own) ? (nameBook[a.id] = a.own) : (!isLeadName(a.given) && a.given) || uniqueName(a.id, h));   // own: the name the person gave this agent (see ownName in server.js); otherwise a first name from the list. a.own is tested first: the landing page reuses this section and has no settings
+const subName = (a, h) => (a.own && prefs.ownNames && !isLeadName(a.own) ? (nameBook[a.id] = a.own) : ((a.twinN || !isLeadName(a.given)) && a.given) || uniqueName(a.id, h));   /* a fork is the one agent named after the lead */   // own: the name the person gave this agent (see ownName in server.js); otherwise a first name from the list. a.own is tested first: the landing page reuses this section and has no settings
 function renameAll(lead) {   // ⚙ → own names on or off, or a new name for the lead: every sub-agent is named again, in the order it arrived, as a reload would name them
   const names = () => Object.values(S.agents).map((p) => p.name).join('\n'), was = names();
   if (lead) for (const p of Object.values(S.agents)) if (p.id === 'main' || p.twinN) { const q = persona(p); p.name = q.name; p.given = q.given; }   // the lead and its forks first: the others then keep clear of the lead's name
-  for (const k in nameBook) delete nameBook[k]; for (const p of Object.values(S.agents)) if (p.id !== 'main' && p.id !== 'user' && !p.twinN) p.name = subName(p, hash(p.id));
+  for (const k in nameBook) delete nameBook[k]; for (const p of Object.values(S.agents)) if (p.id !== 'main' && p.id !== 'user') p.name = p.twinN && !(p.own && prefs.ownNames && !isLeadName(p.own)) ? p.given : subName(p, hash(p.id));   // a fork is the lead's twin unless it has a name of its own to keep
   if (!lead || names() !== was) { buildStage(); renderTokens(); renderCtx(); paintStatus(); renderLog(true); syncUI(); }   // the new tiles get their tokens and context at once, not at the next usage
 }
 function persona0(a) {
@@ -787,6 +790,8 @@ const ACC = [
   (t, c) => `<g transform="translate(60 ${t + 3}) rotate(14)"><path d="M0 0L-9-5V5z" fill="${c}"/><path d="M0 0L9-5V5z" fill="${c}"/><circle r="2.6" fill="${mix(c, '#000000', .18)}"/></g>`,
   (t, c) => `<path d="M44 ${t + 2}L40 ${t - 8}M56 ${t + 2}L60 ${t - 8}" stroke="#2c2f40" stroke-width="1.2" stroke-linecap="round"/><circle cx="40" cy="${t - 9}" r="2.4" fill="${c}"/><circle cx="60" cy="${t - 9}" r="2.4" fill="${c}"/>`,
 ];
+const pumpkinDay = () => { const d = new Date(); return d.getMonth() === 9 && d.getDate() >= 30; };   // Halloween and its eve: the drawn characters bring a pumpkin (mine, not the pack's art)
+const pumpkin = (x) => `<g class="pumpkin"><ellipse cx="${x}" cy="58.3" rx="6.2" ry="4.4" fill="#f28c28"/><path d="M${x - 2.3} 54.2q-1.7 4.1 0 8.3M${x + 2.3} 54.2q1.7 4.1 0 8.3" fill="none" stroke="#c8650f" stroke-width=".7"/><path d="M${x} 54.3q.2-2 1.7-2.7" fill="none" stroke="#4f8a3a" stroke-width="1.3" stroke-linecap="round"/><path d="M${x - 3.5} 57.7l1.3-2 1.3 2zM${x + .9} 57.7l1.3-2 1.3 2z" fill="#ffd84a"/><path d="M${x - 3.3} 59.5q3.3 2.5 6.6 0l-1 1.5-1.1-.8-1.1.9-1.1-.9-1.1.8z" fill="#ffd84a"/></g>`;
 function avatarSVG(p, o, uid = '') {   // uid keeps SVG ids unique per instance: duplicate ids made gradients vanish when the first copy was in a hidden element
   const st = !!o, sh = SHAPES[p.shape], fy = sh.fy, top = sh.top, bot = p.shape === 4, c = p.shirt, c1 = mix(c, '#ffffff', .3), c2 = mix(c, '#000000', .2);
   const ink = bot ? '#8ff0ff' : '#2a2233', gid = uid + 'b' + p.gid, sc = SCENES[p.scene], eg = EYES[p.eye], ex = p.shape === 1 ? [43, 57] : [41.5, 58.5];
@@ -806,7 +811,7 @@ function avatarSVG(p, o, uid = '') {   // uid keeps SVG ids unique per instance:
   const arm = (side) => `<g class="arm ${side}"><ellipse cx="${side === 'l' ? 25 : 75}" cy="56" rx="4.6" ry="9" fill="${c2}" transform="rotate(${side === 'l' ? 12 : -12} ${side === 'l' ? 25 : 75} 56)"/></g>`;
   const prop = [`<path d="M11 62.4l1.6-7.4h7.2l1.6 7.4z" fill="#e07a5f"/><path d="M16 55q-6-8-2-12q5 4 2 12z" fill="#3fbf7f"/><path d="M16 55q6-7 10-5q-1 6-10 5z" fill="#53c98a"/>`,
     `<rect x="79" y="55.6" width="7.4" height="6.8" rx="1.6" fill="#f6f2ea"/><path d="M86.2 57q3.2 0 3.2 2.2t-3.2 2.2" fill="none" stroke="#f6f2ea" stroke-width="1.3"/><g class="steam" fill="none" stroke="#fff" stroke-width=".8" stroke-linecap="round" opacity=".7"><path d="M81.5 53q-1.4-1.8 0-3.4M84.3 53q-1.4-1.8 0-3.4"/></g>`,
-    `<rect x="76" y="58.2" width="14" height="4.2" rx="1" fill="#ff7a6b"/><rect x="77.5" y="54.4" width="12" height="3.8" rx="1" fill="#4cc3ff"/><rect x="76.5" y="50.8" width="11" height="3.6" rx="1" fill="#ffd84a"/>`][p.prop];
+    `<rect x="76" y="58.2" width="14" height="4.2" rx="1" fill="#ff7a6b"/><rect x="77.5" y="54.4" width="12" height="3.8" rx="1" fill="#4cc3ff"/><rect x="76.5" y="50.8" width="11" height="3.6" rx="1" fill="#ffd84a"/>`][p.prop] + (pumpkinDay() ? pumpkin(p.prop === 0 ? 83 : 17) : '');   /* on the 30th and 31st of October, a carved pumpkin on the other side of the desk */
   const lap = `<rect x="33" y="46" width="34" height="18" rx="2.8" fill="#d3d8e6"/><rect x="33" y="46" width="34" height="18" rx="2.8" fill="url(#${uid}lg)" opacity=".5"/><circle cx="50" cy="55" r="2.3" fill="${c1}"/><rect x="29.5" y="63.4" width="41" height="3" rx="1.5" fill="#aab1c2"/>`;
   const lapDark = `<rect x="33" y="46" width="34" height="18" rx="2.8" fill="#3b4152"/><rect x="33" y="46" width="34" height="18" rx="2.8" fill="url(#${uid}lg)" opacity=".18"/><circle cx="50" cy="55" r="2.3" fill="${c1}"/><rect x="29.5" y="63.4" width="41" height="3" rx="1.5" fill="#262a36"/>`;   // for custom characters: darker, so it still shows under a white or cream sprite
   const hands = `<circle class="hand l" cx="38" cy="65.6" r="3.1" fill="${c2}"/><circle class="hand r" cx="62" cy="65.6" r="3.1" fill="${c2}"/>`;
@@ -2282,6 +2287,7 @@ const IDLE = {
       ['✓', 'Écrit « s’il te plaît » dans un prompt', '1 s', 'au cas où', 'Rester poli avec nos futurs maîtres'], ['✗', 'Cherché quelque chose à faire', '9 min', 'le backlog', 'Le backlog est vide. Les agents l’ont vidé.']] },
 };
 const shuffle = (a) => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+const costumeHtml = () => (CHARS.youFrom === 'vampire' && SHOP.halloween && !SHOP.halloween.n ? `<h3>${esc(L('Costume', 'Costume'))}</h3><div>${esc(L('Votre vampire vient du pack Halloween, dessiné à la main par Fabien Coupas. Le reste de l’équipe y est aussi.', 'Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.'))}</div><button class="btn" data-hwpack style="margin:6px 0 2px">🎃 ${esc(L('Voir le pack', 'See the pack'))} · ${esc(SHOP.halloween.price || '2 €')}</button>` : '');   // in the panel you open on yourself: information, not an ask
 function idleHtml() {   // the human's Tools and Recent activity, made up: 5 to 7 tools, 6 to 8 moments
   const I = FR() ? IDLE.fr : IDLE.en, tools = shuffle(I.tools).slice(0, 5 + Math.floor(Math.random() * 3)).map((n) => [n, 1 + Math.floor(Math.random() * (/Ctrl|Coffee|Café|Slack|Sigh|Soupirer/.test(n) ? 40 : 9))]);
   return `<h3>${L('Outils', 'Tools')} (${tools.reduce((a, t) => a + t[1], 0)})</h3><div>${tools.map(([n, c]) => `${esc(n)} ×${c}`).join(' · ')}</div>` +
@@ -2293,9 +2299,10 @@ function renderDetail() {
   const counts = {}; tools.forEach((t) => (counts[t.name] = (counts[t.name] || 0) + 1));
   const u = S.usage[id], tokHtml = u && tokTotal(u) ? `<h3>${L('Jetons', 'Tokens')} · ⚡ ${fmtTok(tokTotal(u))}</h3><div class="dim">${L('entrée', 'input')} ${fmtTok(u.i)} · ${L('sortie', 'output')} ${fmtTok(u.o)} · ${L('écriture cache', 'cache write')} ${fmtTok(u.w)} · ${L('lecture cache', 'cache read')} ${fmtTok(u.r)}${modelShort(S.model[id]) ? ` · ${L('Modèle', 'Model')} ${esc(S.model[id])}${esc(effortOf(id))}${advisorOf(id) ? ' · ' + esc(advisorOf(id)) : ''}` : ''}</div>` : '';
   $('#dbody').innerHTML = tokHtml + (order ? `<h3>${L('Consigne de', 'Prompt from')} ${esc(nameOf(order.agent))}</h3><pre>${esc(order.text)}</pre>` : '') +
-    (id === 'user' ? (S.idleHtml = (S.idleFor === S.detailOpen && S.idleHtml) || idleHtml(), S.idleFor = S.detailOpen, S.idleHtml) : `<h3>${L('Outils', 'Tools')} (${tools.length})</h3><div>${Object.entries(counts).map(([n, c]) => `${esc(n)} ×${c}`).join(' · ') || '—'}</div>` +
+    (id === 'user' ? costumeHtml() + (S.idleHtml = (S.idleFor === S.detailOpen && S.idleHtml) || idleHtml(), S.idleFor = S.detailOpen, S.idleHtml) : `<h3>${L('Outils', 'Tools')} (${tools.length})</h3><div>${Object.entries(counts).map(([n, c]) => `${esc(n)} ×${c}`).join(' · ') || '—'}</div>` +
     `<h3>${L('Activité récente', 'Recent activity')}</h3>` + (S.term[id] || []).slice(-30).reverse().map((e) => `<details><summary>${e.end == null ? '⠋' : e.err ? '✗' : '✓'} ${esc(e.tool.name)} <span class="dim">${e.end != null ? fmtDur(e.end - e.ts) : L('en cours', 'running')}</span> — ${esc((e.tool.arg || '').slice(-60))}</summary><pre>${esc((e.tool.d && e.tool.d.kind === 'cmd' ? '$ ' + e.tool.d.text + '\n' : '') + (e.out || ''))}</pre>${e.img && S.cur ? `<img class="dimg" src="${esc(mediaUrl(id, e.id, 0))}" alt="" loading="lazy">` : ''}</details>`).join('')) +
     evs.filter((e) => e.agent === id && (e.kind === 'say' || e.kind === 'report')).map((e) => `<h3>${e.kind === 'report' ? L('Rapport final', 'Final report') : L('A dit', 'Said')}</h3><pre>${esc(e.text)}</pre>`).join('');
+  const hw = $('#dbody [data-hwpack]'); if (hw) hw.onclick = () => { CHPICK.more = 'halloween'; openChars(); };
 }
 $('#dclose').onclick = () => { S.detail = null; $('#detail').classList.remove('on'); };
 
@@ -2387,7 +2394,7 @@ document.addEventListener('visibilitychange', coffeeDay); setInterval(coffeeDay,
 // it? "Count me in" turns prefs.shareUsage on; then, each time the call is opened, the server sends at most one empty request a week (server.js, usageWeek). Any other answer leaves it
 // off and it is not asked again; ⚙ › All settings turns it on or off. Never asked, and nothing sent, with DO_NOT_TRACK set (APP.track), in a demo or embedded.
 const USAGE_ASKS = ['desktop', 'cli', 'plugin'].includes(APP.kind) && APP.track !== false && !EMBED && !Q.get('demo');
-function usageOpened(fresh) { if (USAGE_ASKS && prefs.shareUsage === true && !document.hidden) (fresh ? fetch('/api/prefs', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: prefsOut() }) : Promise.resolve()).then(() => fetch('/api/usage', { method: 'POST' })).catch(() => {}); }   /* the server sends it once a week at most, and only once the settings file says yes: fresh, just answered, writes it there first (savePrefs waits 400 ms) */
+function usageOpened(fresh) { if (USAGE_ASKS && prefs.shareUsage === true && !document.hidden) (fresh ? putPrefs() : Promise.resolve()).then(() => fetch('/api/usage', { method: 'POST' })).catch(() => {}); }   /* the server sends it once a week at most, and only once the settings file says yes: fresh, just answered, writes it there first (savePrefs waits 400 ms) */
 function usagePending() { return USAGE_ASKS && !prefs.usageAsked && prefs.shareUsage !== true; }   // the usage question, not answered yet: it has its first day to itself, then takes turns with the Halloween pack's line
 function usageStart() {
   if (!USAGE_ASKS) return; $('#mShare').style.display = ''; usageOpened();
@@ -2890,7 +2897,7 @@ const niceProj = (p) => (p === '_demo' ? '' : p === '_codex' ? 'Codex' : p === '
 async function fillProjects() {   // live view: follow the latest activity anywhere, or pin one project
   const sel = $('#liveProj'); let rows = []; try { rows = await (await fetch('/api/projects')).json(); } catch {}
   sel.innerHTML = `<option value="">${L('Tous les projets (le plus récent)', 'All projects (most recent)')}</option>` + rows.map((r) => `<option value="${esc(r.proj)}">${esc(niceProj(r.proj))}</option>`).join('');
-  sel.value = prefs.proj && rows.some((r) => r.proj === prefs.proj) ? prefs.proj : ''; sel.style.display = rows.length > 1 ? '' : 'none';
+  sel.value = prefs.proj && rows.some((r) => r.proj === prefs.proj) ? prefs.proj : ''; $('#liveProjBox').style.display = rows.length > 1 ? 'block' : 'none';   // with its label: a list alone did not say what it chooses
 }
 $('#liveProj').onchange = () => { Q.delete('proj'); prefs.proj = $('#liveProj').value; S.pick = null; savePrefs(); S.cur = null; followCurrent(); };
 async function followCurrent() {
@@ -3143,7 +3150,7 @@ async function setMode(m) {
   document.querySelectorAll('#modeSeg button').forEach((b) => b.classList.toggle('on', b.dataset.m === m)); $('#sessions').style.display = live ? 'none' : '';
   S.cur = null; syncUI();
   if (live) { S.since = 0; fillProjects(); await followCurrent(); return; }
-  $('#liveProj').style.display = 'none';
+  $('#liveProjBox').style.display = 'none';
   const rows = await (await fetch('/api/sessions')).json();
   $('#sessions').innerHTML = rows.map((r) => { const d = new Date(r.mtime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     return `<option value="${esc(r.proj)}|${esc(r.id)}" data-title="${esc(r.title)}">${r.agents ? '👥' + r.agents + ' · ' : ''}${esc(r.title.slice(0, 40))} (${d})</option>`; }).join('');
@@ -3317,7 +3324,7 @@ const PANEL_KEYS = ['office', 'officeVol', 'music', 'station', 'musicVol', 'voic
 $('#prefsReset').onclick = async () => {
   const b = $('#prefsReset'); if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = L('Cliquez encore pour tout remettre', 'Click again to reset them all'); setTimeout(() => { b.classList.remove('sure'); b.textContent = L('Réglages par défaut', 'Reset to defaults'); }, 4000); return; }   // two clicks: nothing is lost by a stray one
   for (const k of PANEL_KEYS) { if (k in PREF_DEFAULTS) prefs[k] = PREF_DEFAULTS[k]; else delete prefs[k]; } delete prefs.notifyChosen;   // notifyChosen too: the default of notifications is decided at start-up from it
-  prefs._t = Date.now(); try { localStorage.setItem('cc.prefs', prefsOut()); } catch {} try { await fetch('/api/prefs', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: prefsOut() }); } catch {}
+  prefs._t = Date.now(); try { localStorage.setItem('cc.prefs', prefsOut()); } catch {} try { await putPrefs(); } catch {}
   location.reload();   // every part of the page starts again from them
 };
 function menuTip() {   // once, to someone who used the app before: where the settings went. Gone with its button, or as soon as the menu is opened

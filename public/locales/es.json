@@ -388,8 +388,8 @@
  "Privacy policy": "Política de privacidad",
  "Help count users (1 request a week)": "Ayudar a contar usuarios (1 petición por semana)",
  "Halloween is coming: dress your agents up as a pumpkin, a ghost, a witch or a skeleton, drawn by hand by Fabien Coupas.": "Se acerca Halloween: disfraza a tus agentes de calabaza, fantasma, bruja o esqueleto, dibujados a mano por Fabien Coupas.",
- "Happy Halloween! Your agents can come to the call in costume.": "¡Feliz Halloween! Tus agentes pueden venir disfrazados a la llamada.",
- "Halloween is tomorrow: your agents can come to the call in costume.": "Mañana es Halloween: tus agentes pueden venir disfrazados a la llamada.",
+ "Happy Halloween! Your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "¡Feliz Halloween! Tus agentes han traído calabazas. Los disfraces completos están en el pack, dibujados a mano.",
+ "Halloween is tomorrow: your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "Mañana es Halloween: tus agentes han traído calabazas. Los disfraces completos están en el pack, dibujados a mano.",
  "advised by": "asesorado por",
  "At least: work went on after it last counted.": "Como mínimo: el trabajo continuó después de su último recuento.",
  "cost": "coste",
@@ -428,5 +428,7 @@
  "Why?": "¿Por qué?",
  "Remove CLAUDE_CODE_SKIP_PROMPT_HISTORY from your shell profile, then start Claude Code again.": "Quita CLAUDE_CODE_SKIP_PROMPT_HISTORY de tu perfil de shell y vuelve a iniciar Claude Code.",
  "Lead agent name": "Nombre del agente principal",
- "Set in the editor’s settings (agentStandup.leadName)": "Elegido en los ajustes del editor (agentStandup.leadName)"
+ "Set in the editor’s settings (agentStandup.leadName)": "Elegido en los ajustes del editor (agentStandup.leadName)",
+ "Costume": "Disfraz",
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Tu vampiro viene del pack de Halloween, dibujado a mano por Fabien Coupas. El resto del reparto también está en él."
 }

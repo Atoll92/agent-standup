@@ -388,8 +388,8 @@
  "Privacy policy": "隱私權政策",
  "Help count users (1 request a week)": "幫忙統計使用者（每週 1 次請求）",
  "Halloween is coming: dress your agents up as a pumpkin, a ghost, a witch or a skeleton, drawn by hand by Fabien Coupas.": "萬聖節快到了：把你的智慧體打扮成南瓜、幽靈、女巫或骷髏，皆由 Fabien Coupas 手繪。",
- "Happy Halloween! Your agents can come to the call in costume.": "萬聖節快樂！你的智慧體可以穿著裝扮來開會。",
- "Halloween is tomorrow: your agents can come to the call in costume.": "明天就是萬聖節：你的智慧體可以穿著裝扮來開會。",
+ "Happy Halloween! Your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "萬聖節快樂！你的智能體帶來了南瓜。完整的裝扮在手繪禮包裡。",
+ "Halloween is tomorrow: your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "明天就是萬聖節：你的智能體帶來了南瓜。完整的裝扮在手繪禮包裡。",
  "advised by": "顧問",
  "At least: work went on after it last counted.": "這是最低值：上次統計之後工作仍在繼續。",
  "cost": "費用",
@@ -428,5 +428,7 @@
  "Why?": "為什麼？",
  "Remove CLAUDE_CODE_SKIP_PROMPT_HISTORY from your shell profile, then start Claude Code again.": "從你的 shell 設定檔中移除 CLAUDE_CODE_SKIP_PROMPT_HISTORY，然後重新啟動 Claude Code。",
  "Lead agent name": "主代理的名字",
- "Set in the editor’s settings (agentStandup.leadName)": "已在編輯器設定中指定（agentStandup.leadName）"
+ "Set in the editor’s settings (agentStandup.leadName)": "已在編輯器設定中指定（agentStandup.leadName）",
+ "Costume": "裝扮",
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "你的吸血鬼來自萬聖節禮包，由 Fabien Coupas 手繪。其餘角色也在禮包裡。"
 }

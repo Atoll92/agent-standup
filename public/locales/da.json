@@ -387,8 +387,8 @@
  "Privacy policy": "Privatlivspolitik",
  "Help count users (1 request a week)": "Hjælp med at tælle brugere (1 forespørgsel om ugen)",
  "Halloween is coming: dress your agents up as a pumpkin, a ghost, a witch or a skeleton, drawn by hand by Fabien Coupas.": "Halloween nærmer sig: klæd dine agenter ud som græskar, spøgelse, heks eller skelet, tegnet i hånden af Fabien Coupas.",
- "Happy Halloween! Your agents can come to the call in costume.": "Glædelig Halloween! Dine agenter kan komme til opkaldet i kostume.",
- "Halloween is tomorrow: your agents can come to the call in costume.": "Det er Halloween i morgen: dine agenter kan komme til opkaldet i kostume.",
+ "Happy Halloween! Your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "Glædelig halloween! Dine agenter har taget græskar med. De hele kostumer er i pakken, tegnet i hånden.",
+ "Halloween is tomorrow: your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "Det er halloween i morgen: dine agenter har taget græskar med. De hele kostumer er i pakken, tegnet i hånden.",
  "advised by": "rådgivet af",
  "At least: work went on after it last counted.": "Mindst: arbejdet fortsatte efter den sidste optælling.",
  "cost": "omkostning",
@@ -427,5 +427,7 @@
  "Why?": "Hvorfor?",
  "Remove CLAUDE_CODE_SKIP_PROMPT_HISTORY from your shell profile, then start Claude Code again.": "Fjern CLAUDE_CODE_SKIP_PROMPT_HISTORY fra din shell-profil, og start derefter Claude Code igen.",
  "Lead agent name": "Lederagentens navn",
- "Set in the editor’s settings (agentStandup.leadName)": "Valgt i editorens indstillinger (agentStandup.leadName)"
+ "Set in the editor’s settings (agentStandup.leadName)": "Valgt i editorens indstillinger (agentStandup.leadName)",
+ "Costume": "Kostume",
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Din vampyr kommer fra halloween-pakken, tegnet i hånden af Fabien Coupas. Resten af holdet er også med."
 }

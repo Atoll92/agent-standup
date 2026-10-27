@@ -388,8 +388,8 @@
  "Privacy policy": "Política de privacidade",
  "Help count users (1 request a week)": "Ajudar a contar usuários (1 solicitação por semana)",
  "Halloween is coming: dress your agents up as a pumpkin, a ghost, a witch or a skeleton, drawn by hand by Fabien Coupas.": "O Halloween está chegando: fantasie seus agentes de abóbora, fantasma, bruxa ou esqueleto, desenhados à mão por Fabien Coupas.",
- "Happy Halloween! Your agents can come to the call in costume.": "Feliz Halloween! Seus agentes podem vir fantasiados para a chamada.",
- "Halloween is tomorrow: your agents can come to the call in costume.": "Amanhã é Halloween: seus agentes podem vir fantasiados para a chamada.",
+ "Happy Halloween! Your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "Feliz Halloween! Seus agentes trouxeram abóboras. As fantasias completas estão no pacote, desenhadas à mão.",
+ "Halloween is tomorrow: your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "Amanhã é Halloween: seus agentes trouxeram abóboras. As fantasias completas estão no pacote, desenhadas à mão.",
  "advised by": "aconselhado por",
  "At least: work went on after it last counted.": "No mínimo: o trabalho continuou depois da última contagem.",
  "cost": "custo",
@@ -428,5 +428,7 @@
  "Why?": "Por quê?",
  "Remove CLAUDE_CODE_SKIP_PROMPT_HISTORY from your shell profile, then start Claude Code again.": "Remova CLAUDE_CODE_SKIP_PROMPT_HISTORY do seu perfil do shell e inicie o Claude Code de novo.",
  "Lead agent name": "Nome do agente principal",
- "Set in the editor’s settings (agentStandup.leadName)": "Definido nas configurações do editor (agentStandup.leadName)"
+ "Set in the editor’s settings (agentStandup.leadName)": "Definido nas configurações do editor (agentStandup.leadName)",
+ "Costume": "Fantasia",
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Seu vampiro vem do pacote de Halloween, desenhado à mão por Fabien Coupas. O resto do elenco também está nele."
 }

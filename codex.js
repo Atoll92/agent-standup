@@ -230,7 +230,7 @@ function zNext() {   // one file at a time
   src.pipe(z);
 }
 let made = null;   // the record reader server.js made with parser(): a compressed thread goes through it here, whole
-const zStates = new Map();   // compressed file → { sig, st }: the events of the last two threads read
+const zStates = new Map();   // compressed file and agent → { sig, st, size }: the events of the threads read last; a call with several compressed workers keeps them all, within about 64 MB of compressed files
 function state(id, agent = 'main') {   // null: a plain file, which server.js reads line by line itself
   const r = row(id); if (!r || !r.zst || !made) return null;
   const sig = r.mtime + ':' + r.size, key = r.file + ':' + agent, hit = zStates.get(key); if (hit && hit.sig === sig) { zStates.delete(key); zStates.set(key, hit); return hit.st; }
@@ -241,7 +241,8 @@ function state(id, agent = 'main') {   // null: a plain file, which server.js re
     if (nl > at) { let j = null; try { j = JSON.parse(buf.toString('utf8', at, nl)); } catch {} if (j && typeof j === 'object') { try { made(st, j); } catch {} } }   // one odd record must not take the whole timeline down
     at = nl + 1;
   }
-  zStates.set(key, { sig, st }); while (zStates.size > 2) zStates.delete(zStates.keys().next().value);
+  zStates.set(key, { sig, st, size: r.size }); let total = 0; for (const v of zStates.values()) total += v.size || 0;
+  while (zStates.size > 2 && (zStates.size > 12 || total > 64 * 1024 * 1024)) { const k0 = zStates.keys().next().value; total -= zStates.get(k0).size || 0; zStates.delete(k0); }
   return st;
 }
 
@@ -260,7 +261,7 @@ function parser({ toolLabel, clip, clipOut = clip, testsOf = () => null, diffOf 
   };
   const NO_RESULT = new Set(['TodoWrite']);
   return (made = function record(st, r) {
-    if (r.type === 'session_meta') { const h = headOf(JSON.stringify(r)); if (st.agent !== 'main' && h.parent) st.birth = h.born; return; }
+    if (r.type === 'session_meta') { const h = headOf(JSON.stringify(r)); if (st.agent !== 'main' && h.parent && !st.birth) st.birth = h.born; return; }   // the child's own first line: a fork of a fork may carry its parent's session_meta further down
     if (r.type !== 'event_msg' && r.type !== 'response_item' && r.type !== 'turn_context' && r.type !== 'compacted') return;
     if (st.birth && Date.parse(r.timestamp) < st.birth) return;   // a fork may include its parent's earlier history: it is not work this child did
     const agent = st.agent, p = r.payload && typeof r.payload === 'object' ? r.payload : {}, cx = st.cx || (st.cx = { items: false, model: '', n: 0, tot: null, last: 0, userAt: -1 });
@@ -268,7 +269,7 @@ function parser({ toolLabel, clip, clipOut = clip, testsOf = () => null, diffOf 
     const push = (e) => { e.k = agent + ':' + st.raw.length; st.raw.push(e); if (e.ts > cx.last) cx.last = e.ts; return e; };
     const th = () => { const t = st.th; st.th = ''; return t ? { th: t } : {}; };
     const say = (text, final) => { const t = String(text == null ? '' : text).trim(); if (!t) return; const e = push({ ts, agent, kind: 'say', text: t, ...th() }); st.act = st.raw.length - 1; if (final && agent === 'main') e.end = 1; };
-    const user = (text, img, iid) => { const t = typed(text); if (!t) return; if (agent !== 'main') { if (!st.prompt && !/^gAAAAA[\w=-]+$/.test(t)) st.prompt = { ts, text: t }; return; } push({ ts, agent: 'user', kind: 'user', text: t, ...(img > 0 && typeof iid === 'string' && /^[\w.\-]{6,200}$/.test(iid) ? { img, iid } : {}) }); cx.userAt = st.raw.length - 1; };
+    const user = (text, img, iid) => { const t = typed(text); if (!t) return; if (agent !== 'main') { if (!/^gAAAAA[\w=-]+$/.test(t)) { if (!st.prompt) st.prompt = { ts, text: t }; else (st.prompts || (st.prompts = [])).push({ ts, text: t }); } return; } push({ ts, agent: 'user', kind: 'user', text: t, ...(img > 0 && typeof iid === 'string' && /^[\w.\-]{6,200}$/.test(iid) ? { img, iid } : {}) }); cx.userAt = st.raw.length - 1; };
     const call = (id, name, input, at) => { const when = Math.max(Math.min(at || ts, ts), cx.last); st.toolName[id] = name; push({ ts: when, agent, kind: 'tool', tool: toolLabel({ id, name, input: input || {} }, when), ...th() }); st.act = st.raw.length - 1; };   // a command is placed when it started, never before what the file already said
     const result = (id, out, err, more) => { const n = st.toolName[id]; if (!n || NO_RESULT.has(n)) return; push({ ts, agent, kind: 'results', items: [{ id, err: !!err, out: clipOut(String(out == null ? '' : out).trimEnd(), resultMax[n] || (/^mcp__/.test(n) ? 900 : 600)), ...more }] }); };   // more: what else the screen shows of it (img, tests, diff, search)
     const views = () => { const v = cx.views || []; cx.views = []; return v; };   // the pictures looked at (ImageView) whose output has not come yet

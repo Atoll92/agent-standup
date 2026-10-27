@@ -89,6 +89,7 @@
  "Copy as Markdown": "Copy as Markdown",
  "Copy failed": "Copy failed",
  "cost": "cost",
+ "Costume": "Costume",
  "Could not open the folder": "Could not open the folder",
  "Count me in": "Count me in",
  "Counted by Claude Code, sub-agents included": "Counted by Claude Code, sub-agents included",
@@ -144,11 +145,11 @@
  "Good-quality local voices, in this language and in English. Free, nothing leaves your machine.": "Good-quality local voices, in this language and in English. Free, nothing leaves your machine.",
  "Got it": "Got it",
  "Halloween is coming: dress your agents up as a pumpkin, a ghost, a witch or a skeleton, drawn by hand by Fabien Coupas.": "Halloween is coming: dress your agents up as a pumpkin, a ghost, a witch or a skeleton, drawn by hand by Fabien Coupas.",
- "Halloween is tomorrow: your agents can come to the call in costume.": "Halloween is tomorrow: your agents can come to the call in costume.",
+ "Halloween is tomorrow: your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "Halloween is tomorrow: your agents brought pumpkins. The full costumes are in the pack, drawn by hand.",
  "Halloween pack": "Halloween pack",
  "Hand-drawn Halloween characters, each in its own room.": "Hand-drawn Halloween characters, each in its own room.",
  "Hand-drawn, each in its own room": "Hand-drawn, each in its own room",
- "Happy Halloween! Your agents can come to the call in costume.": "Happy Halloween! Your agents can come to the call in costume.",
+ "Happy Halloween! Your agents brought pumpkins. The full costumes are in the pack, drawn by hand.": "Happy Halloween! Your agents brought pumpkins. The full costumes are in the pack, drawn by hand.",
  "has a question for you": "has a question for you",
  "has several questions for you": "has several questions for you",
  "Help count how many people use Agent Standup? When you open the call, at most once a week, the app would load an empty 1-pixel file from GitHub: no identifier, nothing about you or your sessions. GitHub sees your IP address, as with any download. You can turn it off any time in ⚙ › All settings.": "Help count how many people use Agent Standup? When you open the call, at most once a week, the app would load an empty 1-pixel file from GitHub: no identifier, nothing about you or your sessions. GitHub sees your IP address, as with any download. You can turn it off any time in ⚙ › All settings.",
@@ -423,5 +424,6 @@
  "Your purchase code, to install the pack on another computer:": "Your purchase code, to install the pack on another computer:",
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "Your settings moved: the everyday ones are here, the rest in “All settings”.",
  "your turn": "your turn",
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.",
  "Yours": "Yours"
 }
