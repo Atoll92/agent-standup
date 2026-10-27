@@ -57,9 +57,15 @@ test('project lead names: folders, windows, switching and fallback', { skip: mis
     assert.match(await c.page.$eval('#roster', (el) => el.textContent), /Nova/);
   });
 
-  await t.test('live and replay switching use the actual folder, including two projects in each provider bucket', async () => {
+  await t.test('live and replay switching use the actual folder, including two projects in each provider bucket', async (t) => {
+    t.after(async () => {   // later name-editing tests need project A even if a switching assertion fails
+      await c.page.evaluate(() => setMode('replay'));
+      await c.page.select('#sessions', a.proj + '|s'); await c.until((proj) => S.cur && S.cur.proj === proj && S.cur.id === 's', a.proj);
+    });
     await c.page.evaluate(() => { openPrefs(document.querySelector('#projectLeadBox')); document.querySelector('#projectLeadName').focus(); });
     await c.page.evaluate(({ proj }) => { Q.delete('proj'); return openSession(proj, 's'); }, b);
+    // A concurrent poll can supersede openSession's load and finish after its promise resolves.
+    await c.until((proj) => S.cur && S.cur.proj === proj && S.cur.id === 's', b.proj);
     assert.equal(await c.page.evaluate(() => document.querySelector('#projectLeadName').value), 'Orion', 'switching replaces a focused field from the old project');
     assert.deepEqual(await named(c), ['Orion', 'Orion 2', 'Orion']);
     await c.page.evaluate(() => setMode('replay'));
@@ -67,7 +73,6 @@ test('project lead names: folders, windows, switching and fallback', { skip: mis
       await c.page.select('#sessions', proj + '|' + id); await c.until(({ proj, id }) => S.cur && S.cur.proj === proj && S.cur.id === id, { proj, id });
       assert.equal(await c.page.evaluate(() => S.agents.main.name), want, proj + '/' + id);
     }
-    await c.page.select('#sessions', a.proj + '|s'); await c.until((proj) => S.cur.proj === proj, a.proj);
   });
 
   await t.test('project names retain sanitization, Unicode, fork and collision rules', async () => {
