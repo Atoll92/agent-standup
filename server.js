@@ -967,6 +967,7 @@ function readNew(file, agent, journal, record = parseRecord) {
   return st;
 }
 function parseRecord(st, r) {
+  if (!st.cwd && typeof r.cwd === 'string' && r.cwd) st.cwd = r.cwd;   // the folder the session started in; later cd records do not change its project
   const agent = st.agent, ts = Date.parse(r.timestamp) || 0, push = (e) => { e.k = agent + ':' + st.raw.length; st.raw.push(e); return e; };   // k: the event's key in the live feed = whose file + its rank in it. A file is only ever appended to, so the rank never changes (and when it is not, the whole file is read again under a new number, see readNew)
   if (ts > (st.lastTs || 0)) st.lastTs = ts;
   if (st.journal) { if (r.type === 'result' && r.agentId) push({ ts: 0, agent, kind: 'wfdone', child: String(r.agentId).replace(/[^\w.-]/g, '_') }); return; }   // a workflow's journal: one line when an agent starts, one when it hands its result back (no time on them)
@@ -1046,6 +1047,16 @@ function readMeta(f) {
   try { const mt = fs.statSync(f).mtimeMs, c = metaCache.get(f); if (c && c.mtime === mt) return c.value; const v = JSON.parse(fs.readFileSync(f, 'utf8')); if (metaCache.size > 3000) metaCache.clear(); metaCache.set(f, { mtime: mt, value: v }); return v; } catch { return {}; }
 }
 
+// The actual project behind a session, not the provider bucket (_codex, _vibe).
+// Keep the full folder: dashed project keys cannot distinguish app/old from app-old.
+function leadProject(proj, id, recordedCwd) {
+  const sx = sourceOf(proj), cwd = sx ? guard(() => sx.cwd(id), '') : recordedCwd;
+  // Cowork's folders live in separate VMs: identical cwd strings there need not be one project.
+  if (proj === COWORK) return { key: 'cowork:' + projDir(proj, id), label: cwd || coworkTitle(proj, id) || id };
+  if (cwd) return { key: 'cwd:' + foldKey(path.normalize(cwd)), label: cwd };
+  return sx ? null : { key: 'claude:' + proj, label: proj };   // older Claude transcripts without cwd still have a project folder; an unknown provider folder has no override
+}
+
 function buildTimeline(proj, id, files = []) {
   const sx = sourceOf(proj), rec = recordOf(sx), base = projDir(proj, id), mainFile = sx ? sx.fileOf(id) || '' : path.join(base, id + '.jsonl');   // source readers supply their own session and child files; the timeline and page are shared
   if (!fs.existsSync(mainFile)) throw new Error('session not found');
@@ -1114,7 +1125,7 @@ function buildTimeline(proj, id, files = []) {
   const real = merged.find((e) => e.kind !== 'usage' && e.kind !== 'finish' && e.kind !== 'compact' && e.kind !== 'tasks'), first = real ? real.ts : 0, last = merged.length ? merged[merged.length - 1].ts : 0;   // time zero = the first thing said or done
   const marks = !sx && states[0] && (states[0].stops || !states[0].lead) ? { marks: 1 } : {};   // a Claude Code session whose turns end with a mark, also before the lead has written anything: a session that has not closed a turn yet is not one without marks, and its lead is not "done" each time it thinks for a while
   const ms = states.find((x) => x && x.agent === 'main'), cost = ms && ms.cost ? { usd: Math.round(ms.cost.usd * 1e4) / 1e4, final: !merged.some((e) => e.kind === 'usage' && e.ts > ms.cost.at) } : null;   // final: nothing was spent after Claude Code counted it (else it is a floor)
-  return { id, proj, agents: Object.values(agents), events: merged.map((e) => ({ ...e, t: Math.max(0, e.ts - first) })), durationMs: last - first, recentUntil, ...marks, ...(cost ? { cost } : {}) };
+  return { id, proj, project: leadProject(proj, id, ms && ms.cwd), agents: Object.values(agents), events: merged.map((e) => ({ ...e, t: Math.max(0, e.ts - first) })), durationMs: last - first, recentUntil, ...marks, ...(cost ? { cost } : {}) };
 }
 
 // Ask the local `claude` CLI (uses the user's existing login) to map a JSON array of strings to another array. Cached.

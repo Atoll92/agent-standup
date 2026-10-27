@@ -430,5 +430,8 @@
  "Lead agent name": "メインエージェントの名前",
  "Set in the editor’s settings (agentStandup.leadName)": "エディターの設定で指定されています（agentStandup.leadName）",
  "Costume": "衣装",
- "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "あなたのヴァンパイアは、Fabien Coupas が手描きしたハロウィンパックのキャラクターです。ほかのメンバーもパックに入っています。"
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "あなたのヴァンパイアは、Fabien Coupas が手描きしたハロウィンパックのキャラクターです。ほかのメンバーもパックに入っています。",
+ "Name for this project": "このプロジェクトでの名前",
+ "Empty: use the default name.": "空欄の場合はデフォルトの名前を使用します。",
+ "Open a project to choose its name.": "プロジェクトを開いて名前を設定してください。"
 }

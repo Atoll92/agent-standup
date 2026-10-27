@@ -430,5 +430,8 @@
  "Lead agent name": "메인 에이전트 이름",
  "Set in the editor’s settings (agentStandup.leadName)": "에디터 설정에서 지정됨 (agentStandup.leadName)",
  "Costume": "의상",
- "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "당신의 뱀파이어는 Fabien Coupas가 손으로 그린 핼러윈 팩에서 왔어요. 나머지 캐스트도 팩에 있어요."
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "당신의 뱀파이어는 Fabien Coupas가 손으로 그린 핼러윈 팩에서 왔어요. 나머지 캐스트도 팩에 있어요.",
+ "Name for this project": "이 프로젝트에서 사용할 이름",
+ "Empty: use the default name.": "비워 두면 기본 이름을 사용합니다.",
+ "Open a project to choose its name.": "프로젝트를 열어 이름을 설정하세요."
 }

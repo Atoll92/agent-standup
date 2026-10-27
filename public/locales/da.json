@@ -429,5 +429,8 @@
  "Lead agent name": "Lederagentens navn",
  "Set in the editor’s settings (agentStandup.leadName)": "Valgt i editorens indstillinger (agentStandup.leadName)",
  "Costume": "Kostume",
- "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Din vampyr kommer fra halloween-pakken, tegnet i hånden af Fabien Coupas. Resten af holdet er også med."
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Din vampyr kommer fra halloween-pakken, tegnet i hånden af Fabien Coupas. Resten af holdet er også med.",
+ "Name for this project": "Navn til dette projekt",
+ "Empty: use the default name.": "Tomt: brug standardnavnet.",
+ "Open a project to choose its name.": "Åbn et projekt for at vælge dets navn."
 }

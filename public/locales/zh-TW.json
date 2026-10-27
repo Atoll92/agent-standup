@@ -430,5 +430,8 @@
  "Lead agent name": "主代理的名字",
  "Set in the editor’s settings (agentStandup.leadName)": "已在編輯器設定中指定（agentStandup.leadName）",
  "Costume": "裝扮",
- "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "你的吸血鬼來自萬聖節禮包，由 Fabien Coupas 手繪。其餘角色也在禮包裡。"
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "你的吸血鬼來自萬聖節禮包，由 Fabien Coupas 手繪。其餘角色也在禮包裡。",
+ "Name for this project": "此專案的名稱",
+ "Empty: use the default name.": "留空則使用預設名稱。",
+ "Open a project to choose its name.": "開啟專案以設定名稱。"
 }
