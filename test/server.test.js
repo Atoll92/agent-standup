@@ -34,6 +34,7 @@ test('settings are kept in a file; cross-site writes are refused', async () => {
       let p = await saved(); assert.deepEqual([p.leadName, p.music, p.lang], ['Bob', true, 'fr']);
       await put({ _patch: { set: { _t: 23 }, del: ['leadName', 'nothing'] } }); p = await saved(); assert.ok(!('leadName' in p), 'a key the page removed'); assert.equal(p.music, true);
       await put({ lang: 'xx', music: false, leadName: 'Stale', _patch: { set: { _t: 23.5 }, del: [] } }); p = await saved(); assert.deepEqual([p.lang, p.music, '_patch' in p], ['fr', true, false], 'the whole settings beside a patch are for older servers: this one merges the patch only');
+      await put({ lang: 'fr', _t: 30, music: true, leadName: 'Olga', _patch: { set: { lang: 'de', _t: 4 }, del: ['music'] } }); p = await saved(); assert.deepEqual([p.lang, p.music, p.leadName, p._t, '_patch' in p], ['fr', true, 'Olga', 30, false], 'a stale patch an older page carries along: its settings are written whole');
       assert.equal((await put({ _patch: { set: [1], del: 'x' } })).status, 200); assert.equal((await saved()).music, true, 'an odd patch changes nothing');
       await put({ lang: 'fr', _t: 24 }); assert.ok(!('music' in (await saved())), 'a whole object (an older page) still replaces the file'); }
     assert.equal(JSON.parse((await get(port, '/api/kokoro')).body).installed, false);
