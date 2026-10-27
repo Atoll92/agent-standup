@@ -142,7 +142,7 @@ p a, .fine a, li a { color:var(--accent) } p a:hover, .fine a:hover, li a:hover 
 
     <p class="lead" data-en="It reads the session files Claude Code, Codex and Mistral Vibe already write, so it works <b>wherever you run them</b>: VS Code, Cursor, a plain terminal, the desktop app. Nothing to configure, nothing sent anywhere." data-fr="Il lit les fichiers de session que Claude Code, Codex et Mistral Vibe écrivent déjà : il marche donc <b>partout où vous les lancez</b> : VS Code, Cursor, un simple terminal, l’application de bureau. Rien à configurer, rien n’est envoyé.">It works wherever you run Claude Code, Codex or Mistral Vibe.</p>
     <div class="cta-row">
-      <a class="cta" id="ctaVsc" href="https://marketplace.visualstudio.com/items?itemName=DoubleGeste.agent-standup" target="_blank" rel="noopener"><span data-en="Install in VS Code" data-fr="Installer dans VS Code">Install in VS Code</span><small id="dlS">v1.41.2</small></a>
+      <a class="cta" id="ctaVsc" href="https://marketplace.visualstudio.com/items?itemName=DoubleGeste.agent-standup" target="_blank" rel="noopener"><span data-en="Install in VS Code" data-fr="Installer dans VS Code">Install in VS Code</span><small id="dlS">v1.42.0</small></a>
       <a class="cta ghost" href="#ways" data-en="No VS Code? Pick your way ↓" data-fr="Pas de VS Code ? Choisissez ↓">No VS Code? Pick your way ↓</a>
     </div>
     <p class="fine" data-en="Free · open source · Mac, Windows, Linux<br>Or in 30 seconds, no editor: <code style='white-space:nowrap'>npx @double_geste/agent-standup@latest --open</code>" data-fr="Gratuit · open source · Mac, Windows, Linux<br>Ou en 30 secondes, sans éditeur : <code style='white-space:nowrap'>npx @double_geste/agent-standup@latest --open</code>">Free · open source</p>
@@ -220,10 +220,16 @@ const FR = () => LANG === 'fr';   // the art block shared with the app expects t
 // =====================================================================
 const NAMES = ['Ada','Linus','Grace','Alan','Margaret','Dennis','Barbara','Ken','Radia','Tim','Hedy','Guido','Frances','Bjarne','Katherine','Brian','Sophie','Niklaus','Annie','Donald','Joan','Edsger','Lynn','Vint','Mae','Rob','Zoe','Ivan','Nina','Otto','Lena','Hugo','Ines','Théo','Maya','Jules','Alma','Remy','Cleo','Noah','Iris','Leo','Mira','Axel','Nora','Eli','Lou','Gaby'];
 const nameBook = {};   // agent id → unique first name within the session
+// The lead's name: Margot, or the one chosen in ⚙ → All settings (prefs.leadName) or in the editor (agentStandup.leadName, which wins: AS_APP.lead, see appKind in server.js). Plain text of 24 characters at most: it is written into the page in many places.
+// typeof: the landing page reuses this section and has neither prefs nor APP
+const LEAD_NAME = 'Margot', cleanLead = (v) => Array.from(String(v == null ? '' : v).replace(/'/g, '’').replace(/[\u0000-\u001f\u007f-\u009f<>&"`\\]/g, '').replace(/\s+/g, ' ').trim()).slice(0, 24).join('').trim();
+const leadName = () => (typeof APP === 'object' && APP && cleanLead(APP.lead)) || (typeof prefs === 'object' && prefs && cleanLead(prefs.leadName)) || LEAD_NAME;
+const isLeadName = (n) => !!n && String(n).toLocaleLowerCase() === leadName().toLocaleLowerCase();   // whatever the capitals: Ivan and ivan would read as one agent
 function uniqueName(id, h) {
-  if (nameBook[id]) return nameBook[id]; const taken = new Set(Object.values(nameBook));
-  for (let k = 0; k < NAMES.length; k++) { const n = NAMES[(h + k) % NAMES.length]; if (!taken.has(n)) return (nameBook[id] = n); }
-  return (nameBook[id] = NAMES[h % NAMES.length] + ' ' + (taken.size + 1));
+  if (nameBook[id]) return nameBook[id]; const taken = new Set(Object.values(nameBook).map((n) => n.toLocaleLowerCase())), n0 = taken.size; taken.add(leadName().toLocaleLowerCase());   // never the lead's own name: one may be chosen from this list
+  for (let k = 0; k < NAMES.length; k++) { const n = NAMES[(h + k) % NAMES.length]; if (!taken.has(n.toLocaleLowerCase())) return (nameBook[id] = n); }
+  let b = h % NAMES.length; if (isLeadName(NAMES[b])) b = (b + 1) % NAMES.length;   // every name taken: a number after it, but never after the lead's name ("Ivan 48" would read as a fork of a lead called Ivan)
+  return (nameBook[id] = NAMES[b] + ' ' + (n0 + 1));
 }
 const PAL = ['#ff7a6b','#ffb347','#ffd84a','#4fd1a5','#4cc3ff','#7c8cff','#b583ff','#ff7eb6'];
 const hexRGB = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -360,14 +366,16 @@ function packNote() {   // the Halloween pack, to someone without it, twice a se
   $('#packNoteB').textContent = L('Voir le pack', 'See the pack') + ' · ' + price;
 }
 function persona(a) { const p = persona0(a); p.custom = customFor(p.twin ? 'main' : a.id); return p; }   // a fork wears the lead's own picture too
-const subName = (a, h) => (a.own && prefs.ownNames ? (nameBook[a.id] = a.own) : a.given || uniqueName(a.id, h));   // own: the name the person gave this agent (see ownName in server.js); otherwise a first name from the list. a.own is tested first: the landing page reuses this section and has no settings
-function renameAll() {   // ⚙ → own names on or off: every sub-agent is named again, in the order it arrived
-  for (const k in nameBook) delete nameBook[k]; for (const p of Object.values(S.agents)) if (p.id !== 'main' && p.id !== 'user') p.name = subName(p, hash(p.id));
-  buildStage(); paintStatus(); renderLog(true); syncUI();
+const subName = (a, h) => (a.own && prefs.ownNames && !isLeadName(a.own) ? (nameBook[a.id] = a.own) : (!isLeadName(a.given) && a.given) || uniqueName(a.id, h));   // own: the name the person gave this agent (see ownName in server.js); otherwise a first name from the list. a.own is tested first: the landing page reuses this section and has no settings
+function renameAll(lead) {   // ⚙ → own names on or off, or a new name for the lead: every sub-agent is named again, in the order it arrived, as a reload would name them
+  const names = () => Object.values(S.agents).map((p) => p.name).join('\n'), was = names();
+  if (lead) for (const p of Object.values(S.agents)) if (p.id === 'main' || p.twinN) { const q = persona(p); p.name = q.name; p.given = q.given; }   // the lead and its forks first: the others then keep clear of the lead's name
+  for (const k in nameBook) delete nameBook[k]; for (const p of Object.values(S.agents)) if (p.id !== 'main' && p.id !== 'user' && !p.twinN) p.name = subName(p, hash(p.id));
+  if (!lead || names() !== was) { buildStage(); renderTokens(); renderCtx(); paintStatus(); renderLog(true); syncUI(); }   // the new tiles get their tokens and context at once, not at the next usage
 }
 function persona0(a) {
-  const h = hash(a.id), base = { ...a, given: 'given' in a ? a.given : a.name };
-  if (a.id === 'main') return { ...base, name: a.name || 'Margot', role: L('Chef', 'Lead'), shirt: '#e8845f', shape: 0, acc: 1, eye: 0, glasses: false, scene: 6, prop: 1, acc2: '#f5c04a', lead: true, vi: 0, gid: 'main' };
+  const h = hash(a.id), base = { ...a, given: a.twinN ? leadName() + ' ' + a.twinN : 'given' in a ? a.given : a.name };   // twinN: a fork, named after the lead whatever the lead is called now
+  if (a.id === 'main') return { ...base, name: leadName(), role: L('Chef', 'Lead'), shirt: '#e8845f', shape: 0, acc: 1, eye: 0, glasses: false, scene: 6, prop: 1, acc2: '#f5c04a', lead: true, vi: 0, gid: 'main' };
   if (a.id === 'user') return { ...base, name: L('Vous', 'You'), role: L('Humain', 'Human'), shirt: '#8a94c9', shape: 1, acc: 2, eye: 1, glasses: false, scene: 7, prop: 1, acc2: '#ff7a6b', vi: 3, gid: 'user' };
   if (/^fork$/i.test(a.type || '')) return { ...base, name: subName(base, h), roleEn: a.roleEn || a.role, role: (FR() && a.roleFr) || a.roleEn || a.role, shirt: '#e8845f', shape: 0, acc: 1, eye: 0, glasses: true, scene: (h >>> 18) % 6, prop: 1, acc2: '#f5c04a', vi: 0, twin: true, gid: h.toString(36) };   // a fork (Claude Code's subagent_type "fork", on by default since 2.1.302) starts as a copy of the lead: the lead's face, shirt and voice, glasses and a room of its own to tell them apart
   return { ...base, name: subName(base, h), roleEn: a.roleEn || a.role, role: (FR() && a.roleFr) || a.roleEn || a.role, shirt: PAL[(h >>> 6) % 8], shape: (h >>> 3) % 5, acc: (h >>> 9) % 6, eye: (h >>> 12) % 3, glasses: ((h >>> 15) % 4) === 0,
