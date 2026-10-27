@@ -9,6 +9,7 @@ Codex, both the desktop app and the `codex` command line, records every thread o
 - **Files created or changed**, web searches, MCP calls and the questions Codex asks you.
 - **Its reasoning summaries**, shown as the agent's inner thoughts.
 - **Token counts** and the end of each turn.
+- **Codex sub-agents** in their lead's call, each with its own name, commands, results, token counts and final report. A sub-agent's own sub-agents join too.
 - **A board of every session**, Codex, Claude Code and Mistral Vibe together, with the ones that need you first.
 - **Replay** of any past Codex session, with a recap.
 
@@ -16,7 +17,7 @@ Codex, both the desktop app and the `codex` command line, records every thread o
 
 Codex writes one "rollout" file per thread in `~/.codex/sessions/YYYY/MM/DD/rollout-<time>-<id>.jsonl` (or under `$CODEX_HOME`), and the names of threads in `session_index.jsonl`. Agent Standup reads those files and nothing else in the Codex folder. It never writes there and makes no model call to show them: zero tokens, and nothing leaves your machine.
 
-A command appears in the call once it has finished, because that is when Codex writes it down. The short automatic reviews Codex runs before some commands are not shown as sessions. Codex sub-agents are not shown yet: a Codex session appears as the lead and you.
+A command appears in the call once it has finished, because that is when Codex writes it down. The short automatic reviews Codex runs before some commands are not shown as sessions. A sub-agent's thread is not a session of its own: it joins the call of the thread that started it, and keeps that session at the top of the list while it works.
 
 ## Try it
 

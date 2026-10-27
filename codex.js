@@ -75,30 +75,45 @@ function headOf(text, capped) {
   return out;
 }
 // Only explicit thread_spawn relationships are team members. Guardian/approval reviews and unrelated sessions never join a call.
+const kinCache = new Map();   // file → { top, parent }: a file's place in its family, from its first line, which never changes. Kept whatever the size of headCache, so that a poll does not read every first line again
+function kin(r) {
+  const was = kinCache.get(r.file); if (was) return was;
+  const h = head(r.file), k = { top: h.ok && !h.child, parent: h.parent && h.parent !== r.id ? h.parent : '' };
+  if (headCache.get(r.file) === h) kinCache.set(r.file, k);   // a first line still being written is read again next time
+  return k;
+}
 let familyMemo = { scan: null, children: new Map() };
 function descendants(id) {
   const s = scan();
   if (familyMemo.scan !== s) {
     const children = new Map();
-    for (const r of s.rows) { const h = head(r.file); if (!h.parent || h.parent === r.id) continue; const list = children.get(h.parent) || []; list.push({ ...r, h }); children.set(h.parent, list); }
+    for (const r of s.rows) { const k = kin(r); if (!k.parent) continue; const list = children.get(k.parent) || []; list.push(r); children.set(k.parent, list); }
+    if (kinCache.size > s.rows.length * 2 + 100) { const live = new Set(s.rows.map((r) => r.file)); for (const f of kinCache.keys()) if (!live.has(f)) kinCache.delete(f); }   // files gone or compressed under another name
     familyMemo = { scan: s, children };
   }
   const out = [], seen = new Set([id]), pending = [id];
   for (let i = 0; i < pending.length; i++) for (const r of familyMemo.children.get(pending[i]) || []) {
-    if (seen.has(r.id)) continue; seen.add(r.id); pending.push(r.id); out.push(r);
+    if (seen.has(r.id)) continue; seen.add(r.id); pending.push(r.id); out.push({ ...r, h: head(r.file) });
   }
   return out.sort((a, b) => a.h.born - b.h.born || a.id.localeCompare(b.id));
 }
-function subFiles(id) {
+function subFiles(id) {   // a compressed child is read whole only when the timeline is built (state, called by server.js), not each time its files are listed
   const out = descendants(id).map((r) => ({ file: r.file, aid: r.id, mtime: r.mtime,
     meta: { agentType: r.h.role, description: r.h.task || r.h.role, name: r.h.name || r.h.task, parent: r.h.parent === id ? 'main' : r.h.parent, startedAt: r.h.born },
-    ...(r.zst ? { st: state(r.id, r.id) } : {}) }));
+    ...(r.zst ? { zst: true } : {}) }));
   out.dirs = []; out.journals = []; return out;
 }
+const subCount = (id) => descendants(id).length;
 // The threads a person started, newest first. A thread started by another thread (Codex's review of a command before it runs, a sub-agent) is not a session of its own.
+// A thread with sub-agents is as recent as the newest of them: the rows come newest first, so the first one met of a family places the whole family, and the list stops at limit.
 function sessions(limit = 80) {
-  const out = []; for (const r of scan().rows) { const h = head(r.file); if (!h.ok || h.child) continue; out.push({ ...r, mtime: Math.max(r.mtime, ...descendants(r.id).map((k) => k.mtime)), cwd: h.cwd, dir: h.dir }); }
-  return out.sort((a, b) => b.mtime - a.mtime).slice(0, limit);
+  const s = scan(), out = [], seen = new Set();
+  for (const r of s.rows) {
+    let top = r, k = kin(r); for (let n = 0; k.parent && n < 32; n++) { const p = s.byId.get(k.parent); if (!p) break; top = p; k = kin(p); }   // up to the thread the person started
+    if (!k.top || seen.has(top.id)) continue; seen.add(top.id);
+    const h = head(top.file); out.push({ ...top, mtime: r.mtime, cwd: h.cwd, dir: h.dir }); if (out.length >= limit) break;
+  }
+  return out;
 }
 const under = (cwd, key) => { for (let d = String(cwd || ''); d;) { if (dirKey(d) === key) return true; const up = path.dirname(d); if (up === d) return false; d = up; } return false; };   // key is the folder itself or one above it: a dashed name alone cannot tell app/old (inside app) from app-old (beside it)
 const inProject = (id, key) => { const r = row(id); if (!r || !key) return false; if (key === PROJ) return true; const h = head(r.file), d = h.dir; return d === key || (d.startsWith(key + '-') && under(h.cwd, key)); };
@@ -372,4 +387,4 @@ function image(id, toolId, n, user, agent = 'main') {   // { type, buf } or null
   imgMemo.set(key, out); if (imgMemo.size > 12) imgMemo.delete(imgMemo.keys().next().value);
   return out;
 }
-module.exports = { PROJ, SOURCE, home, dirKey, sessions, row, fileOf, cwd, inProject, projectLabel, title, boardRow, subFiles, state, parser, image };
+module.exports = { PROJ, SOURCE, home, dirKey, sessions, row, fileOf, cwd, inProject, projectLabel, title, boardRow, subFiles, subCount, state, parser, image };

@@ -1057,7 +1057,7 @@ function buildTimeline(proj, id, files = []) {
     if (m.parent) Object.assign(agents[aid], { parent: m.parent, name: m.name, startedAt: m.startedAt });   // Codex records the parent explicitly, even when its spawn prompt is encrypted
     if (x.run) { agents[aid].wf = x.run; if (m.workflowPhase) agents[aid].phase = m.workflowPhase; (runs[x.run] = runs[x.run] || { agents: {}, done: new Set() }).agents[x.id0] = aid; }   // launched by a workflow: no Agent call of the lead points at it
     agents[aid].mtime = x.mtime || mtimeOf(x.file) || undefined;
-    const st = x.st || readNew(x.file, aid, false, rec); if (st) states.push(st); files.push(x.file);
+    const st = x.st || (x.zst ? sx && sx.state && guard(() => sx.state(aid, aid), null) : readNew(x.file, aid, false, rec)); if (st) states.push(st); files.push(x.file);   // x.zst: a compressed Codex child, read whole here only
   }
   for (const j of subs.journals) { const st = readNew(j.file, 'wf:' + j.run, true), run = runs[j.run]; files.push(j.file); if (st && run) for (const e of st.raw) if (run.agents[e.child]) run.done.add(run.agents[e.child]); }
   const childByTool = {};   // Agent tool_use id → the sub-agent it created, so we know who ordered whom

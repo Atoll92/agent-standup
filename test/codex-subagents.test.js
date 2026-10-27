@@ -66,6 +66,7 @@ test('the picker and board list only root Codex sessions and count finished and 
     assert.deepEqual(rows.map((r) => r.id).sort(), [ROOT, LIVE, FORK].sort()); assert.deepEqual(board.map((r) => r.id).sort(), [ROOT, LIVE, FORK].sort());
     const root = board.find((r) => r.id === ROOT), live = board.find((r) => r.id === LIVE);
     assert.deepEqual([root.subTotal, root.subActive], [3, 1]); assert.deepEqual([live.subTotal, live.subActive], [1, 1]);
+    const codex = require('../codex.js'), all = codex.sessions(80).map((r) => r.id); assert.deepEqual(codex.sessions(2).map((r) => r.id), all.slice(0, 2), 'a limit stops the list without changing its order'); assert.equal(codex.subCount(ROOT), 3);
   } finally { s.stop(); }
 });
 
@@ -111,6 +112,7 @@ test('a compressed Codex worker is attributed to its parent like a plain rollout
     const codex = require('../codex.js'); let tl;
     for (let n = 0; n < 100; n++) { codex.sessions(500); tl = await get(s.port, route(COMPRESSED)); if (tl.agents.some((a) => a.id === ZCHILD)) break; await wait(20); }
     assert.ok(tl.agents.some((a) => a.id === ZCHILD && a.own === 'Archive checker'));
+    const listed = codex.subFiles(COMPRESSED).find((x) => x.aid === ZCHILD); assert.ok(listed && listed.zst && !('st' in listed), 'listing a compressed child does not decompress it');
     assert.ok(tl.events.some((e) => e.agent === ZCHILD && e.kind === 'results' && e.items[0].out === 'archived result'));
     assert.ok(tl.events.some((e) => e.agent === ZCHILD && e.kind === 'report' && e.to === 'main' && e.text === 'Archived fixture checked.'));
     assert.deepEqual(tl.events.filter((e) => e.kind === 'usage').map((e) => [e.agent, e.u]), [[ZCHILD, { i: 35, o: 4, r: 15, w: 0 }]]);
