@@ -1,7 +1,7 @@
 {
   "name": "agent-standup-desktop",
   "productName": "Agent Standup",
-  "version": "1.41.2",
+  "version": "1.42.0",
   "description": "Agent Standup as a small desktop app: a window plus a menu bar / tray indicator. Same local server as the VS Code extension and the command line.",
   "main": "main.js",
   "license": "MIT",

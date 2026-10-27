@@ -18,7 +18,7 @@ To open it:
 2. Start it in the background, so it keeps running while the user works. It needs Node.js 18 or later.
 
    ```bash
-   AGENT_STANDUP_FROM=plugin npx -y @double_geste/agent-standup@1.41.2 --open
+   AGENT_STANDUP_FROM=plugin npx -y @double_geste/agent-standup@1.42.0 --open
    ```
 
    `AGENT_STANDUP_FROM=plugin` tells the app that the plugin started it (if the user agrees to share usage, the plugin is counted apart). In a Windows terminal outside Bash, leave it out.

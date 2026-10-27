@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.42.0
+- **Codex sub-agents join their lead's call.** When a Codex session starts sub-agents (and they start their own), each one joins the call of the session that started it, under the name Codex gave it, with its own commands and their output, its tokens and the report it hands back; the lead stays at work while one of them works. A sub-agent is no longer listed as a session of its own, and the short reviews Codex runs before a command stay hidden. Compressed Codex threads work the same way. Contributed by [Harrison O'Connor-Hoover](https://github.com/harrisonoconnorhover) (#13).
+- **Give the lead another name than Margot.** ⚙ → All settings → Characters → **Lead agent name**, or in VS Code the setting `agentStandup.leadName`, which gives each workspace its own name and wins over the field. The lead is renamed at once on its tile, in the agents list and in the transcript; its forks follow (“Bob 2”, “Bob 3”…), a sub-agent never keeps the same name, and an empty field brings Margot back. Asked for, and tested on real sessions, by [Saros-12-42](https://github.com/Saros-12-42) (#14).
+- **agent-standup-band** (the line above the Claude Code prompt): it no longer pushes away what other mods draw there, no longer tells a session about itself after `/clear` or a resume, shows again when a session you hid asks again, and a slow check of the sessions no longer brings back a wait you already answered.
+
 ## 1.41.2
 - **The VS Code rating request no longer disappears for good.** VS Code tucks a notification into the bell after a few seconds, and if you had not clicked it by then, Agent Standup never asked again. Now it asks again a week later, one last time, unless you chose “Rate it” or “No thanks”. If an earlier version asked you once already, you are asked one more time. Nothing is sent: VS Code keeps the days and the answer for the extension.
 - **The one-time coffee tip** comes at the end of a run of three minutes, not only ten, so people whose agents finish quickly see it too.

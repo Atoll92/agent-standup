@@ -34,7 +34,7 @@ A second plugin, `agent-standup-band`, tells you inside Claude Code when another
 
 Both skills run one command, pinned to an exact version of the app's npm package:
 
-    npx -y @double_geste/agent-standup@1.41.2
+    npx -y @double_geste/agent-standup@1.42.0
 
 `npx` downloads that package from the npm registry the first time. The package has no dependencies. `open` starts a web server that listens on your own machine only (`127.0.0.1`); `status` starts nothing and exits.
 
