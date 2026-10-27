@@ -478,7 +478,7 @@ function timelineEntry(proj, id) {
 // ---- Live feed. The timeline is sorted again at each build and events already sent can change (an order typed mid-turn is stamped at typing time and lands before what the page has; a sub-agent's last line becomes its report; a tool call joins an earlier beat),
 // so a page cannot ask for "what comes after index n". Every event has a key `k` that never changes, each build that changes something gets the next sequence number, and a page asks for the events that are new or different since the number it holds.
 // `ep` names this memory: it is a new one after a restart, after the session left the cache, or when a transcript was rewritten, and the page then loads the whole session again.
-const sigOf = (e) => e.kind + '|' + e.agent + '|' + (e.to || '') + '|' + (e.end || '') + '|' + (e.kind === 'tools' ? e.tools.length + ':' + e.tools[e.tools.length - 1].id + ':' + e.tools.map((t) => (t.d && t.d.kind === 'plan' ? (t.d.text || '').length + (t.d.text || '').slice(-24) : '')).join(',') : e.kind === 'usage' ? e.u.i + ',' + e.u.o + ',' + e.u.r + ',' + e.u.w + ',' + e.model : e.kind === 'order' ? e.toolId + ',' + e.bg + ',' + e.title : e.kind === 'finish' ? e.ts : '');   // everything about an event that can differ from one build to the next (a plan's text too: its answer names the plan approved). Its text, its tool calls, its results and its time never do: they come from one transcript record (same key = same record); and `t` moves only when time zero does, which feedStep looks at once for all
+const sigOf = (e) => e.kind + '|' + e.agent + '|' + (e.to || '') + '|' + (e.end || '') + '|' + (e.kind === 'tools' ? e.tools.length + ':' + e.tools[e.tools.length - 1].id + ':' + e.tools.map((t) => (t.d && t.d.kind === 'plan' ? (t.d.text || '').length + (t.d.text || '').slice(-24) : '')).join(',') : e.kind === 'usage' ? e.u.i + ',' + e.u.o + ',' + e.u.r + ',' + e.u.w + ',' + e.model : e.kind === 'order' ? e.toolId + ',' + e.bg + ',' + e.title + ',' + e.text : e.kind === 'finish' ? e.ts : '');   // everything about an event that can differ from one build to the next (a plan's text too: its answer names the plan approved). Except for an order's late-arriving prompt, its text, its tool calls, its results and its time never do: they come from one transcript record (same key = same record); and `t` moves only when time zero does, which feedStep looks at once for all
 function feedStep(prev, tl, files) {
   let f = prev && files.every((x) => { const was = prev.gens.get(x); return was === undefined || was === (fileStates.get(x) || {}).gen; }) ? prev : null;   // a transcript read again from its start numbers its events again: the keys no longer mean the same thing
   for (let pass = 0; ; pass++) {
@@ -947,7 +947,7 @@ function readNew(file, agent, journal, record = parseRecord) {
   let size, mtime; try { const s = fs.statSync(file); size = s.size; mtime = s.mtimeMs; } catch { fileStates.delete(file); return null; }
   let st = fileStates.get(file);
   if (st && size >= st.offset && mtime !== st.mtime && st.fp.length && !sameBytes(file, st)) st = null;   // rewritten in place and not shorter: checked only when the file was written to, with one small read
-  if (!st || size < st.offset) { st = { agent, file, journal: !!journal, gen: ++fileGen, offset: 0, mtime: 0, fp: Buffer.alloc(0), tail: Buffer.alloc(0), raw: [], toolName: {}, msgUsage: new Map() }; fileStates.set(file, st); }
+  if (!st || st.agent !== agent || size < st.offset) { st = { agent, file, journal: !!journal, gen: ++fileGen, offset: 0, mtime: 0, fp: Buffer.alloc(0), tail: Buffer.alloc(0), raw: [], toolName: {}, msgUsage: new Map() }; fileStates.set(file, st); }
   st.mtime = mtime;
   while (size > st.offset) {   // read in chunks of at most 16 MB so a huge transcript never needs one giant buffer
     const fd = fs.openSync(file, 'r'); let buf;
@@ -1047,13 +1047,14 @@ function readMeta(f) {
 }
 
 function buildTimeline(proj, id, files = []) {
-  const sx = sourceOf(proj), rec = recordOf(sx), base = projDir(proj, id), mainFile = sx ? sx.fileOf(id) || '' : path.join(base, id + '.jsonl');   // a Codex or Vibe session is kept somewhere else, in another format (rec); from here on it is a session like any other (Codex without sub-agents)
+  const sx = sourceOf(proj), rec = recordOf(sx), base = projDir(proj, id), mainFile = sx ? sx.fileOf(id) || '' : path.join(base, id + '.jsonl');   // source readers supply their own session and child files; the timeline and page are shared
   if (!fs.existsSync(mainFile)) throw new Error('session not found');
   const agents = { main: { id: 'main', role: 'Lead', type: 'main' } };   // the lead has the same name whatever tool runs the session: the page gives it
   const states = [(sx && sx.state && guard(() => sx.state(id), null)) || readNew(mainFile, 'main', false, rec)], subs = subFilesOf(proj, id), runs = {}; files.push(mainFile);   // sx.state: a format that is not read line by line hands over the events of the session whole   // runs: workflow run → { agents (file name → agent id), by (who launched it), toolId, done }
   for (const x of subs) {
     const aid = x.aid, m = x.meta || readMeta(x.file.replace(/\.jsonl$/, '.meta.json'));
     agents[aid] = { id: aid, role: m.description || m.workflowPhase || m.agentType || 'Agent', type: m.agentType || 'agent', toolUseId: m.toolUseId };
+    if (m.parent) Object.assign(agents[aid], { parent: m.parent, name: m.name, startedAt: m.startedAt });   // Codex records the parent explicitly, even when its spawn prompt is encrypted
     if (x.run) { agents[aid].wf = x.run; if (m.workflowPhase) agents[aid].phase = m.workflowPhase; (runs[x.run] = runs[x.run] || { agents: {}, done: new Set() }).agents[x.id0] = aid; }   // launched by a workflow: no Agent call of the lead points at it
     agents[aid].mtime = x.mtime || mtimeOf(x.file) || undefined;
     const st = x.st || readNew(x.file, aid, false, rec); if (st) states.push(st); files.push(x.file);
@@ -1063,19 +1064,27 @@ function buildTimeline(proj, id, files = []) {
   for (const a of Object.values(agents)) if (a.toolUseId) childByTool[a.toolUseId] = a.id;
   const called = {}, born = {}; for (const st of states) if (st) { if (st.raw.length) born[st.agent] = st.raw[0].ts; for (const e of st.raw) if (e.kind === 'agentcall' && e.nm && childByTool[e.toolId]) called[childByTool[e.toolId]] = e.nm; }
   const sameName = {}; for (const a of Object.values(agents).filter((x) => x.id !== 'main').sort((x, y) => (born[x.id] || Infinity) - (born[y.id] || Infinity) || (x.id < y.id ? -1 : 1))) {   // in the order they started, so that a second agent of the same name is the one numbered 2 and stays so
-    const n = ownName(called[a.id]) || ownName(a.type, true); if (n) { const k = n.toLowerCase(); sameName[k] = (sameName[k] || 0) + 1; a.own = sameName[k] > 1 ? n + ' ' + sameName[k] : n; }
+    const n = ownName(called[a.id]) || ownName(a.name) || ownName(a.type, true); if (n) { const k = n.toLowerCase(); sameName[k] = (sameName[k] || 0) + 1; a.own = sameName[k] > 1 ? n + ' ' + sameName[k] : n; }
   }
   const runByTool = {}; for (const st of states) if (st) for (const e of st.raw) if (e.kind === 'wfrun' && runs[e.run] && !runs[e.run].by) { runs[e.run].by = e.agent; runs[e.run].toolId = e.toolId; runByTool[e.toolId] = runs[e.run]; }   // Workflow tool_use id → the run it started
 
   const finished = new Set(), now0 = Date.now(); for (const st of states) if (st) for (const e of st.raw) if (e.kind === 'agentdone') { if (childByTool[e.toolId]) finished.add(childByTool[e.toolId]); else if (runByTool[e.toolId]) for (const a of Object.values(runByTool[e.toolId].agents)) finished.add(a); }   // a run that stopped: so did every agent in it
   for (const run of Object.values(runs)) for (const a of run.done) finished.add(a);
+  for (const st of states) if (st && st.agent !== 'main' && st.completed) finished.add(st.agent);
   let recentUntil = 0; for (const a of Object.values(agents)) if (a.id !== 'main' && a.mtime && now0 - a.mtime <= 240000) recentUntil = Math.max(recentUntil, a.mtime + 241000);
   for (const a of Object.values(agents)) if (a.id !== 'main' && now0 - (a.mtime || 0) > 240000) finished.add(a.id);   // old transcripts without a completion record: silent for 4 min counts as finished
   const events = [], parent = {}, doneSeen = new Set(), lastTs = {}; for (const st of states) if (st) lastTs[st.agent] = st.lastTs || 0;
+  for (const a of Object.values(agents)) if (a.parent && a.parent !== a.id && agents[a.parent]) parent[a.id] = a.parent;
   const usageBy = new Map(); for (const st of states) if (st) for (const [mid, mu] of st.msgUsage) { if (!/^msg_/.test(mid)) continue; const o = usageBy.get(mid); if (!o || mu.ts < o.msgUsage.get(mid).ts || (mu.ts === o.msgUsage.get(mid).ts && st.agent === 'main')) usageBy.set(mid, st); }   // a fork (on by default since Claude Code 2.1.302) starts its file with a copy of the message that launched it: its tokens count once, for the agent that wrote it first. Only the API's own message ids (msg_…) name one message across files: Codex and Vibe number theirs in each agent (t0, v1…), the same name in two agents is two messages
   const finish = (to, ts, by) => { if (!doneSeen.has(to)) { doneSeen.add(to); events.push({ ts, agent: to, kind: 'finish', to: by, k: 'f/' + to }); } };   // one per agent, whichever record says it first: the key is the agent, not the record
   for (const st of states) {
     if (!st) continue;
+    const a = agents[st.agent];
+    if (a && a.parent && parent[st.agent]) {
+      events.push({ ts: a.startedAt || (st.prompt && st.prompt.ts) || born[st.agent] || 0, agent: parent[st.agent], to: st.agent, kind: 'order', bg: true,
+        text: st.prompt ? st.prompt.text : a.role, title: a.role, k: 'o/' + st.agent });
+      if (st.completed && st.completedAt) finish(st.agent, st.completedAt, parent[st.agent]);
+    }
     let lastSay = -1;   // the last thing a sub-agent says is its report back to the lead
     if (st.agent !== 'main' && finished.has(st.agent)) for (let i = st.raw.length - 1; i >= 0; i--) if (st.raw[i].kind === 'say') { lastSay = i; break; }
     const run = agents[st.agent] && agents[st.agent].wf ? runs[agents[st.agent].wf] : null;
@@ -1495,7 +1504,7 @@ function start(port = PORT) {
     if (url.pathname === '/api/media') {
       const q = (k) => url.searchParams.get(k) || '', SAFE = /^[\w.\-]+$/, n = +q('n') || 0, bad = [q('proj'), q('id'), q('agent'), q('tool')].some((v) => !SAFE.test(v) || v === '..' || v.length > 200) || q('tool').length < 6;   // no tool call has an id that short, and looking for one meant reading the whole transcript
       const sx = sourceOf(q('proj')), user = q('agent') === 'user', ok = !bad && Number.isInteger(n) && n >= 0 && n <= 9, file = ok && !sx ? mediaFile(q('proj'), q('id'), q('agent')) : null;
-      const im = !ok ? null : q('proj') === '_demo' ? require('./demo.js').picture(q('tool'), n) : sx ? (sx.image ? guard(() => sx.image(q('id'), q('tool'), n, user), null) : null) : file && toolImage(file, q('tool'), n, user);   // a Codex session: from its rollout, plain or compressed (codex.js)
+      const im = !ok ? null : q('proj') === '_demo' ? require('./demo.js').picture(q('tool'), n) : sx ? (sx.image ? guard(() => sx.image(q('id'), q('tool'), n, user, q('agent') || 'main'), null) : null) : file && toolImage(file, q('tool'), n, user);   // a Codex session: from the lead or the specified child rollout, plain or compressed
       if (!im) { res.writeHead(bad ? 400 : 404); return res.end(bad ? 'bad request' : 'not found'); }
       res.writeHead(200, { 'content-type': im.type, 'content-length': im.buf.length, 'cache-control': 'private, max-age=3600', 'x-content-type-options': 'nosniff' }); return res.end(im.buf);
     }
