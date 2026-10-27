@@ -2947,6 +2947,7 @@ setInterval(async () => {
     if (switched || !S.cur) return;
     const cur = S.cur, d = await (await fetch(`/api/session?proj=${encodeURIComponent(cur.proj)}&id=${cur.id}&after=${S.seq}&ep=${encodeURIComponent(S.ep)}`)).json();
     if (d.error || cur !== S.cur) return; if (d.resync) { S.cur = null; return; }   // the server no longer has our place (restarted, transcript rewritten): reload next tick
+    if ('project' in d && (d.project || {}).key !== (leadProject || {}).key) { leadProject = d.project || null; clearTimeout(leadTimer); leadField(true); renameLead(); }   // the first cwd can arrive after the call opens, even without a new event
     S.seq = d.seq; if (d.marks) S.sawEnd = true; if (d.cost && (!S.cost || d.cost.usd !== S.cost.usd || d.cost.final !== S.cost.final)) { S.cost = d.cost; later('tok', renderTokens, 300); } if (!d.events || !d.events.length) return;
     for (const a of d.agents) if (!S.agents[a.id]) { S.agents[a.id] = persona(twinOf(a)); addTile(S.agents[a.id]); }
     const from = S.events.length, fresh = [], changed = [];   // the session is not written in order: what is new goes at the end (the order the call got it in), what the server corrected is corrected in place

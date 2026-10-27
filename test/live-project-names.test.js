@@ -109,4 +109,25 @@ test('project lead names: folders, windows, switching and fallback', { skip: mis
     assert.deepEqual([saved()[ka], saved()[kb], saved().leadName], [undefined, 'Orion', undefined]);
   });
   await c.close(); await other.close();
+
+  await t.test('a late cwd refreshes the live project, including a metadata-only update, and subsequent edits survive reload', async () => {
+    for (const type of ['user', 'system']) {
+      const s = session(), file = path.join(tmp, 'projects', s.proj, 's.jsonl'), cwd = path.join(tmp, 'late-' + type), key = 'leadName:cwd:' + cwd;
+      raw(file, { type: 'queue-operation' });
+      fs.writeFileSync(process.env.AGENT_STANDUP_PREFS, JSON.stringify({ ...saved(), [key]: 'Nova', _t: Date.now() }));
+      const live = await open(s, false);
+      try {
+        assert.equal(await live.page.evaluate(() => projectLeadKey()), 'leadName:claude:' + s.proj);
+        await live.page.evaluate(() => openPrefs(document.querySelector('#projectLeadBox')));
+        raw(file, { type, cwd, ...(type === 'user' ? { message: { role: 'user', content: 'The first prompt with a project folder' } } : {}) });
+        if (type === 'user') await live.until(() => S.events.some((e) => e.text === 'The first prompt with a project folder'));
+        else await live.until((key) => projectLeadKey() === key, key, 5000);   // metadata can change while the timeline's sequence number stays the same
+        assert.deepEqual(await live.page.evaluate(() => [projectLeadKey(), S.agents.main.name, document.querySelector('#projectLeadName').value]), [key, 'Nova', 'Nova']);
+        assert.equal(await edit(live, 'projectLeadName', 'Stella'), 'Stella');
+        assert.equal(saved()[key], 'Stella'); assert.equal(saved()['leadName:claude:' + s.proj], undefined);
+        await reload(live);
+        assert.deepEqual(await live.page.evaluate(() => [projectLeadKey(), S.agents.main.name, document.querySelector('#projectLeadName').value]), [key, 'Stella', 'Stella']);
+      } finally { await live.close(); }
+    }
+  });
 });

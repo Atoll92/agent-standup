@@ -1548,10 +1548,10 @@ function start(port = PORT) {
         res.writeHead(200, { 'content-type': 'application/json', ...(gz ? { 'content-encoding': 'gzip' } : {}), vary: 'accept-encoding' });
         return res.end(gz ? entry.gz : entry.json);
       }
-      if (ep == null) return json({ id: tl.id, agents: tl.agents, total: tl.events.length, events: tl.events.slice(+after) });   // a page loaded before 1.25.7 still asks by position
+      if (ep == null) return json({ id: tl.id, project: tl.project, agents: tl.agents, total: tl.events.length, events: tl.events.slice(+after) });   // a page loaded before 1.25.7 still asks by position
       const a = +after; if (ep !== tl.ep || !(a >= 0 && a <= tl.seq)) return json({ resync: true });   // not the feed this page was following (restart, session dropped from memory, transcript rewritten): it loads the session again
-      if (a === tl.seq) { if (!entry.idle) entry.idle = JSON.stringify({ id: tl.id, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, ...(tl.cost ? { cost: tl.cost } : {}), events: [] }); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(entry.idle); }   // nothing new, which is the answer to nearly every poll: written once
-      return json({ id: tl.id, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, ...(tl.cost ? { cost: tl.cost } : {}), events: feedSince(entry, a) });   // new events and changed ones alike, whole, under the key they always had
+      if (a === tl.seq) { if (!entry.idle) entry.idle = JSON.stringify({ id: tl.id, project: tl.project, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, ...(tl.cost ? { cost: tl.cost } : {}), events: [] }); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(entry.idle); }   // nothing new, which is the answer to nearly every poll: written once
+      return json({ id: tl.id, project: tl.project, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, ...(tl.cost ? { cost: tl.cost } : {}), events: feedSince(entry, a) });   // new events and changed ones alike, whole, under the key they always had
     }
     const pk = url.pathname.match(/^\/packs\/([a-z]+)\/(.*)$/);
     if (url.pathname.startsWith('/characters/') || (pk && packDir(pk[1]))) {   // only plain image files of the characters folder (or of a built-in pack), by exact name
