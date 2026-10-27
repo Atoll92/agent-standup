@@ -109,6 +109,12 @@
           "type": "string",
           "default": "",
           "description": "%config.charactersPath.description%"
+        },
+        "agentStandup.leadName": {
+          "type": "string",
+          "default": "",
+          "maxLength": 24,
+          "description": "%config.leadName.description%"
         }
       }
     },

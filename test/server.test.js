@@ -42,7 +42,10 @@ test('the page is told where it runs, for ⚙ › Rate: the store page the edito
     process.env.AGENT_STANDUP_HOST = 'claude code plugin'; assert.deepEqual(await app(), { kind: 'plugin', rate: GH, track: true, updates: true });   // the plugin's commands: agent-standup --from plugin
     process.env.AGENT_STANDUP_HOST = 'Cursor 1.2'; assert.deepEqual(await app(), { kind: 'editor', rate: MP, track: true, updates: true });
     process.env.AGENT_STANDUP_RATE = 'https://example.com/'; assert.deepEqual(await app(), { kind: 'editor', rate: GH, track: true, updates: true });   // only the two stores
+    process.env.AGENT_STANDUP_LEAD_NAME = '  Zoé</script> '; assert.equal((await app()).lead, 'Zoé</script>'); assert.doesNotMatch((await get(port, '/api/prefs.js')).body, /<\/script>/);   // the lead's name set in the editor (agentStandup.leadName): handed to the page, which cleans it
+    process.env.AGENT_STANDUP_LEAD_NAME = '   '; assert.equal('lead' in (await app()), false);
   } finally {
+    delete process.env.AGENT_STANDUP_LEAD_NAME;
     for (const [k, v] of [['AGENT_STANDUP_HOST', h0], ['AGENT_STANDUP_RATE', r0]]) { if (v == null) delete process.env[k]; else process.env[k] = v; }
     srv.close(); require('../server.js').shutdown();
   }

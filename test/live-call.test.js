@@ -77,7 +77,7 @@ test('live call: joining, orders and lines', { skip: missing || false, timeout: 
     await c.page.evaluate(() => togglePlay()); await wait(800); await c.page.evaluate(() => togglePlay()); await c.quiet(); assert.equal(count(await c.lines(), 'LAST line'), 1); await c.close();
   });
 
-  await t.test("a fork joins as the lead's twin; the effort, the advisor and the cost Claude Code writes are shown", async () => {   // Claude Code 2.1.302: forks on by default; cost-state since 2.1.300; effort and advisorModel since 2.1.275
+  await t.test("a fork joins as the lead's twin and follows the lead's name; the effort, the advisor and the cost Claude Code writes are shown", async () => {   // Claude Code 2.1.302: forks on by default; cost-state since 2.1.300; effort and advisorModel since 2.1.275
     const s = session(); s.user('hello', Date.now() - 600000); s.say('Ready.', { at: Date.now() - 590000, end: true }); const c = await open(s);
     const dir = path.join(tmp, 'projects', s.proj), raw = (f, r) => fs.appendFileSync(f, JSON.stringify({ timestamp: new Date().toISOString(), ...r }) + '\n');
     s.user('Check it with a fork'); await wait(800);
@@ -86,6 +86,12 @@ test('live call: joining, orders and lines', { skip: missing || false, timeout: 
     s.result(id, 'Async agent launched successfully.\nagentId: a9'); await wait(800); s.say('It is note.txt.', { sub: 9 });
     await c.until(() => S.agents.a9 && S.effort.main === 'max', null, 20000);
     assert.deepEqual(await c.page.evaluate(() => [S.agents.a9.name, !!S.agents.a9.twin, S.agents.a9.shirt === S.agents.main.shirt, S.adv.main]), ['Margot 2', true, true, 'claude-opus-5-5']);
+    await c.page.evaluate(() => { window.__named = () => [S.agents.main.name, S.agents.a9.name, document.querySelector('#t-main .tag b').textContent, document.querySelector('#t-a9 .tag b').textContent]; });
+    const lead = (v) => c.page.evaluate((v) => { const el = document.querySelector('#leadName'); el.value = v; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); return [...window.__named(), 'leadName' in prefs ? prefs.leadName : 'unset']; }, v);   // ⚙ → All settings → Lead agent name
+    assert.deepEqual(await lead('Captain <Hook> & Co'), ['Captain Hook Co', 'Captain Hook Co 2', 'Captain Hook Co', 'Captain Hook Co 2', 'Captain Hook Co'], 'plain text only, and the fork follows');
+    assert.deepEqual(await lead('Abcdefghijklmnopqrstuvwxyz'), ['Abcdefghijklmnopqrstuvwx', 'Abcdefghijklmnopqrstuvwx 2', 'Abcdefghijklmnopqrstuvwx', 'Abcdefghijklmnopqrstuvwx 2', 'Abcdefghijklmnopqrstuvwx'], '24 characters at most');
+    assert.deepEqual(await c.page.evaluate(() => { APP.lead = 'Iris'; leadField(); renameLead(); const r = [...window.__named(), document.querySelector('#leadName').disabled, document.querySelector('#leadName').value]; APP.lead = ''; leadField(); renameLead(); return r; }), ['Iris', 'Iris 2', 'Iris', 'Iris 2', true, 'Iris'], 'the editor’s agentStandup.leadName wins, and the field says so');
+    assert.deepEqual(await lead('  '), ['Margot', 'Margot 2', 'Margot', 'Margot 2', 'unset'], 'empty: Margot again');
     await c.until(() => /max/.test(document.querySelector('#t-main .tk').textContent), null, 10000);   // a costly effort shows on the tile
     s.say('Done.', { end: true }); fs.appendFileSync(path.join(dir, 's.jsonl'), JSON.stringify({ type: 'cost-state', totalCostUSD: 0.4213 }) + '\n');   // written when the process ends: no time of its own
     await c.until(() => S.cost && S.cost.usd === 0.4213 && S.cost.final, null, 20000); await c.quiet(500);

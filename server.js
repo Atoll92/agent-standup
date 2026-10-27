@@ -808,9 +808,9 @@ function logError(where, e) {
 // (a star on GitHub: they have no store). Only the desktop app and the command line ask on their own, on the third day: the extension asks in its own way (extension.js, noteUse).
 const RATE_STORES = /^https:\/\/(marketplace\.visualstudio\.com|open-vsx\.org)\//, GITHUB_REPO = 'https://github.com/Atoll92/agent-standup';
 function appKind() {
-  const h = String(process.env.AGENT_STANDUP_HOST || ''), rate = String(process.env.AGENT_STANDUP_RATE || '');
+  const h = String(process.env.AGENT_STANDUP_HOST || ''), rate = String(process.env.AGENT_STANDUP_RATE || ''), lead = String(process.env.AGENT_STANDUP_LEAD_NAME || '').trim().slice(0, 100);
   const kind = h === 'desktop app' ? 'desktop' : h === 'command line' ? 'cli' : h === 'claude code plugin' ? 'plugin' : h ? 'editor' : '';
-  return { kind, rate: kind === 'editor' && RATE_STORES.test(rate) ? rate : GITHUB_REPO, track: !noTrack(), updates: !noUpdate() };   // track: false when DO_NOT_TRACK is set, and the page does not ask about usage
+  return { kind, rate: kind === 'editor' && RATE_STORES.test(rate) ? rate : GITHUB_REPO, track: !noTrack(), updates: !noUpdate(), ...(lead ? { lead } : {}) };   // track: false when DO_NOT_TRACK is set, and the page does not ask about usage. lead: the lead's name set in the editor (agentStandup.leadName), which the page cleans and prefers to its own setting
 }
 // Usage, counted only for those who said yes, in the desktop app, the command line and the Claude Code plugin (the editor counts itself: extension.js, pingWeek). The page asks once
 // (prefs.shareUsage, which this server reads again in the settings file before it sends anything); when the call is opened it asks this server, which sends at most one empty request a week (weeks from Monday, UTC) for the 1-pixel file of its kind in the "stats"

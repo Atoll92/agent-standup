@@ -426,5 +426,7 @@
  "Claude usage limit: {0} sessions stopped": "Límite de uso de Claude: {0} sesiones detenidas",
  "Claude Code is open in {0} but saves no history (CLAUDE_CODE_SKIP_PROMPT_HISTORY is set), so Agent Standup cannot follow it.": "Claude Code está abierto en {0}, pero no guarda historial (CLAUDE_CODE_SKIP_PROMPT_HISTORY está definida), así que Agent Standup no puede seguirlo.",
  "Why?": "¿Por qué?",
- "Remove CLAUDE_CODE_SKIP_PROMPT_HISTORY from your shell profile, then start Claude Code again.": "Quita CLAUDE_CODE_SKIP_PROMPT_HISTORY de tu perfil de shell y vuelve a iniciar Claude Code."
+ "Remove CLAUDE_CODE_SKIP_PROMPT_HISTORY from your shell profile, then start Claude Code again.": "Quita CLAUDE_CODE_SKIP_PROMPT_HISTORY de tu perfil de shell y vuelve a iniciar Claude Code.",
+ "Lead agent name": "Nombre del agente principal",
+ "Set in the editor’s settings (agentStandup.leadName)": "Elegido en los ajustes del editor (agentStandup.leadName)"
 }

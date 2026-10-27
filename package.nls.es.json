@@ -14,5 +14,6 @@
   "config.vibe.description": "Mostrar también las sesiones de Mistral Vibe (leídas de ~/.vibe/logs/session, o $VIBE_HOME). Desactívalo para no mostrarlas.",
   "config.claudePath.description": "Ruta completa del ejecutable de Claude Code, si no se encuentra automáticamente (se usa para la traducción).",
   "config.charactersPath.description": "Carpeta con tus propias imágenes de personajes (PNG, GIF o WebP, hasta 300 KB cada una). Si está vacía, usa ~/.agent-standup/characters. lead.png es el agente principal, you.png eres tú, cualquier otra imagen es un subagente y name-talk.png es un fotograma opcional con la boca abierta.",
+  "config.leadName.description": "Nombre del agente principal en la llamada (sus copias llevan su nombre: Nombre 2, Nombre 3…). Vacío: el nombre elegido en los ajustes de la llamada, o Margot. 24 caracteres como máximo.",
   "config.notifyNeedsYou.description": "Mostrar una notificación cuando una sesión de este espacio de trabajo empieza a esperarte (una pregunta, una aprobación, un plan), con el nombre de la sesión y lo que pide; una vez por espera, nunca un recordatorio. No se muestra mientras la videollamada está a la vista, ni cuando estás en la pestaña de Claude Code de esa sesión."
 }

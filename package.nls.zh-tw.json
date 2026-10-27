@@ -14,5 +14,6 @@
   "config.vibe.description": "同時顯示 Mistral Vibe 工作階段（讀取自 ~/.vibe/logs/session 或 $VIBE_HOME）。關閉後不顯示。",
   "config.claudePath.description": "Claude Code 可執行檔的完整路徑（若無法自動找到時使用；用於翻譯）。",
   "config.charactersPath.description": "存放你自己角色圖片的資料夾（PNG、GIF 或 WebP，每張最大 300 KB）。留空則使用 ~/.agent-standup/characters。lead.png 是主代理，you.png 是你，其他圖片是子代理，name-talk.png 是選用的張嘴畫面。",
+  "config.leadName.description": "通話中主代理的名字（它的分身沿用這個名字：名字 2、名字 3…）。留空則使用通話設定中選的名字，否則為 Margot。最多 24 個字元。",
   "config.notifyNeedsYou.description": "當此工作區的某個工作階段開始等你（提問、核准、計畫）時顯示通知，寫明工作階段名稱和它的請求；每次等待只通知一次，不再提醒。通話可見時，或你正在該工作階段的 Claude Code 分頁上時，不顯示。"
 }

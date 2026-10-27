@@ -14,5 +14,6 @@
   "config.vibe.description": "Mostrar também as sessões do Mistral Vibe (lidas de ~/.vibe/logs/session, ou $VIBE_HOME). Desative para não mostrá-las.",
   "config.claudePath.description": "Caminho completo do executável do Claude Code, se não for encontrado automaticamente (usado para a tradução).",
   "config.charactersPath.description": "Pasta com suas próprias imagens de personagens (PNG, GIF ou WebP, até 300 KB cada). Vazio usa ~/.agent-standup/characters. lead.png é o agente principal, you.png é você, qualquer outra imagem é um subagente, name-talk.png é um quadro opcional de boca aberta.",
+  "config.leadName.description": "Nome do agente principal na chamada (as cópias levam o nome dele: Nome 2, Nome 3…). Vazio: o nome escolhido nas configurações da chamada, ou Margot. No máximo 24 caracteres.",
   "config.notifyNeedsYou.description": "Mostrar uma notificação quando uma sessão deste workspace começa a esperar por você (uma pergunta, uma aprovação, um plano), com o nome da sessão e o que ela pede; uma vez por espera, nunca um lembrete. Não aparece enquanto a chamada está à vista, nem quando você está na aba do Claude Code dessa sessão."
 }

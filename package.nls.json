@@ -14,5 +14,6 @@
   "config.vibe.description": "Also show Mistral Vibe sessions (read from ~/.vibe/logs/session, or $VIBE_HOME). Turn off to leave them out.",
   "config.claudePath.description": "Full path to the Claude Code executable, if it is not found automatically (used for translation).",
   "config.charactersPath.description": "Folder with your own character images (PNG, GIF or WebP, up to 300 KB each). Empty uses ~/.agent-standup/characters. lead.png is the lead, you.png is you, any other image is a sub-agent, name-talk.png is an optional open-mouth frame.",
+  "config.leadName.description": "Name of the lead agent in the call (its forks are named after it: Name 2, Name 3…). Empty uses the name chosen in the call’s settings, or Margot. 24 characters at most.",
   "config.notifyNeedsYou.description": "Show a notification when a session of this workspace starts waiting for you (a question, an approval, a plan), naming the session and what it asks; once per wait, never a reminder. Not shown while the call is in view, nor while you are on that session's Claude Code tab."
 }

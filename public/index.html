@@ -300,7 +300,7 @@
   .coffee-btn { color:#ffd24a !important; background:rgba(255,210,74,.12); box-shadow:inset 0 0 0 1px rgba(255,210,74,.35) } .coffee-btn:hover { background:rgba(255,210,74,.22) !important }
   .glink { color:var(--dim); font-size:12.5px; text-decoration:underline; text-underline-offset:3px } .glink:hover { color:#ffd24a }
   #mCoffee { background:rgba(255,210,74,.10); box-shadow:inset 0 0 0 1px rgba(255,210,74,.3); margin-top:4px } #mCoffee:hover { background:rgba(255,210,74,.2) }
-  #menuQ, #logQ { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font:inherit; font-size:12.5px; outline:none } #menuQ:focus, #logQ:focus { border-color:var(--accent) }
+  #menuQ, #logQ, #leadName { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font:inherit; font-size:12.5px; outline:none } #menuQ:focus, #logQ:focus, #leadName:focus { border-color:var(--accent) } #leadName { width:100%; margin:2px 0 6px } #leadName:disabled { opacity:.6 } #leadHint { font-size:11.5px; margin:-2px 0 6px }
   #switcher { position:fixed; inset:0; z-index:20; background:rgba(5,6,12,.7); display:flex; align-items:flex-start; justify-content:center; padding-top:12vh } #switcher .sbox { width:min(560px,92vw); background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.6); overflow:hidden }
   #swq { width:100%; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--text); font:inherit; font-size:15px; padding:14px 16px; outline:none } #swl { max-height:50vh; overflow:auto } .swr { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; padding:9px 14px; cursor:pointer; align-items:center } .swr.on, .swr:hover { background:var(--panel2) } .swr b { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .swr i { grid-column:2; font-style:normal; font-size:11px; color:var(--dim) }
   #sps { display:none; gap:2px; flex:none } body.replay #sps { display:inline-flex } #sps button { background:var(--panel2); color:var(--dim); border:1px solid var(--line); border-radius:6px; padding:1px 6px; font:inherit; font-size:11px; cursor:pointer } #sps button.on { color:var(--text); border-color:var(--accent) }
@@ -435,6 +435,7 @@
   <h4 data-fr="Personnages" data-en="Characters">Personnages</h4>
   <button class="mi" data-t="customLaptop"><span data-fr="Ordinateur devant vos personnages" data-en="Laptop in front of your own characters">Ordinateur devant vos personnages</span><i class="sw"></i></button>
   <button class="mi" data-t="ownNames"><span data-fr="Garder les noms de mes agents" data-en="Keep my agents’ own names">Garder les noms de mes agents</span><i class="sw"></i></button>
+  <div class="box" id="leadBox"><div class="lbl"><span data-fr="Nom de l’agent principal" data-en="Lead agent name">Nom de l’agent principal</span></div><input id="leadName" type="text" maxlength="24" placeholder="Margot" autocomplete="off" spellcheck="false" aria-label="Lead agent name"><div class="dim" id="leadHint" style="display:none"></div></div>
   </div><div class="pcol">
   <h4 data-fr="Affichage" data-en="Display">Affichage</h4>
   <button class="mi" data-t="roster"><span data-fr="Liste des agents (à gauche)" data-en="Agents list (left)">Liste des agents (à gauche)</span><i class="sw"></i></button>
@@ -564,10 +565,14 @@ async function setLang(code, save) {
 // =====================================================================
 const NAMES = ['Ada','Linus','Grace','Alan','Margaret','Dennis','Barbara','Ken','Radia','Tim','Hedy','Guido','Frances','Bjarne','Katherine','Brian','Sophie','Niklaus','Annie','Donald','Joan','Edsger','Lynn','Vint','Mae','Rob','Zoe','Ivan','Nina','Otto','Lena','Hugo','Ines','Théo','Maya','Jules','Alma','Remy','Cleo','Noah','Iris','Leo','Mira','Axel','Nora','Eli','Lou','Gaby'];
 const nameBook = {};   // agent id → unique first name within the session
+// The lead's name: Margot, or the one chosen in ⚙ → All settings (prefs.leadName) or in the editor (agentStandup.leadName, which wins: AS_APP.lead, see appKind in server.js). Plain text of 24 characters at most: it is written into the page in many places.
+// typeof: the landing page reuses this section and has neither prefs nor APP
+const LEAD_NAME = 'Margot', cleanLead = (v) => Array.from(String(v == null ? '' : v).replace(/'/g, '’').replace(/[\u0000-\u001f\u007f-\u009f<>&"`\\]/g, '').replace(/\s+/g, ' ').trim()).slice(0, 24).join('').trim();
+const leadName = () => (typeof APP === 'object' && APP && cleanLead(APP.lead)) || (typeof prefs === 'object' && prefs && cleanLead(prefs.leadName)) || LEAD_NAME;
 function uniqueName(id, h) {
-  if (nameBook[id]) return nameBook[id]; const taken = new Set(Object.values(nameBook));
+  if (nameBook[id]) return nameBook[id]; const taken = new Set(Object.values(nameBook)), n0 = taken.size; taken.add(leadName());   // never the lead's own name: one may be chosen from this list
   for (let k = 0; k < NAMES.length; k++) { const n = NAMES[(h + k) % NAMES.length]; if (!taken.has(n)) return (nameBook[id] = n); }
-  return (nameBook[id] = NAMES[h % NAMES.length] + ' ' + (taken.size + 1));
+  return (nameBook[id] = NAMES[h % NAMES.length] + ' ' + (n0 + 1));
 }
 const PAL = ['#ff7a6b','#ffb347','#ffd84a','#4fd1a5','#4cc3ff','#7c8cff','#b583ff','#ff7eb6'];
 const hexRGB = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -710,8 +715,8 @@ function renameAll() {   // ⚙ → own names on or off: every sub-agent is name
   buildStage(); paintStatus(); renderLog(true); syncUI();
 }
 function persona0(a) {
-  const h = hash(a.id), base = { ...a, given: 'given' in a ? a.given : a.name };
-  if (a.id === 'main') return { ...base, name: a.name || 'Margot', role: L('Chef', 'Lead'), shirt: '#e8845f', shape: 0, acc: 1, eye: 0, glasses: false, scene: 6, prop: 1, acc2: '#f5c04a', lead: true, vi: 0, gid: 'main' };
+  const h = hash(a.id), base = { ...a, given: a.twinN ? leadName() + ' ' + a.twinN : 'given' in a ? a.given : a.name };   // twinN: a fork, named after the lead whatever the lead is called now
+  if (a.id === 'main') return { ...base, name: leadName(), role: L('Chef', 'Lead'), shirt: '#e8845f', shape: 0, acc: 1, eye: 0, glasses: false, scene: 6, prop: 1, acc2: '#f5c04a', lead: true, vi: 0, gid: 'main' };
   if (a.id === 'user') return { ...base, name: L('Vous', 'You'), role: L('Humain', 'Human'), shirt: '#8a94c9', shape: 1, acc: 2, eye: 1, glasses: false, scene: 7, prop: 1, acc2: '#ff7a6b', vi: 3, gid: 'user' };
   if (/^fork$/i.test(a.type || '')) return { ...base, name: subName(base, h), roleEn: a.roleEn || a.role, role: (FR() && a.roleFr) || a.roleEn || a.role, shirt: '#e8845f', shape: 0, acc: 1, eye: 0, glasses: true, scene: (h >>> 18) % 6, prop: 1, acc2: '#f5c04a', vi: 0, twin: true, gid: h.toString(36) };   // a fork (Claude Code's subagent_type "fork", on by default since 2.1.302) starts as a copy of the lead: the lead's face, shirt and voice, glasses and a room of its own to tell them apart
   return { ...base, name: subName(base, h), roleEn: a.roleEn || a.role, role: (FR() && a.roleFr) || a.roleEn || a.role, shirt: PAL[(h >>> 6) % 8], shape: (h >>> 3) % 5, acc: (h >>> 9) % 6, eye: (h >>> 12) % 3, glasses: ((h >>> 15) % 4) === 0,
@@ -847,7 +852,7 @@ const caughtUp = () => !S.live || lagMs() < 6000;
 const nearLive = () => !S.live || lagMs() < 30000;   // an answer to what was just said (a word after an order, a thank-you after a report) still fits here: reading the line took longer than 6 s and the session went on meanwhile
 const spd = () => (S.live ? 1.12 * lagFactor() : +$('#speed').value) * (S.boost || 1);
 const nameOf = (id) => (S.agents[id] || {}).name || id;
-const twinOf = (a) => (/^fork$/i.test(a.type || '') && !('given' in a) && !(a.own && prefs.ownNames) ? { ...a, given: nameOf('main') + ' ' + (2 + Object.values(S.agents).filter((p) => p.twin).length) } : a);   // a fork is named after the lead: Margot 2, Margot 3…
+const twinOf = (a) => (/^fork$/i.test(a.type || '') && !('given' in a) && !(a.own && prefs.ownNames) ? { ...a, twinN: 2 + Object.values(S.agents).filter((p) => p.twin).length } : a);   // a fork is named after the lead: Margot 2, Margot 3… (persona0 writes the name from twinN)
 
 // ---------- text prep ----------
 const plain = (t) => String(t).replace(/```[\s\S]*?```/g, ' ').replace(/`([^`]*)`/g, '$1').replace(/https?:\/\/\S+/g, 'link').replace(/[#*_>|~\[\]]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -2940,7 +2945,8 @@ setInterval(async () => {
 
 
 window.addEventListener('message', (e) => {   // VS Code asks for a given session: the one the status bar was clicked for, or the one of the Claude Code tab you went to (the message is named 'pin' on both sides, from when the call was pinned there)
-  const d = e.data; if (EMBED && e.source === window.parent && d && d.agentStandup === 'answered' && d.how === 'app' && typeof d.app === 'string') { toast('✋ ' + L('Elle vous attend dans ', 'Waiting for you in ') + d.app.slice(0, 40)); return; }   // the extension opened the terminal or app the session runs in (answerAt)
+  const d = e.data; if (EMBED && e.source === window.parent && d && d.agentStandup === 'lead' && typeof d.name === 'string') { APP.lead = d.name.slice(0, 100); leadField(); renameLead(); return; }   // agentStandup.leadName changed in the editor
+  if (EMBED && e.source === window.parent && d && d.agentStandup === 'answered' && d.how === 'app' && typeof d.app === 'string') { toast('✋ ' + L('Elle vous attend dans ', 'Waiting for you in ') + d.app.slice(0, 40)); return; }   // the extension opened the terminal or app the session runs in (answerAt)
   if (!EMBED || e.source !== window.parent || !d || d.agentStandup !== 'pin' || typeof d.id !== 'string') return;
   if (d.tab) { if (prefs.followTab !== false && S.live && !S.demo && typeof d.proj === 'string' && !(S.pick && S.pick.pin)) goSession(d.proj, d.id); return; }   // the Claude Code tab you went to: the call goes with you (followTab in extension.js; off in ⚙), unless you pinned a call (📌): that one stays while you go through your tabs
   const dp = typeof d.proj === 'string' ? d.proj : ''; if (!TOOL[dp]) prefs.proj = dp; S.pick = { proj: dp, id: d.id }; S.cur = null; setView('call'); if (S.live) { fillProjects(); followCurrent(); } else setMode('live');
@@ -3236,7 +3242,8 @@ function applyLang() {
   document.querySelectorAll('#viewSeg button').forEach((b) => { b.title = b.textContent; });   // in a narrow window they are icons: the name stays as a tooltip
   $('#callTrMi').style.display = CALL_LANG[prefs.lang] && !FR() ? '' : 'none';
   const sel = $('#langSel'); if (!sel.options.length) sel.innerHTML = LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join(''); sel.value = prefs.lang;
-  [['#bPlay', L('Pause / Lecture (espace)', 'Pause / Play (space)')], ['#bLog', L('Transcription', 'Transcript')], ['#bMute', L('Son (touche M)', 'Sound (M key)')], ['#bMenu', L('Réglages', 'Settings')], ['#dclose', L('Fermer', 'Close')], ['#officeVol', L('Volume de l’ambiance', 'Ambience volume')], ['#voiceVol', L('Volume des voix', 'Voice volume')], ['#musicVol', L('Volume de la musique', 'Music volume')], ['#liveProj', L('Projet à suivre', 'Project to follow')], ['#reactBar', L('Réactions', 'Reactions')], ['#logQ', L('Rechercher dans la transcription', 'Search the transcript')], ['#roster', L('Agents', 'Agents')]].forEach(([q, t]) => { const el = $(q); if (!el) return; el.title = t; el.setAttribute('aria-label', t); }); $('#logQ').placeholder = L('Rechercher…', 'Search…'); $('#menuQ').placeholder = L('Chercher un réglage…', 'Search settings…'); $('#menuQ').setAttribute('aria-label', $('#menuQ').placeholder); $('#sps').setAttribute('aria-label', L('Vitesses prédéfinies', 'Speed presets')); document.querySelectorAll('#reactBar button').forEach((b) => b.setAttribute('aria-label', b.dataset.e));
+  [['#bPlay', L('Pause / Lecture (espace)', 'Pause / Play (space)')], ['#bLog', L('Transcription', 'Transcript')], ['#bMute', L('Son (touche M)', 'Sound (M key)')], ['#bMenu', L('Réglages', 'Settings')], ['#dclose', L('Fermer', 'Close')], ['#officeVol', L('Volume de l’ambiance', 'Ambience volume')], ['#voiceVol', L('Volume des voix', 'Voice volume')], ['#musicVol', L('Volume de la musique', 'Music volume')], ['#liveProj', L('Projet à suivre', 'Project to follow')], ['#reactBar', L('Réactions', 'Reactions')], ['#logQ', L('Rechercher dans la transcription', 'Search the transcript')], ['#roster', L('Agents', 'Agents')], ['#leadName', L('Nom de l’agent principal', 'Lead agent name')]].forEach(([q, t]) => { const el = $(q); if (!el) return; el.title = t; el.setAttribute('aria-label', t); }); $('#logQ').placeholder = L('Rechercher…', 'Search…'); $('#menuQ').placeholder = L('Chercher un réglage…', 'Search settings…'); $('#menuQ').setAttribute('aria-label', $('#menuQ').placeholder); $('#sps').setAttribute('aria-label', L('Vitesses prédéfinies', 'Speed presets')); document.querySelectorAll('#reactBar button').forEach((b) => b.setAttribute('aria-label', b.dataset.e));
+  leadField();
   $('#gB').textContent = L('🔊 Activer le son', '🔊 Turn on sound'); $('#gB').title = L('Ou cliquez n’importe où dans l’appel', 'Or click anywhere in the call');
   $('#eDemo').textContent = L('▶ Voir la démo', '▶ Watch the demo'); $('#eT').textContent = L('En attente d’une session', 'Waiting for a session'); $('#eP').innerHTML = watched() ? esc(L('Aucune session pour l’instant. Lancez Claude Code, Codex ou Mistral Vibe dans {0} : l’appel démarrera tout seul.', 'No session yet. Start Claude Code, Codex or Mistral Vibe in {0}: the call will start by itself.')).replace('{0}', () => `<b>${esc(watched())}</b>`) : esc(L('Aucune session sur cet ordinateur pour l’instant. Lancez Claude Code, Codex ou Mistral Vibe (ou une tâche Cowork) : l’appel démarrera tout seul.', 'No session on this computer yet. Start Claude Code, Codex or Mistral Vibe (or a Cowork task): the call will start by itself.'));
   for (const id in S.agents) { const p = persona(S.agents[id]); Object.assign(S.agents[id], { name: p.name, role: p.role }); const t = $('#t-' + id); if (t) { t.querySelector('.tag span').textContent = p.role; t.querySelector('.tag b').textContent = p.name; if (id === 'main' || id === 'user') t.querySelector('.tag span').textContent = p.role; } }
@@ -3301,7 +3308,7 @@ function openPrefs(target) {   // ⚙ → All settings; target: one of its setti
   $('#menu').classList.remove('on'); $('#prefs').classList.add('on'); syncSwitches(); document.querySelectorAll('#prefs .mi[data-t]').forEach((b) => b.querySelector('.sw').classList.toggle('on', !!prefs[b.dataset.t]));
   if (target) { target.scrollIntoView({ block: 'center' }); target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash'); (target.matches('.mi') ? target : target.querySelector('select, input, button') || target).focus(); } else $('#prefsX').focus();
 }
-const PANEL_KEYS = ['office', 'officeVol', 'music', 'station', 'musicVol', 'voiceVol', 'notify', 'customLaptop', 'ownNames', 'roster', 'reactions', 'banter', 'chat', 'vanish', 'epi', 'files', 'artNet', 'visits', 'askCard', 'followTab'];   // what the panel holds, and so what Reset puts back
+const PANEL_KEYS = ['office', 'officeVol', 'music', 'station', 'musicVol', 'voiceVol', 'notify', 'customLaptop', 'ownNames', 'roster', 'reactions', 'banter', 'chat', 'vanish', 'epi', 'files', 'artNet', 'visits', 'askCard', 'followTab', 'leadName'];   // what the panel holds, and so what Reset puts back
 $('#prefsReset').onclick = async () => {
   const b = $('#prefsReset'); if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = L('Cliquez encore pour tout remettre', 'Click again to reset them all'); setTimeout(() => { b.classList.remove('sure'); b.textContent = L('Réglages par défaut', 'Reset to defaults'); }, 4000); return; }   // two clicks: nothing is lost by a stray one
   for (const k of PANEL_KEYS) { if (k in PREF_DEFAULTS) prefs[k] = PREF_DEFAULTS[k]; else delete prefs[k]; } delete prefs.notifyChosen;   // notifyChosen too: the default of notifications is decided at start-up from it
@@ -3326,6 +3333,20 @@ $('#station').innerHTML = STATIONS.map((s) => `<option value="${s.id}">📻 ${s.
 $('#station').value = prefs.station; $('#musicVol').value = prefs.musicVol; $('#musicBox').style.display = prefs.music ? '' : 'none';
 $('#station').onchange = (e) => { prefs.station = e.target.value; savePrefs(); AUD.init(); RADIO.sync(); };
 $('#chatSel').value = ['quiet', 'normal', 'lively'].includes(prefs.chat) ? prefs.chat : 'normal'; $('#chatSel').onchange = () => { prefs.chat = $('#chatSel').value; savePrefs(); };
+// ⚙ → All settings → Lead agent name (empty: Margot). The editor's agentStandup.leadName wins over it: the field then shows that name, greyed, and says where it is set
+function leadField() {
+  const f = $('#leadName'), ed = cleanLead(APP.lead); f.disabled = !!ed; if (document.activeElement !== f || ed) f.value = ed || cleanLead(prefs.leadName);
+  const h = $('#leadHint'); h.style.display = ed ? '' : 'none'; h.textContent = ed ? L('Choisi dans les réglages de l’éditeur (agentStandup.leadName)', 'Set in the editor’s settings (agentStandup.leadName)') : '';
+}
+function renameLead() {   // the lead and its forks take the new name at once, in the call, the list and the transcript
+  const was = (S.agents.main || {}).name; let moved = false;
+  for (const id in S.agents) { const a = S.agents[id]; if (id !== 'main' && !a.twinN) continue; const p = persona(a); if (p.name !== a.name) moved = true; a.name = p.name; a.given = p.given; }
+  if (moved || was !== leadName()) { buildStage(); paintStatus(); renderLog(true); syncUI(); }
+}
+let leadTimer = null;
+$('#leadName').oninput = () => { prefs.leadName = cleanLead($('#leadName').value); if (!prefs.leadName) delete prefs.leadName; savePrefs(); clearTimeout(leadTimer); leadTimer = setTimeout(renameLead, 250); };
+$('#leadName').onchange = () => { clearTimeout(leadTimer); renameLead(); leadField(); };
+leadField();
 $('#vstyle').innerHTML = [['animal', 'Animal Crossing (babillage)', 'Animal Crossing (babble)'], ['kokoro', 'Voix naturelles (à installer)', 'Natural voices (installs on demand)']].map(([v, fr, en]) => `<option value="${v}" data-fr="${fr}" data-en="${en}">${L(fr, en)}</option>`).join(''); $('#vstyle').value = prefs.vstyle; $('#vstyle').onchange = () => { prefs.vstyle = $('#vstyle').value; prefs.vstyleChosen = true; savePrefs(); TTS.init().then(kokoroUI); kokoroUI(); };
 // ---- ⚙ → very natural voices (Kokoro): install box and status, polled while installing
 let kokoroTimer = null;

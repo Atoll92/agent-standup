@@ -283,6 +283,7 @@ Browsers allow sound only after a click: the call plays from the start, silent, 
 | `agentStandup.notifyNeedsYou` | `true` | A notification when a session of this workspace starts to wait for you, with its name and what it asks, and **Go to session** / **Open call**; once per wait, with no reminder. Not while the call is in view, nor while you are on that session's Claude Code tab; with several windows on one folder, one of them tells it |
 | `agentStandup.shareUsage` | `false` | Opt-in, anonymous: one empty request a day (when the editor starts) and at most one a week (when you open the call) to 1-pixel files on GitHub, to count how many people use it. Asked once, the first time you open the call; ignored when VS Code telemetry is off |
 | `agentStandup.charactersPath` | _(empty)_ | Folder with your own character images (default `~/.agent-standup/characters`) |
+| `agentStandup.leadName` | _(empty)_ | Name of the lead agent in the call, 24 characters at most; its forks are named after it (Name 2, Name 3…). Empty uses the name chosen in ⚙ → All settings, or Margot |
 | `agentStandup.codex` | `true` | Also show Codex sessions (read from `~/.codex/sessions`, or `$CODEX_HOME`). Turn off to show Claude Code sessions only |
 | `agentStandup.vibe` | `true` | Also show Mistral Vibe sessions (read from `~/.vibe/logs/session`, or `$VIBE_HOME`). Turn off to leave them out |
 | `agentStandup.claudePath` | _(auto)_ | Full path to the Claude Code executable if it isn't found automatically (needed only for translation) |

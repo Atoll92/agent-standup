@@ -14,5 +14,6 @@
   "config.vibe.description": "Vis også Mistral Vibe-sessioner (læst fra ~/.vibe/logs/session eller $VIBE_HOME). Slå fra for at udelade dem.",
   "config.claudePath.description": "Fuld sti til Claude Code-programmet, hvis det ikke findes automatisk (bruges til oversættelse).",
   "config.charactersPath.description": "Mappe med dine egne figurbilleder (PNG, GIF eller WebP, op til 300 KB hver). Tom bruger ~/.agent-standup/characters. lead.png er lederen, you.png er dig, alle andre billeder er underagenter, navn-talk.png er en valgfri ramme med åben mund.",
+  "config.leadName.description": "Navnet på hovedagenten i opkaldet (dens kopier får dens navn: Navn 2, Navn 3 …). Tom: navnet valgt i opkaldets indstillinger, eller Margot. Højst 24 tegn.",
   "config.notifyNeedsYou.description": "Vis en notifikation, når en session i dette arbejdsområde begynder at vente på dig (et spørgsmål, en godkendelse, en plan), med sessionens navn og hvad den spørger om; én gang pr. ventetid, aldrig en påmindelse. Vises ikke, mens opkaldet er synligt, eller mens du er på sessionens Claude Code-fane."
 }

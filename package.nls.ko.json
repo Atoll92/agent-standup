@@ -14,5 +14,6 @@
   "config.vibe.description": "Mistral Vibe 세션도 표시합니다 (~/.vibe/logs/session 또는 $VIBE_HOME에서 읽음). 끄면 표시하지 않습니다.",
   "config.claudePath.description": "자동으로 찾지 못할 경우 Claude Code 실행 파일의 전체 경로입니다(번역에 사용).",
   "config.charactersPath.description": "직접 만든 캐릭터 이미지(PNG, GIF, WebP, 각 300 KB 이하) 폴더입니다. 비워 두면 ~/.agent-standup/characters를 사용합니다. lead.png는 메인 에이전트, you.png는 나, 그 밖의 이미지는 서브에이전트이며, name-talk.png는 입을 벌린 프레임(선택)입니다.",
+  "config.leadName.description": "통화에서 메인 에이전트의 이름(포크는 이 이름을 따릅니다: 이름 2, 이름 3…). 비워 두면 통화 설정에서 고른 이름, 없으면 Margot. 최대 24자.",
   "config.notifyNeedsYou.description": "이 워크스페이스의 세션이 당신을 기다리기 시작하면(질문, 승인, 계획) 세션 이름과 요청 내용을 알림으로 보여 줍니다. 기다릴 때마다 한 번만 알리고, 다시 알리지 않습니다. 통화가 화면에 보이는 동안이나 그 세션의 Claude Code 탭에 있는 동안에는 알리지 않습니다."
 }

@@ -97,7 +97,7 @@ const frameHtml = (src) => `<!doctype html><html><head><meta charset="utf-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src http://localhost:* http://127.0.0.1:* https:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
     <style>html,body{margin:0;height:100%;background:#12131a}iframe{border:0;width:100%;height:100vh}</style></head>
     <body><iframe src="${src}" allow="autoplay; clipboard-write"></iframe>
-    <script>const vs = acquireVsCodeApi(); const fr = document.querySelector('iframe'); addEventListener('message', (e) => { if (e.source === fr.contentWindow) { if (e.data && e.data.agentStandup) vs.postMessage(e.data); } else if (e.data && (e.data.agentStandup === 'pin' || e.data.agentStandup === 'answered')) fr.contentWindow.postMessage(e.data, '*'); });</script></body></html>`;
+    <script>const vs = acquireVsCodeApi(); const fr = document.querySelector('iframe'); addEventListener('message', (e) => { if (e.source === fr.contentWindow) { if (e.data && e.data.agentStandup) vs.postMessage(e.data); } else if (e.data && (e.data.agentStandup === 'pin' || e.data.agentStandup === 'answered' || e.data.agentStandup === 'lead')) fr.contentWindow.postMessage(e.data, '*'); });</script></body></html>`;
 // Messages from the page: open it in the browser, or open a donation link or the draft of a problem report (https only, known sites only).
 // A link that carries a query (the draft of a report) is handed over as text: given as a Uri, VS Code decodes and re-encodes the query, and the draft arrives cut at its first "&" or "#".
 const DONATE_HOSTS = /^(www\.)?(buymeacoffee\.com|ko-fi\.com|paypal\.me|paypal\.com|github\.com)$/, SHOP_HOSTS = /^(checkout\.stripe\.com|agent-standup\.com|(www\.)?instagram\.com)$/, ARTIFACT_PATH = /^\/(code\/)?artifact\/[\w-]+$/;   // SHOP_HOSTS: the payment page of a pack bought from ⚙ → Characters, and the page of the artist who drew it. Its address ends with a fragment the page needs, so it is handed over as text too
@@ -291,7 +291,7 @@ function noteUse(st = extCtx && extCtx.globalState, day = new Date().toISOString
   } catch (err) { logErr('rating', err); }
 }
 let codex0, vibe0;   // what the environment asked for, put back when the setting is on
-const serverEnv = () => ({ AGENT_STANDUP_CLAUDE: cfg().get('claudePath') || '', AGENT_STANDUP_CHARACTERS: cfg().get('charactersPath') || '', AGENT_STANDUP_CODEX: cfg().get('codex') === false ? 'off' : codex0, AGENT_STANDUP_VIBE: cfg().get('vibe') === false ? 'off' : vibe0 });   // undefined: not set
+const serverEnv = () => ({ AGENT_STANDUP_CLAUDE: cfg().get('claudePath') || '', AGENT_STANDUP_CHARACTERS: cfg().get('charactersPath') || '', AGENT_STANDUP_CODEX: cfg().get('codex') === false ? 'off' : codex0, AGENT_STANDUP_VIBE: cfg().get('vibe') === false ? 'off' : vibe0, AGENT_STANDUP_LEAD_NAME: String(cfg().get('leadName') || '').trim() || undefined });   // undefined: not set
 function activate(ctx) {
   extCtx = ctx; pingActive(ctx);
   try { process.env.AGENT_STANDUP_HOST = `${vscode.env.appName || 'editor'} ${vscode.version || ''}`.trim(); } catch {}   // named in a problem report: VS Code, Cursor, VSCodium…
@@ -299,7 +299,7 @@ function activate(ctx) {
   codex0 = process.env.AGENT_STANDUP_CODEX; vibe0 = process.env.AGENT_STANDUP_VIBE;
   noteWindow();
   const applyPath = () => { const e = serverEnv(); for (const [k, v] of Object.entries(e)) { if (v == null) delete process.env[k]; else process.env[k] = v; } if (started) started.then((s) => { if (s.kid && s.kid.connected) s.kid.send({ env: Object.fromEntries(Object.entries(e).map(([k, v]) => [k, v === undefined ? null : v])) }); }).catch(() => {}); };   /* null: unset there too (JSON leaves out undefined) */   // here (the characters folder, a server in the extension host) and in the server's process
-  applyPath(); ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration((ev) => { if (ev.affectsConfiguration('agentStandup.claudePath') || ev.affectsConfiguration('agentStandup.charactersPath') || ev.affectsConfiguration('agentStandup.codex') || ev.affectsConfiguration('agentStandup.vibe')) applyPath(); }));
+  applyPath(); ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration((ev) => { if (ev.affectsConfiguration('agentStandup.claudePath') || ev.affectsConfiguration('agentStandup.charactersPath') || ev.affectsConfiguration('agentStandup.codex') || ev.affectsConfiguration('agentStandup.vibe') || ev.affectsConfiguration('agentStandup.leadName')) applyPath(); if (ev.affectsConfiguration('agentStandup.leadName')) for (const w of [panel, side]) if (w) try { w.webview.postMessage({ agentStandup: 'lead', name: String(cfg().get('leadName') || '') }); } catch {} }));   // the lead's new name, to the calls open now (a page loaded later has it from the server)
   ctx.subscriptions.push(
     vscode.commands.registerCommand('agentStandup.open', openPanel),
     vscode.commands.registerCommand('agentStandup.openInBrowser', openBrowser),
