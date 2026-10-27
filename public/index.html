@@ -236,6 +236,7 @@
   .tag { position:absolute; left:6px; bottom:6px; right:6px; display:flex; gap:5px; pointer-events:none }
   .tag b, .tag span { background:rgba(14,15,24,.78); backdrop-filter:blur(6px); padding:2px 9px; border-radius:99px; font-size:11.5px; white-space:nowrap }
   .tag span { color:#e3e6f0; font-size:10.5px; overflow:hidden; text-overflow:ellipsis; min-width:0 }
+  #t-main .tag b { min-width:0; overflow:hidden; text-overflow:ellipsis } #t-main .tag b + span { flex-shrink:0 }   /* a long name for the lead (⚙ → Lead agent name) is cut, not its Lead badge */
   .status { position:absolute; top:6px; right:6px; font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:99px; background:rgba(14,15,24,.8); backdrop-filter:blur(6px) }
   #stage .tile .status { white-space:normal; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.3; border-radius:10px } #stage .tile .status:empty { display:none }   /* what a tile is doing: two lines before it is cut */
   .status.working { color:var(--gold) } .status.done { color:var(--ok) } .status.turn { color:#0b1020; background:var(--accent) }
@@ -435,7 +436,7 @@
   <h4 data-fr="Personnages" data-en="Characters">Personnages</h4>
   <button class="mi" data-t="customLaptop"><span data-fr="Ordinateur devant vos personnages" data-en="Laptop in front of your own characters">Ordinateur devant vos personnages</span><i class="sw"></i></button>
   <button class="mi" data-t="ownNames"><span data-fr="Garder les noms de mes agents" data-en="Keep my agents’ own names">Garder les noms de mes agents</span><i class="sw"></i></button>
-  <div class="box" id="leadBox"><div class="lbl"><span data-fr="Nom de l’agent principal" data-en="Lead agent name">Nom de l’agent principal</span></div><input id="leadName" type="text" maxlength="24" placeholder="Margot" autocomplete="off" spellcheck="false" aria-label="Lead agent name"><div class="dim" id="leadHint" style="display:none"></div></div>
+  <div class="box" id="leadBox"><div class="lbl"><span data-fr="Nom de l’agent principal" data-en="Lead agent name">Nom de l’agent principal</span></div><input id="leadName" type="text" maxlength="48" placeholder="Margot" autocomplete="off" spellcheck="false" aria-label="Lead agent name"><div class="dim" id="leadHint" style="display:none"></div></div>
   </div><div class="pcol">
   <h4 data-fr="Affichage" data-en="Display">Affichage</h4>
   <button class="mi" data-t="roster"><span data-fr="Liste des agents (à gauche)" data-en="Agents list (left)">Liste des agents (à gauche)</span><i class="sw"></i></button>
@@ -569,10 +570,12 @@ const nameBook = {};   // agent id → unique first name within the session
 // typeof: the landing page reuses this section and has neither prefs nor APP
 const LEAD_NAME = 'Margot', cleanLead = (v) => Array.from(String(v == null ? '' : v).replace(/'/g, '’').replace(/[\u0000-\u001f\u007f-\u009f<>&"`\\]/g, '').replace(/\s+/g, ' ').trim()).slice(0, 24).join('').trim();
 const leadName = () => (typeof APP === 'object' && APP && cleanLead(APP.lead)) || (typeof prefs === 'object' && prefs && cleanLead(prefs.leadName)) || LEAD_NAME;
+const isLeadName = (n) => !!n && String(n).toLocaleLowerCase() === leadName().toLocaleLowerCase();   // whatever the capitals: Ivan and ivan would read as one agent
 function uniqueName(id, h) {
-  if (nameBook[id]) return nameBook[id]; const taken = new Set(Object.values(nameBook)), n0 = taken.size; taken.add(leadName());   // never the lead's own name: one may be chosen from this list
-  for (let k = 0; k < NAMES.length; k++) { const n = NAMES[(h + k) % NAMES.length]; if (!taken.has(n)) return (nameBook[id] = n); }
-  return (nameBook[id] = NAMES[h % NAMES.length] + ' ' + (n0 + 1));
+  if (nameBook[id]) return nameBook[id]; const taken = new Set(Object.values(nameBook).map((n) => n.toLocaleLowerCase())), n0 = taken.size; taken.add(leadName().toLocaleLowerCase());   // never the lead's own name: one may be chosen from this list
+  for (let k = 0; k < NAMES.length; k++) { const n = NAMES[(h + k) % NAMES.length]; if (!taken.has(n.toLocaleLowerCase())) return (nameBook[id] = n); }
+  let b = h % NAMES.length; if (isLeadName(NAMES[b])) b = (b + 1) % NAMES.length;   // every name taken: a number after it, but never after the lead's name ("Ivan 48" would read as a fork of a lead called Ivan)
+  return (nameBook[id] = NAMES[b] + ' ' + (n0 + 1));
 }
 const PAL = ['#ff7a6b','#ffb347','#ffd84a','#4fd1a5','#4cc3ff','#7c8cff','#b583ff','#ff7eb6'];
 const hexRGB = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -709,10 +712,12 @@ function packNote() {   // the Halloween pack, to someone without it, twice a se
   $('#packNoteB').textContent = L('Voir le pack', 'See the pack') + ' · ' + price;
 }
 function persona(a) { const p = persona0(a); p.custom = customFor(p.twin ? 'main' : a.id); return p; }   // a fork wears the lead's own picture too
-const subName = (a, h) => (a.own && prefs.ownNames ? (nameBook[a.id] = a.own) : a.given || uniqueName(a.id, h));   // own: the name the person gave this agent (see ownName in server.js); otherwise a first name from the list. a.own is tested first: the landing page reuses this section and has no settings
-function renameAll() {   // ⚙ → own names on or off: every sub-agent is named again, in the order it arrived
-  for (const k in nameBook) delete nameBook[k]; for (const p of Object.values(S.agents)) if (p.id !== 'main' && p.id !== 'user') p.name = subName(p, hash(p.id));
-  buildStage(); paintStatus(); renderLog(true); syncUI();
+const subName = (a, h) => (a.own && prefs.ownNames && !isLeadName(a.own) ? (nameBook[a.id] = a.own) : (!isLeadName(a.given) && a.given) || uniqueName(a.id, h));   // own: the name the person gave this agent (see ownName in server.js); otherwise a first name from the list. a.own is tested first: the landing page reuses this section and has no settings
+function renameAll(lead) {   // ⚙ → own names on or off, or a new name for the lead: every sub-agent is named again, in the order it arrived, as a reload would name them
+  const names = () => Object.values(S.agents).map((p) => p.name).join('\n'), was = names();
+  if (lead) for (const p of Object.values(S.agents)) if (p.id === 'main' || p.twinN) { const q = persona(p); p.name = q.name; p.given = q.given; }   // the lead and its forks first: the others then keep clear of the lead's name
+  for (const k in nameBook) delete nameBook[k]; for (const p of Object.values(S.agents)) if (p.id !== 'main' && p.id !== 'user' && !p.twinN) p.name = subName(p, hash(p.id));
+  if (!lead || names() !== was) { buildStage(); renderTokens(); renderCtx(); paintStatus(); renderLog(true); syncUI(); }   // the new tiles get their tokens and context at once, not at the next usage
 }
 function persona0(a) {
   const h = hash(a.id), base = { ...a, given: a.twinN ? leadName() + ' ' + a.twinN : 'given' in a ? a.given : a.name };   // twinN: a fork, named after the lead whatever the lead is called now
@@ -3338,11 +3343,7 @@ function leadField() {
   const f = $('#leadName'), ed = cleanLead(APP.lead); f.disabled = !!ed; if (document.activeElement !== f || ed) f.value = ed || cleanLead(prefs.leadName);
   const h = $('#leadHint'); h.style.display = ed ? '' : 'none'; h.textContent = ed ? L('Choisi dans les réglages de l’éditeur (agentStandup.leadName)', 'Set in the editor’s settings (agentStandup.leadName)') : '';
 }
-function renameLead() {   // the lead and its forks take the new name at once, in the call, the list and the transcript
-  const was = (S.agents.main || {}).name; let moved = false;
-  for (const id in S.agents) { const a = S.agents[id]; if (id !== 'main' && !a.twinN) continue; const p = persona(a); if (p.name !== a.name) moved = true; a.name = p.name; a.given = p.given; }
-  if (moved || was !== leadName()) { buildStage(); paintStatus(); renderLog(true); syncUI(); }
-}
+function renameLead() { renameAll(true); }   // the lead and its forks take the new name at once, in the call, the list and the transcript, and a sub-agent that had that name gets another
 let leadTimer = null;
 $('#leadName').oninput = () => { prefs.leadName = cleanLead($('#leadName').value); if (!prefs.leadName) delete prefs.leadName; savePrefs(); clearTimeout(leadTimer); leadTimer = setTimeout(renameLead, 250); };
 $('#leadName').onchange = () => { clearTimeout(leadTimer); renameLead(); leadField(); };
