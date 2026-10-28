@@ -100,6 +100,11 @@
           "default": true,
           "description": "%config.vibe.description%"
         },
+        "agentStandup.reply": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.reply.description%"
+        },
         "agentStandup.claudePath": {
           "type": "string",
           "default": "",

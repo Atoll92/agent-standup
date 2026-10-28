@@ -113,6 +113,15 @@ Sessions of Cowork (a tab of the Claude desktop app) appear next to your Claude 
 - **Where it looks:** `~/Library/Application Support/Claude` on macOS, `%APPDATA%\Claude` on Windows (and the app's own folder under `%LOCALAPPDATA%\Packages` when it is installed as a Windows package), `~/.config/Claude` on Linux. Checked against real sessions on macOS; the Windows and Linux places are not tested yet.
 - **Turn it off or point it elsewhere:** `AGENT_STANDUP_COWORK=off`, or `AGENT_STANDUP_COWORK=/path/to/local-agent-mode-sessions` (command line: `--cowork off` or `--cowork DIR`). With `--projects DIR`, Cowork sessions are only read if you also pass `--cowork`. There is no VS Code setting for it yet.
 
+## Talk to the session from the call
+
+Off by default. Turned on, a field under the live call lets you write to the Claude Code session the call follows: Agent Standup types your line into that session's terminal, through tmux, and presses Enter, as if you had typed it there. The field names the session it goes to, and asks again if the call moved to another session after you started typing.
+
+- **Needs:** a Claude Code session running inside tmux, on Linux (sending works only on Linux for now). The app finds the session's tmux pane from the status Claude Code keeps for each open session in `~/.claude/sessions`. Codex, Mistral Vibe and Cowork sessions, replays and the demo have no field.
+- **Turn it on:** in VS Code, the setting `agentStandup.reply`; anywhere else `AGENT_STANDUP_REPLY=on` (command line: `--reply`, or `--reply off`).
+- **What it refuses:** a session that is not at its prompt (still working, or a menu open in Claude Code, such as a permission question: answer that one in the terminal), a session started outside tmux, and a request from another user of the computer. A line is one message: new lines become spaces, 4000 characters at most. If the session starts working while the line is typed, Enter is not pressed and the text stays in the terminal prompt.
+- **The risk:** anyone who can run commands as you can then type into your sessions. Leave it off on a computer you share with code or people you do not trust.
+
 ## What you see for each agent
 
 **On its tile**
@@ -288,6 +297,7 @@ Browsers allow sound only after a click: the call plays from the start, silent, 
 | `agentStandup.leadName` | _(empty)_ | Name of the lead agent in the call, 24 characters at most; its forks are named after it (Name 2, Name 3…). Empty uses the name chosen in ⚙ → All settings, or Margot |
 | `agentStandup.codex` | `true` | Also show Codex sessions (read from `~/.codex/sessions`, or `$CODEX_HOME`). Turn off to show Claude Code sessions only |
 | `agentStandup.vibe` | `true` | Also show Mistral Vibe sessions (read from `~/.vibe/logs/session`, or `$VIBE_HOME`). Turn off to leave them out |
+| `agentStandup.reply` | `false` | Let the call type your line into the followed Claude Code session's tmux pane ([Talk to the session from the call](#talk-to-the-session-from-the-call), Linux only for now). Anyone who can run commands as you can then type into your sessions |
 | `agentStandup.claudePath` | _(auto)_ | Full path to the Claude Code executable if it isn't found automatically (needed only for translation) |
 | `agentStandup.autoOpen` | `false` | Open the call when VS Code starts |
 | `agentStandup.onlyThisWorkspace` | `true` | Follow only sessions started in the open folder (falls back to the newest session if there is none) |
@@ -403,6 +413,7 @@ The code is MIT licensed: use it, change it, fork it. The name, the logo and the
 The full [privacy policy](PRIVACY.md) says what is read, what is kept on your computer and what can leave it.
 
 - **It reads local files and sends nothing by default.** Agent Standup reads the output Claude Code writes for a command running in the background (in its temporary folder, while the shared screen shows that command), and the session files Claude Code already writes (`~/.claude/projects`, or `CLAUDE_CONFIG_DIR`; the status it keeps for each open session in `~/.claude/sessions`, and the plan files a session names in `~/.claude/plans`) and the ones Codex, Mistral Vibe and Cowork write (`~/.codex/sessions`, or `CODEX_HOME`; `~/.vibe/logs/session`, or `VIBE_HOME`; the `local-agent-mode-sessions` folder of the Claude desktop app; each can be turned off) and draws them in a page. It never writes to your sessions; a click on a session that needs you opens it in the app it runs in (a local link, or that app brought to the front, found in the list of running programs); it starts Claude Code only for translation and the optional jokes, described below.
+- **One exception, off by default:** with [Talk to the session from the call](#talk-to-the-session-from-the-call) turned on, it types the line you write into that session's tmux pane, and only when you send it.
 - **Local only.** The server listens on `127.0.0.1` (never on the network), refuses requests whose Host or Origin is not local, and refuses cross-site requests on every endpoint that does something (translation, jokes, sound, settings).
 - **What calls out:** translation, which is on when the interface is in French, Spanish or Brazilian Portuguese (for the last two it can be switched off), and three things that are optional and off by default: jokes, the FIP radio stream, and the usage counter (only if you say yes: in VS Code, one empty request a day and at most one a week; in the desktop app, the command line and the Claude Code plugin, at most one a week; each to a 1-pixel file on GitHub), and, in those three, the new-version notice (only if you say yes: at most one request a day to the npm registry for the latest version number). Installing the natural voices, buying a character pack and loading an artifact's libraries also reach the network, only when you ask; [PRIVACY.md](PRIVACY.md) lists each one. Translation and jokes go through your own Claude login (the small Haiku model, with all tools disabled); when one of them is on, the lines of a Codex, Mistral Vibe or Cowork session are sent the same way, to Anthropic.
 - **No dependencies**: the code is plain Node.js and one HTML file, so there is nothing hidden in `node_modules`. The optional Kokoro voices install a third-party package only when you click Install.

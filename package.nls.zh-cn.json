@@ -12,6 +12,7 @@
   "config.shareUsage.description": "帮助项目统计有多少人在使用：编辑器启动时每天一次、打开通话时每周最多一次，向 GitHub 上一个 1 像素文件发送一次空请求（无标识符、无内容；GitHub 会像普通下载一样看到你的 IP）。在你同意之前保持关闭（首次打开通话时询问一次）；VS Code 遥测关闭时将被忽略。",
   "config.codex.description": "同时显示 Codex 会话（读取自 ~/.codex/sessions 或 $CODEX_HOME）。关闭后仅显示 Claude Code 会话。",
   "config.vibe.description": "同时显示 Mistral Vibe 会话（读取自 ~/.vibe/logs/session 或 $VIBE_HOME）。关闭后不显示。",
+  "config.reply.description": "允许通话把你的消息输入到所跟随的 Claude Code 会话的 tmux 窗格中（仅限 Linux，默认关闭）。任何能以你的身份运行命令的人都可以借此向你的会话输入内容。",
   "config.claudePath.description": "Claude Code 可执行文件的完整路径（若无法自动找到；用于翻译）。",
   "config.charactersPath.description": "存放你自己角色图片的文件夹（PNG、GIF 或 WebP，每张最大 300 KB）。留空则使用 ~/.agent-standup/characters。lead.png 是主代理，you.png 是你，其他图片是子代理，name-talk.png 是可选的张嘴帧。",
   "config.leadName.description": "通话中主代理的名字（它的分身沿用这个名字：名字 2、名字 3…）。留空则使用通话设置中选的名字，否则为 Margot。最多 24 个字符。",

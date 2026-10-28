@@ -12,6 +12,7 @@
   "config.shareUsage.description": "Help the project count how many people use it: once a day when the editor starts, and at most once a week when you open the call, send one empty request to a 1-pixel file on GitHub (no identifier, no content; GitHub sees your IP like for any download). Off until you say yes (asked once, the first time you open the call); ignored if VS Code telemetry is off.",
   "config.codex.description": "Also show Codex sessions (read from ~/.codex/sessions, or $CODEX_HOME). Turn off to show Claude Code sessions only.",
   "config.vibe.description": "Also show Mistral Vibe sessions (read from ~/.vibe/logs/session, or $VIBE_HOME). Turn off to leave them out.",
+  "config.reply.description": "Let the call type your message into the followed Claude Code session's tmux pane (Linux only, off by default). Anyone who can run commands as you can then type into your sessions.",
   "config.claudePath.description": "Full path to the Claude Code executable, if it is not found automatically (used for translation).",
   "config.charactersPath.description": "Folder with your own character images (PNG, GIF or WebP, up to 300 KB each). Empty uses ~/.agent-standup/characters. lead.png is the lead, you.png is you, any other image is a sub-agent, name-talk.png is an optional open-mouth frame.",
   "config.leadName.description": "Name of the lead agent in the call (its forks are named after it: Name 2, Name 3…). Empty uses the name chosen in the call’s settings, or Margot. 24 characters at most.",
