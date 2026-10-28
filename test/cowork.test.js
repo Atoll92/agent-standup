@@ -22,6 +22,8 @@ test('Cowork sessions are listed under Cowork with the name the app gave them, a
     assert.equal(rows.filter((r) => r.proj === '-work-app').length, 1);
     const board = core.boardRows().find((r) => r.id === S1); assert.equal(board.proj, '_cowork'); assert.equal(board.title, 'Invoices of October'); assert.equal(board.subTotal, 1);
     const tl = await get(port, '/api/session?proj=_cowork&id=' + S1); assert.equal(tl.status, 200); assert.ok(tl.json.events.some((e) => JSON.stringify(e).includes('three folders')));
+    assert.equal(tl.json.project.key, 'cowork:' + p1);
+    assert.equal((await get(port, '/api/session?proj=_cowork&id=' + S2)).json.project.key, 'cowork:' + p2, 'each VM project has its own lead name, never one for all Cowork');
     assert.equal((await get(port, '/api/session?proj=_cowork&id=44444444-4444-4444-8444-444444444444')).status, 404);
     assert.equal((await get(port, '/api/session?proj=_cowork&id=' + CC)).status, 404);   // a Claude Code session is not one of Cowork
     assert.ok((await get(port, '/api/projects')).json.some((p) => p.proj === '_cowork' && p.sessions === 2));

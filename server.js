@@ -908,7 +908,7 @@ const projCwds = new Map(), dirKey = (d) => String(d || '').replace(/[^a-zA-Z0-9
 const foldKey = (k) => (process.platform === 'win32' ? String(k).toLowerCase() : k);   // Windows: a folder is the same whatever its case (the editor sends C:, Claude Code may have written c:)
 function projCwd(proj) {
   if (projCwds.has(proj)) return projCwds.get(proj);
-  let cwd = ''; for (const { id } of transcripts(proj).slice(0, 3)) { try { const m = /"cwd":"((?:[^"\\]|\\.)*)"/.exec(readHead(path.join(projDir(proj, id), id + '.jsonl'), 64 * 1024)); if (m) { cwd = JSON.parse('"' + m[1] + '"'); break; } } catch {} }
+  let cwd = ''; for (const { id } of transcripts(proj).slice(0, 3)) { try { const m = /"cwd":"((?:[^"\\]|\\.)*)"/.exec(readHead(path.join(projDir(proj, id), id + '.jsonl'), 64 * 1024)); if (m) { const c = JSON.parse('"' + m[1] + '"'); if (foldKey(dirKey(c)) === foldKey(proj)) { cwd = c; break; } } } catch {} }   /* a session that started elsewhere (a scratch folder) does not hide the others */
   const sure = !!cwd && foldKey(dirKey(cwd)) === foldKey(proj); if (sure) projCwds.set(proj, cwd); return sure ? cwd : '';   // kept once it is sure: the folder whose name is the project's
 }
 const inFolder = (proj, key) => { const p = foldKey(proj), k = foldKey(key); if (p === k) return true; if (!p.startsWith(k + '-')) return false; const cwd = projCwd(proj); if (!cwd) return true; for (let d = cwd; d;) { if (foldKey(dirKey(d)) === k) return true; const up = path.dirname(d); if (up === d) return false; d = up; } return false; };
@@ -970,6 +970,7 @@ function readNew(file, agent, journal, record = parseRecord) {
   return st;
 }
 function parseRecord(st, r) {
+  if (!st.cwd && typeof r.cwd === 'string' && r.cwd) st.cwd = r.cwd;   // the folder the session started in; later cd records do not change its project
   const agent = st.agent, ts = Date.parse(r.timestamp) || 0, push = (e) => { e.k = agent + ':' + st.raw.length; st.raw.push(e); return e; };   // k: the event's key in the live feed = whose file + its rank in it. A file is only ever appended to, so the rank never changes (and when it is not, the whole file is read again under a new number, see readNew)
   if (ts > (st.lastTs || 0)) st.lastTs = ts;
   if (st.journal) { if (r.type === 'result' && r.agentId) push({ ts: 0, agent, kind: 'wfdone', child: String(r.agentId).replace(/[^\w.-]/g, '_') }); return; }   // a workflow's journal: one line when an agent starts, one when it hands its result back (no time on them)
@@ -1049,6 +1050,19 @@ function readMeta(f) {
   try { const mt = fs.statSync(f).mtimeMs, c = metaCache.get(f); if (c && c.mtime === mt) return c.value; const v = JSON.parse(fs.readFileSync(f, 'utf8')); if (metaCache.size > 3000) metaCache.clear(); metaCache.set(f, { mtime: mt, value: v }); return v; } catch { return {}; }
 }
 
+// The actual project behind a session, not the provider bucket (_codex, _vibe).
+// Keep the full folder: dashed project keys cannot distinguish app/old from app-old.
+// A Claude Code session is filed under its project's folder: the folder whose name that is comes first (projCwd), so a session that started in a scratch folder, an old transcript without cwd and a live one whose first cwd is not written yet all share their project's name.
+const leadProjects = new Map(), bareDir = (d) => { const n = path.normalize(d), root = path.parse(n).root; return n.length > root.length ? n.replace(/[\\/]+$/, '') : n; };   // /work/app/ and /work/app are one folder
+function leadProject(proj, id, recordedCwd) {
+  const memo = proj + '/' + id; if (leadProjects.has(memo)) return leadProjects.get(memo);
+  const sx = sourceOf(proj), cwd = sx ? guard(() => sx.cwd(id), '') : projCwd(proj) || recordedCwd;
+  // Cowork's folders live in separate VMs: identical cwd strings there need not be one project.
+  if (proj === COWORK) return { key: 'cowork:' + projDir(proj, id), label: cwd || coworkTitle(proj, id) || id };
+  if (cwd) { const v = { key: 'cwd:' + foldKey(bareDir(cwd)), label: cwd }; if (leadProjects.size > 3000) leadProjects.clear(); leadProjects.set(memo, v); return v; }   // kept once a folder is known: it no longer changes
+  return sx ? null : { key: 'claude:' + proj, label: proj };   // older Claude transcripts without cwd still have a project folder; an unknown provider folder has no override
+}
+
 function buildTimeline(proj, id, files = []) {
   const sx = sourceOf(proj), rec = recordOf(sx), base = projDir(proj, id), mainFile = sx ? sx.fileOf(id) || '' : path.join(base, id + '.jsonl');   // source readers supply their own session and child files; the timeline and page are shared
   if (!fs.existsSync(mainFile)) throw new Error('session not found');
@@ -1117,7 +1131,7 @@ function buildTimeline(proj, id, files = []) {
   const real = merged.find((e) => e.kind !== 'usage' && e.kind !== 'finish' && e.kind !== 'compact' && e.kind !== 'tasks'), first = real ? real.ts : 0, last = merged.length ? merged[merged.length - 1].ts : 0;   // time zero = the first thing said or done
   const marks = !sx && states[0] && (states[0].stops || !states[0].lead) ? { marks: 1 } : {};   // a Claude Code session whose turns end with a mark, also before the lead has written anything: a session that has not closed a turn yet is not one without marks, and its lead is not "done" each time it thinks for a while
   const ms = states.find((x) => x && x.agent === 'main'), cost = ms && ms.cost ? { usd: Math.round(ms.cost.usd * 1e4) / 1e4, final: !merged.some((e) => e.kind === 'usage' && e.ts > ms.cost.at) } : null;   // final: nothing was spent after Claude Code counted it (else it is a floor)
-  return { id, proj, agents: Object.values(agents), events: merged.map((e) => ({ ...e, t: Math.max(0, e.ts - first) })), durationMs: last - first, recentUntil, ...marks, ...(cost ? { cost } : {}) };
+  return { id, proj, project: leadProject(proj, id, ms && ms.cwd), agents: Object.values(agents), events: merged.map((e) => ({ ...e, t: Math.max(0, e.ts - first) })), durationMs: last - first, recentUntil, ...marks, ...(cost ? { cost } : {}) };
 }
 
 // Ask the local `claude` CLI (uses the user's existing login) to map a JSON array of strings to another array. Cached.
@@ -1547,10 +1561,10 @@ function start(port = PORT) {
         res.writeHead(200, { 'content-type': 'application/json', ...(gz ? { 'content-encoding': 'gzip' } : {}), vary: 'accept-encoding' });
         return res.end(gz ? entry.gz : entry.json);
       }
-      if (ep == null) return json({ id: tl.id, agents: tl.agents, total: tl.events.length, events: tl.events.slice(+after) });   // a page loaded before 1.25.7 still asks by position
+      if (ep == null) return json({ id: tl.id, project: tl.project, agents: tl.agents, total: tl.events.length, events: tl.events.slice(+after) });   // a page loaded before 1.25.7 still asks by position
       const a = +after; if (ep !== tl.ep || !(a >= 0 && a <= tl.seq)) return json({ resync: true });   // not the feed this page was following (restart, session dropped from memory, transcript rewritten): it loads the session again
-      if (a === tl.seq) { if (!entry.idle) entry.idle = JSON.stringify({ id: tl.id, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, ...(tl.cost ? { cost: tl.cost } : {}), events: [] }); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(entry.idle); }   // nothing new, which is the answer to nearly every poll: written once
-      return json({ id: tl.id, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, ...(tl.cost ? { cost: tl.cost } : {}), events: feedSince(entry, a) });   // new events and changed ones alike, whole, under the key they always had
+      if (a === tl.seq) { if (!entry.idle) entry.idle = JSON.stringify({ id: tl.id, project: tl.project, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, ...(tl.cost ? { cost: tl.cost } : {}), events: [] }); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(entry.idle); }   // nothing new, which is the answer to nearly every poll: written once
+      return json({ id: tl.id, project: tl.project, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, ...(tl.cost ? { cost: tl.cost } : {}), events: feedSince(entry, a) });   // new events and changed ones alike, whole, under the key they always had
     }
     const pk = url.pathname.match(/^\/packs\/([a-z]+)\/(.*)$/);
     if (url.pathname.startsWith('/characters/') || (pk && packDir(pk[1]))) {   // only plain image files of the characters folder (or of a built-in pack), by exact name

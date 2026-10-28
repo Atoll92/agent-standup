@@ -228,9 +228,9 @@ test('a live call followed record by record ends with exactly what a fresh load 
     const marks = [];
     for (const [file, rec] of steps.slice(1)) {
       fs.appendFileSync(file, line(rec)); await wait(280);   // the server does not build a timeline twice within 250 ms
-      const d = await load(port, q + '&after=' + seq + '&ep=' + ep); assert.equal(d.ep, ep); assert.ok(d.seq >= seq); assert.deepEqual(Object.keys(d).filter((k) => k !== 'marks').sort(), ['agents', 'ep', 'events', 'id', 'seq']); marks.push(d.marks || 0);
+      const d = await load(port, q + '&after=' + seq + '&ep=' + ep); assert.equal(d.ep, ep); assert.ok(d.seq >= seq); assert.deepEqual(Object.keys(d).filter((k) => k !== 'marks').sort(), ['agents', 'ep', 'events', 'id', 'project', 'seq']); assert.deepEqual(d.project, { key: 'claude:-f', label: '-f' }); marks.push(d.marks || 0);
       for (const e of d.events) { seen.push([have.has(e.k) ? 'changed' : 'new', e.kind, e.agent, e.end || 0]); if (!have.has(e.k) && [...have.values()].some((x) => x.ts > e.ts)) late++; have.set(e.k, e); }   // what the page does: a known key is replaced in place, an unknown one is added
-      seq = d.seq; assert.deepEqual((await load(port, q + '&after=' + seq + '&ep=' + ep)).events, []);   // asked again with the new number: nothing
+      seq = d.seq; const idle = await load(port, q + '&after=' + seq + '&ep=' + ep); assert.deepEqual(idle.events, []); assert.deepEqual(idle.project, first.project);   // asked again with the new number: nothing
     }
     const fresh = await load(port, q); assert.equal(fresh.ep, ep); assert.equal(fresh.seq, seq); assert.equal(marks[0], 0, 'a transcript whose records carry no stop reason is not said to mark its turns'); assert.equal(marks[marks.length - 1], 1); assert.equal(fresh.marks, 1);
     assert.equal(new Set(fresh.events.map((e) => e.k)).size, fresh.events.length);   // keys are unique
@@ -244,7 +244,7 @@ test('a live call followed record by record ends with exactly what a fresh load 
     assert.ok(seen.some((s) => s[0] === 'changed' && s[1] === 'tools' && s[3] === 1));   // the interruption marks a beat the page already had: it comes back under the same key
     // a page that follows another feed is told to load again; a page from before the upgrade is still answered by position
     assert.deepEqual(await load(port, q + '&after=0&ep=nope'), { resync: true }); assert.deepEqual(await load(port, q + '&after=' + (seq + 1) + '&ep=' + ep), { resync: true });
-    const old = await load(port, q + '&after=2'); assert.equal(old.total, fresh.events.length); assert.deepEqual(old.events, fresh.events.slice(2));
+    const old = await load(port, q + '&after=2'); assert.equal(old.total, fresh.events.length); assert.deepEqual(old.events, fresh.events.slice(2)); assert.deepEqual(old.project, first.project);
     assert.equal((await load(port, q + '&after=0&ep=' + ep)).events.length, fresh.events.length);
   } finally { stop(); }
 });
@@ -755,4 +755,17 @@ test('pictures added from the page: under the name of their role, the one replac
     assert.equal((await post('/api/characters/add', { role: 'you', name: 'new face.png', data: png('n') })).file, 'you.png');   // a new face: the old open mouth goes aside with the old picture
     assert.ok(!fs.existsSync(path.join(dir, 'you-talk.png'))); assert.equal(JSON.parse((await get(port, '/api/characters')).body).chars.find((c) => c.role === 'you').talk, null);
   } finally { stop(); delete process.env.AGENT_STANDUP_CHARACTERS; }
+});
+test('every session filed under a project shares its lead name key: one that started in a scratch folder, an old one without cwd, and a folder written with a trailing slash', async () => {
+  const real = path.join(tmp, 'work', 'app'), scratch = path.join(tmp, 'scratch', 'x'), key = (d) => d.replace(/[^a-zA-Z0-9]/g, '-');
+  const rec = (cwd, i) => [{ type: 'user', timestamp: `2026-01-01T00:0${i}:00Z`, ...(cwd ? { cwd } : {}), message: { role: 'user', content: 'hello' } }, { type: 'assistant', timestamp: `2026-01-01T00:0${i}:01Z`, ...(cwd ? { cwd: real } : {}), message: { content: [{ type: 'text', text: 'hi' }] } }];
+  const write = (proj, id, lines) => { const dir = path.join(tmp, 'projects', proj); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, id + '.jsonl'), lines.map((r) => JSON.stringify(r)).join('\n') + '\n'); };
+  write(key(real), 'scratch', rec(scratch, 3)); write(key(real), 'old', rec('', 2)); write(key(real), 'plain', rec(real, 1));
+  const slash = path.join(tmp, 'work', 'other'); write(key(slash), 's', [{ type: 'user', timestamp: '2026-01-01T00:00:00Z', cwd: slash + path.sep, message: { role: 'user', content: 'hello' } }]);
+  const srv = require('../server.js').start(0); await new Promise((r) => srv.once('listening', r)); const port = srv.address().port, project = async (proj, id) => JSON.parse((await get(port, `/api/session?proj=${proj}&id=${id}`)).body).project;
+  try {
+    for (const id of ['scratch', 'old', 'plain']) assert.equal((await project(key(real), id)).key, 'cwd:' + real, id);
+    assert.equal((await project(key(real), 'scratch')).label, real, 'the folder shown under the name is the project, not the scratch folder');
+    assert.equal((await project(key(slash), 's')).key, 'cwd:' + slash);
+  } finally { srv.close(); require('../server.js').shutdown(); }
 });

@@ -447,5 +447,8 @@
  "Claude is working: you can write when it is done": "Claude 正在工作：等它完成后你就可以输入",
  "The session changed while sending: the text stayed in the terminal, without Enter": "发送时会话发生了变化：文本留在终端中，未按 Enter",
  "Refused: only the user who started Agent Standup can write": "已拒绝：只有启动 Agent Standup 的用户才能输入",
- "Sending works only on Linux for now": "目前仅在 Linux 上可以发送"
+ "Sending works only on Linux for now": "目前仅在 Linux 上可以发送",
+ "Name for this project": "此项目的名称",
+ "Empty: use the default name.": "留空则使用默认名称。",
+ "Open a project to choose its name.": "打开项目以设置名称。"
 }

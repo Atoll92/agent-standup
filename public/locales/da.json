@@ -446,5 +446,8 @@
  "Claude is working: you can write when it is done": "Claude arbejder: du kan skrive, når han er færdig",
  "The session changed while sending: the text stayed in the terminal, without Enter": "Sessionen ændrede sig under afsendelsen: teksten blev i terminalen, uden Enter",
  "Refused: only the user who started Agent Standup can write": "Afvist: kun den bruger, der startede Agent Standup, kan skrive",
- "Sending works only on Linux for now": "Afsendelse virker indtil videre kun på Linux"
+ "Sending works only on Linux for now": "Afsendelse virker indtil videre kun på Linux",
+ "Name for this project": "Navn til dette projekt",
+ "Empty: use the default name.": "Tomt: brug standardnavnet.",
+ "Open a project to choose its name.": "Åbn et projekt for at vælge dets navn."
 }

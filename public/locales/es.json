@@ -447,5 +447,8 @@
  "Claude is working: you can write when it is done": "Claude está trabajando: podrás escribir cuando termine",
  "The session changed while sending: the text stayed in the terminal, without Enter": "La sesión cambió durante el envío: el texto quedó en el terminal, sin Enter",
  "Refused: only the user who started Agent Standup can write": "Rechazado: solo el usuario que inició Agent Standup puede escribir",
- "Sending works only on Linux for now": "Por ahora, el envío solo funciona en Linux"
+ "Sending works only on Linux for now": "Por ahora, el envío solo funciona en Linux",
+ "Name for this project": "Nombre para este proyecto",
+ "Empty: use the default name.": "Vacío: usar el nombre predeterminado.",
+ "Open a project to choose its name.": "Abre un proyecto para elegir su nombre."
 }
