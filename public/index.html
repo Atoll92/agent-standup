@@ -301,7 +301,7 @@
   .coffee-btn { color:#ffd24a !important; background:rgba(255,210,74,.12); box-shadow:inset 0 0 0 1px rgba(255,210,74,.35) } .coffee-btn:hover { background:rgba(255,210,74,.22) !important }
   .glink { color:var(--dim); font-size:12.5px; text-decoration:underline; text-underline-offset:3px } .glink:hover { color:#ffd24a }
   #mCoffee { background:rgba(255,210,74,.10); box-shadow:inset 0 0 0 1px rgba(255,210,74,.3); margin-top:4px } #mCoffee:hover { background:rgba(255,210,74,.2) }
-  #menuQ, #logQ, #leadName { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font:inherit; font-size:12.5px; outline:none } #menuQ:focus, #logQ:focus, #leadName:focus { border-color:var(--accent) } #leadName { width:100%; margin:2px 0 6px } #leadName:disabled { opacity:.6 } #leadHint { font-size:11.5px; margin:-2px 0 6px }
+  #menuQ, #logQ, #leadName, #projectLeadName { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font:inherit; font-size:12.5px; outline:none } #menuQ:focus, #logQ:focus, #leadName:focus, #projectLeadName:focus { border-color:var(--accent) } #leadName, #projectLeadName { width:100%; margin:2px 0 6px } #leadName:disabled, #projectLeadName:disabled { opacity:.6 } #leadHint, #projectLeadHint { overflow-wrap:anywhere; font-size:11.5px; margin:-2px 0 6px }
   #switcher { position:fixed; inset:0; z-index:20; background:rgba(5,6,12,.7); display:flex; align-items:flex-start; justify-content:center; padding-top:12vh } #switcher .sbox { width:min(560px,92vw); background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.6); overflow:hidden }
   #swq { width:100%; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--text); font:inherit; font-size:15px; padding:14px 16px; outline:none } #swl { max-height:50vh; overflow:auto } .swr { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; padding:9px 14px; cursor:pointer; align-items:center } .swr.on, .swr:hover { background:var(--panel2) } .swr b { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .swr i { grid-column:2; font-style:normal; font-size:11px; color:var(--dim) }
   #sps { display:none; gap:2px; flex:none } body.replay #sps { display:inline-flex } #sps button { background:var(--panel2); color:var(--dim); border:1px solid var(--line); border-radius:6px; padding:1px 6px; font:inherit; font-size:11px; cursor:pointer } #sps button.on { color:var(--text); border-color:var(--accent) }
@@ -437,6 +437,7 @@
   <button class="mi" data-t="customLaptop"><span data-fr="Ordinateur devant vos personnages" data-en="Laptop in front of your own characters">Ordinateur devant vos personnages</span><i class="sw"></i></button>
   <button class="mi" data-t="ownNames"><span data-fr="Garder les noms de mes agents" data-en="Keep my agents’ own names">Garder les noms de mes agents</span><i class="sw"></i></button>
   <div class="box" id="leadBox"><div class="lbl"><span data-fr="Nom de l’agent principal" data-en="Lead agent name">Nom de l’agent principal</span></div><input id="leadName" type="text" maxlength="48" placeholder="Margot" autocomplete="off" spellcheck="false" aria-label="Lead agent name"><div class="dim" id="leadHint" style="display:none"></div></div>
+  <div class="box" id="projectLeadBox"><label class="lbl" for="projectLeadName" data-fr="Nom pour ce projet" data-en="Name for this project">Nom pour ce projet</label><input id="projectLeadName" type="text" maxlength="48" autocomplete="off" spellcheck="false" aria-describedby="projectLeadHint"><div class="dim" id="projectLeadHint"></div></div>
   </div><div class="pcol">
   <h4 data-fr="Affichage" data-en="Display">Affichage</h4>
   <button class="mi" data-t="roster"><span data-fr="Liste des agents (à gauche)" data-en="Agents list (left)">Liste des agents (à gauche)</span><i class="sw"></i></button>
@@ -508,6 +509,7 @@ const APP = window.AS_APP && typeof window.AS_APP === 'object' && typeof window.
 
 let prefs = { lang: 'en', voice: true, roster: false, banter: true, reactions: false, office: false, officeVol: 0.8, vstyle: 'kokoro', notify: false, epi: false, vanish: true, music: false, station: 'fip', musicVol: 0.35, view: 'call', hideCode: false, ownNames: true, visits: true, askCard: false, followTab: true, files: true, callTr: true, voiceVol: 1 };
 const PREF_DEFAULTS = { ...prefs };   // for ⚙ → All settings → Reset to defaults
+let leadProject = null;   // the project of the loaded live call or replay, supplied by the server before naming its agents
 let prefsBase = {};   // the settings file as this page last knew it: a save sends only what changed since (prefsPatch), so another window's newer choices are not written over
 { let loc = {}; try { loc = JSON.parse(localStorage.getItem('cc.prefs') || '{}') || {}; } catch {}   // the settings file (shared by every window) and this origin's copy: the more recent one wins
   const sv = window.SAVED_PREFS && typeof window.SAVED_PREFS === 'object' ? window.SAVED_PREFS : {}; prefsBase = JSON.parse(JSON.stringify(sv)); const won = (sv._t || 0) >= (loc._t || 0) && Object.keys(sv).length ? sv : loc; Object.assign(prefs, won); delete prefs._patch;   /* a tie: this window saved last, and the file holds that save merged with what the other windows changed */ if (Object.keys(won).length && !('roster' in won)) prefs.roster = true;   /* settings saved before the list could be turned off: it stays as they had it, on */
@@ -569,10 +571,12 @@ async function setLang(code, save) {
 // =====================================================================
 const NAMES = ['Ada','Linus','Grace','Alan','Margaret','Dennis','Barbara','Ken','Radia','Tim','Hedy','Guido','Frances','Bjarne','Katherine','Brian','Sophie','Niklaus','Annie','Donald','Joan','Edsger','Lynn','Vint','Mae','Rob','Zoe','Ivan','Nina','Otto','Lena','Hugo','Ines','Théo','Maya','Jules','Alma','Remy','Cleo','Noah','Iris','Leo','Mira','Axel','Nora','Eli','Lou','Gaby'];
 const nameBook = {};   // agent id → unique first name within the session
-// The lead's name: Margot, or the one chosen in ⚙ → All settings (prefs.leadName) or in the editor (agentStandup.leadName, which wins: AS_APP.lead, see appKind in server.js). Plain text of 24 characters at most: it is written into the page in many places.
+// The lead's name: Margot, the global default, the current project override, or the name in the editor (agentStandup.leadName, which wins: AS_APP.lead, see appKind in server.js). Plain text of 24 characters at most: it is written into the page in many places.
 // typeof: the landing page reuses this section and has neither prefs nor APP
 const LEAD_NAME = 'Margot', cleanLead = (v) => Array.from(String(v == null ? '' : v).replace(/'/g, '’').replace(/[\u0000-\u001f\u007f-\u009f<>&"`\\]/g, '').replace(/\s+/g, ' ').trim()).slice(0, 24).join('').trim();
-const leadName = () => (typeof APP === 'object' && APP && cleanLead(APP.lead)) || (typeof prefs === 'object' && prefs && cleanLead(prefs.leadName)) || LEAD_NAME;
+// One top-level preference per project: the existing prefsPatch merges independent window edits without replacing a shared map.
+const projectLeadKey = () => typeof leadProject === 'object' && leadProject ? 'leadName:' + leadProject.key : '';
+const leadName = () => (typeof APP === 'object' && APP && cleanLead(APP.lead)) || (typeof prefs === 'object' && prefs && (cleanLead(prefs[projectLeadKey()]) || cleanLead(prefs.leadName))) || LEAD_NAME;
 const isLeadName = (n) => { const l = leadName().toLocaleLowerCase(), s = String(n || '').toLocaleLowerCase(); return !!n && (s === l || (s.startsWith(l + ' ') && /^\d+$/.test(s.slice(l.length + 1)))); };   // whatever the capitals: Ivan and ivan would read as one agent, and Ivan 2 as a fork of the lead
 function uniqueName(id, h) {
   if (nameBook[id]) return nameBook[id]; const taken = new Set(Object.values(nameBook).map((n) => n.toLocaleLowerCase())), n0 = taken.size; taken.add(leadName().toLocaleLowerCase());   // never the lead's own name: one may be chosen from this list
@@ -2887,6 +2891,7 @@ async function loadSession(proj, id) {
   pause(); const mine = (S.loadN = (S.loadN || 0) + 1);
   const data = await (await fetch(`/api/session?proj=${encodeURIComponent(proj)}&id=${id}`)).json();
   if (mine !== S.loadN || data.error) return false;
+  leadProject = data.project || null; clearTimeout(leadTimer); leadField(true);
   S.term = {}; S.camFor = null; S.focus = null; S.agents = {}; S.cost = data.cost || null; for (const k in nameBook) delete nameBook[k]; [{ id: 'user' }, ...data.agents].forEach((a) => (S.agents[a.id] = persona(twinOf(a))));
   clearThoughts(); Object.assign(TH, { since: {}, next: {}, said: {}, last: 0 }); S.events = data.events; stampT(0); S.byK = new Map(data.events.map((e) => [e.k, e])); S.seq = data.seq || 0; S.ep = data.ep || ''; S.sawEnd = !!data.marks || data.events.some((e) => e.end); S.late = []; S.pos = 0; S.joinAt = Date.now(); S.idx = 0; S.status = {}; S.tc = {}; S.cur = { proj, id }; S.logTo = 0; S.detail = null; $('#detail').classList.remove('on'); S.fgone = new Set(); S.fmade = new Map(); S.artOk = new Map(); S.artPin = null; S.artWhole = null; S.wholeSeen = new Set();
   const opt = $('#sessions').selectedOptions[0]; S.title = (S.live ? niceProj(proj) : opt && opt.dataset.title) || '';
@@ -2942,6 +2947,7 @@ setInterval(async () => {
     if (switched || !S.cur) return;
     const cur = S.cur, d = await (await fetch(`/api/session?proj=${encodeURIComponent(cur.proj)}&id=${cur.id}&after=${S.seq}&ep=${encodeURIComponent(S.ep)}`)).json();
     if (d.error || cur !== S.cur) return; if (d.resync) { S.cur = null; return; }   // the server no longer has our place (restarted, transcript rewritten): reload next tick
+    if ('project' in d && (d.project || {}).key !== (leadProject || {}).key) { leadProject = d.project || null; clearTimeout(leadTimer); leadField(true); renameLead(); }   // the first cwd can arrive after the call opens, even without a new event
     S.seq = d.seq; if (d.marks) S.sawEnd = true; if (d.cost && (!S.cost || d.cost.usd !== S.cost.usd || d.cost.final !== S.cost.final)) { S.cost = d.cost; later('tok', renderTokens, 300); } if (!d.events || !d.events.length) return;
     for (const a of d.agents) if (!S.agents[a.id]) { S.agents[a.id] = persona(twinOf(a)); addTile(S.agents[a.id]); }
     const from = S.events.length, fresh = [], changed = [];   // the session is not written in order: what is new goes at the end (the order the call got it in), what the server corrected is corrected in place
@@ -3323,8 +3329,9 @@ function openPrefs(target) {   // ⚙ → All settings; target: one of its setti
 const PANEL_KEYS = ['office', 'officeVol', 'music', 'station', 'musicVol', 'voiceVol', 'notify', 'customLaptop', 'ownNames', 'roster', 'reactions', 'banter', 'chat', 'vanish', 'epi', 'files', 'artNet', 'visits', 'askCard', 'followTab', 'leadName'];   // what the panel holds, and so what Reset puts back
 $('#prefsReset').onclick = async () => {
   const b = $('#prefsReset'); if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = L('Cliquez encore pour tout remettre', 'Click again to reset them all'); setTimeout(() => { b.classList.remove('sure'); b.textContent = L('Réglages par défaut', 'Reset to defaults'); }, 4000); return; }   // two clicks: nothing is lost by a stray one
-  for (const k of PANEL_KEYS) { if (k in PREF_DEFAULTS) prefs[k] = PREF_DEFAULTS[k]; else delete prefs[k]; } delete prefs.notifyChosen;   // notifyChosen too: the default of notifications is decided at start-up from it
-  prefs._t = Date.now(); try { localStorage.setItem('cc.prefs', prefsOut()); } catch {} for (const k of [...PANEL_KEYS, 'notifyChosen']) prefsBase[k] = { reset: true }; try { await putPrefs(); } catch {}   /* marked as changed: reset too what another window changed after this one loaded */
+  const keys = [...PANEL_KEYS, ...(projectLeadKey() ? [projectLeadKey()] : [])];   // reset the displayed project override, leaving other projects alone
+  for (const k of keys) { if (k in PREF_DEFAULTS) prefs[k] = PREF_DEFAULTS[k]; else delete prefs[k]; } delete prefs.notifyChosen;   // notifyChosen too: the default of notifications is decided at start-up from it
+  prefs._t = Date.now(); try { localStorage.setItem('cc.prefs', prefsOut()); } catch {} for (const k of [...keys, 'notifyChosen']) prefsBase[k] = { reset: true }; try { await putPrefs(); } catch {}   /* marked as changed: reset too what another window changed after this one loaded */
   location.reload();   // every part of the page starts again from them
 };
 function menuTip() {   // once, to someone who used the app before: where the settings went. Gone with its button, or as soon as the menu is opened
@@ -3346,14 +3353,19 @@ $('#station').value = prefs.station; $('#musicVol').value = prefs.musicVol; $('#
 $('#station').onchange = (e) => { prefs.station = e.target.value; savePrefs(); AUD.init(); RADIO.sync(); };
 $('#chatSel').value = ['quiet', 'normal', 'lively'].includes(prefs.chat) ? prefs.chat : 'normal'; $('#chatSel').onchange = () => { prefs.chat = $('#chatSel').value; savePrefs(); };
 // ⚙ → All settings → Lead agent name (empty: Margot). The editor's agentStandup.leadName wins over it: the field then shows that name, greyed, and says where it is set
-function leadField() {
+function leadField(projectChanged = false) {
   const f = $('#leadName'), ed = cleanLead(APP.lead); f.disabled = !!ed; if (document.activeElement !== f || ed) f.value = ed || cleanLead(prefs.leadName);
+  const p = $('#projectLeadName'), key = projectLeadKey(); p.disabled = !!ed || !key; p.placeholder = cleanLead(prefs.leadName) || LEAD_NAME;
+  if (projectChanged || document.activeElement !== p || ed) p.value = ed || (key ? cleanLead(prefs[key]) : '');
+  const ph = $('#projectLeadHint'); ph.textContent = key ? leadProject.label + ' · ' + L('Vide : utiliser le nom par défaut.', 'Empty: use the default name.') : L('Ouvrez un projet pour choisir son nom.', 'Open a project to choose its name.');
   const h = $('#leadHint'); h.style.display = ed ? '' : 'none'; h.textContent = ed ? L('Choisi dans les réglages de l’éditeur (agentStandup.leadName)', 'Set in the editor’s settings (agentStandup.leadName)') : '';
 }
 function renameLead() { renameAll(true); }   // the lead and its forks take the new name at once, in the call, the list and the transcript, and a sub-agent that had that name gets another
 let leadTimer = null;
 $('#leadName').oninput = () => { prefs.leadName = cleanLead($('#leadName').value); if (!prefs.leadName) delete prefs.leadName; savePrefs(); clearTimeout(leadTimer); leadTimer = setTimeout(renameLead, 250); };
 $('#leadName').onchange = () => { clearTimeout(leadTimer); renameLead(); leadField(); };
+$('#projectLeadName').oninput = () => { const key = projectLeadKey(); if (!key || cleanLead(APP.lead)) return; const name = cleanLead($('#projectLeadName').value); if (name) prefs[key] = name; else delete prefs[key]; savePrefs(); clearTimeout(leadTimer); leadTimer = setTimeout(renameLead, 250); };
+$('#projectLeadName').onchange = () => { clearTimeout(leadTimer); renameLead(); leadField(); };
 leadField();
 $('#vstyle').innerHTML = [['animal', 'Animal Crossing (babillage)', 'Animal Crossing (babble)'], ['kokoro', 'Voix naturelles (à installer)', 'Natural voices (installs on demand)']].map(([v, fr, en]) => `<option value="${v}" data-fr="${fr}" data-en="${en}">${L(fr, en)}</option>`).join(''); $('#vstyle').value = prefs.vstyle; $('#vstyle').onchange = () => { prefs.vstyle = $('#vstyle').value; prefs.vstyleChosen = true; savePrefs(); TTS.init().then(kokoroUI); kokoroUI(); };
 // ---- ⚙ → very natural voices (Kokoro): install box and status, polled while installing

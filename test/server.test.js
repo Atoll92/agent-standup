@@ -228,9 +228,9 @@ test('a live call followed record by record ends with exactly what a fresh load 
     const marks = [];
     for (const [file, rec] of steps.slice(1)) {
       fs.appendFileSync(file, line(rec)); await wait(280);   // the server does not build a timeline twice within 250 ms
-      const d = await load(port, q + '&after=' + seq + '&ep=' + ep); assert.equal(d.ep, ep); assert.ok(d.seq >= seq); assert.deepEqual(Object.keys(d).filter((k) => k !== 'marks').sort(), ['agents', 'ep', 'events', 'id', 'seq']); marks.push(d.marks || 0);
+      const d = await load(port, q + '&after=' + seq + '&ep=' + ep); assert.equal(d.ep, ep); assert.ok(d.seq >= seq); assert.deepEqual(Object.keys(d).filter((k) => k !== 'marks').sort(), ['agents', 'ep', 'events', 'id', 'project', 'seq']); assert.deepEqual(d.project, { key: 'claude:-f', label: '-f' }); marks.push(d.marks || 0);
       for (const e of d.events) { seen.push([have.has(e.k) ? 'changed' : 'new', e.kind, e.agent, e.end || 0]); if (!have.has(e.k) && [...have.values()].some((x) => x.ts > e.ts)) late++; have.set(e.k, e); }   // what the page does: a known key is replaced in place, an unknown one is added
-      seq = d.seq; assert.deepEqual((await load(port, q + '&after=' + seq + '&ep=' + ep)).events, []);   // asked again with the new number: nothing
+      seq = d.seq; const idle = await load(port, q + '&after=' + seq + '&ep=' + ep); assert.deepEqual(idle.events, []); assert.deepEqual(idle.project, first.project);   // asked again with the new number: nothing
     }
     const fresh = await load(port, q); assert.equal(fresh.ep, ep); assert.equal(fresh.seq, seq); assert.equal(marks[0], 0, 'a transcript whose records carry no stop reason is not said to mark its turns'); assert.equal(marks[marks.length - 1], 1); assert.equal(fresh.marks, 1);
     assert.equal(new Set(fresh.events.map((e) => e.k)).size, fresh.events.length);   // keys are unique
@@ -244,7 +244,7 @@ test('a live call followed record by record ends with exactly what a fresh load 
     assert.ok(seen.some((s) => s[0] === 'changed' && s[1] === 'tools' && s[3] === 1));   // the interruption marks a beat the page already had: it comes back under the same key
     // a page that follows another feed is told to load again; a page from before the upgrade is still answered by position
     assert.deepEqual(await load(port, q + '&after=0&ep=nope'), { resync: true }); assert.deepEqual(await load(port, q + '&after=' + (seq + 1) + '&ep=' + ep), { resync: true });
-    const old = await load(port, q + '&after=2'); assert.equal(old.total, fresh.events.length); assert.deepEqual(old.events, fresh.events.slice(2));
+    const old = await load(port, q + '&after=2'); assert.equal(old.total, fresh.events.length); assert.deepEqual(old.events, fresh.events.slice(2)); assert.deepEqual(old.project, first.project);
     assert.equal((await load(port, q + '&after=0&ep=' + ep)).events.length, fresh.events.length);
   } finally { stop(); }
 });

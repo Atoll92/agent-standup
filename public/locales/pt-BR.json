@@ -430,5 +430,8 @@
  "Lead agent name": "Nome do agente principal",
  "Set in the editor’s settings (agentStandup.leadName)": "Definido nas configurações do editor (agentStandup.leadName)",
  "Costume": "Fantasia",
- "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Seu vampiro vem do pacote de Halloween, desenhado à mão por Fabien Coupas. O resto do elenco também está nele."
+ "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Seu vampiro vem do pacote de Halloween, desenhado à mão por Fabien Coupas. O resto do elenco também está nele.",
+ "Name for this project": "Nome para este projeto",
+ "Empty: use the default name.": "Vazio: usar o nome padrão.",
+ "Open a project to choose its name.": "Abra um projeto para escolher seu nome."
 }
