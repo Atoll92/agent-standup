@@ -37,7 +37,7 @@ const lines1 = [
 ];
 const kidLines = [user('Find every place the cart total is computed.\nReport the files.'), asst('', [['k1', 'grep', { pattern: 'total', path: '/w' }]]), tool('k1', 'grep', 'matches: cart.js:1', { matches: 'cart.js:1\ncheckout.js:9', match_count: 2 }), asst('Two places: cart.js and checkout.js.')];
 const main1 = put(path.join(ROOT, S1), lines1, metaOf({ start: START, more: { title: 'Fix the cart total', child_sessions: [{ session_id: 'kid', tool_call_id: 'c6', agent: 'explore', relative_path: 'agents/' + KID }], stats: { steps: 4, session_prompt_tokens: 9000, session_completion_tokens: 700, session_cached_tokens: 4000, context_tokens: 3000 }, config: { active_model: 'devstral', models: [{ name: 'devstral-latest', alias: 'devstral', max_context_length: 200000 }] } } }), END);
-put(path.join(ROOT, S1, 'agents', KID), kidLines, metaOf({ start: SUB_START, more: { parent_session_id: 'id-' + START } }), SUB_END);
+put(path.join(ROOT, S1, 'agents', KID), kidLines, metaOf({ start: SUB_START, more: { parent_session_id: 'id-' + START, stats: { steps: 1, session_prompt_tokens: 1000, session_completion_tokens: 50, session_cached_tokens: 0 } } }), SUB_END);
 put(path.join(ROOT, S2), [user('An older question, with no title.'), asst('An older answer.')], metaOf({ start: NOW - 30 * 3600e3 }), NOW - 29 * 3600e3);
 fs.mkdirSync(path.join(ROOT, '.last_session'), { recursive: true }); fs.mkdirSync(path.join(ROOT, 'session_empty'), { recursive: true }); fs.writeFileSync(path.join(ROOT, '.session_index.json'), '{}');   // what else Vibe keeps there
 // ---- the current format: a snapshot taken while the lead waits for its sub-agent, then (later, in the test) the journal that follows it
@@ -120,6 +120,7 @@ test('a Vibe session becomes the same events as a Claude Code one: lines, tools 
     assert.equal(real[17].ts, Math.round(END));
     const u = ev.filter((e) => e.kind === 'usage' && e.agent === 'main'), sum = (k) => u.reduce((n, e) => n + e.u[k], 0), last = u[u.length - 1];
     assert.deepEqual([sum('i'), sum('o'), sum('r'), last.u.i + last.u.r, last.model, last.cw], [5000, 700, 4000, 3000, 'devstral', 200000]);   // the totals of the session, and a last line the size of the context now
+    const ku = ev.filter((e) => e.kind === 'usage' && e.agent !== 'main'); assert.deepEqual([ku.reduce((n, e) => n + e.u.i + e.u.r, 0), ku.reduce((n, e) => n + e.u.o, 0)], [1000, 50], 'the sub-agent\'s own tokens: Vibe numbers the lines of each agent from 1, the same name in the lead is another message (1.40.0 candidate counted only one of them)');
   } finally { stop(); }
 });
 
@@ -209,4 +210,26 @@ test('a Vibe session the reader does not expect costs that session at most: the 
     assert.ok(!JSON.stringify([rows, board.json()]).includes('root:'), 'nothing from outside the Vibe folder');
     assert.equal((await get(port, '/api/session?proj=-c&id=cc')).json().events.length, 2);
   } finally { stop(); for (const d of dirs) fs.rmSync(d, { recursive: true, force: true }); }
+});
+
+test('a Vibe session that says it waits on you needs you as long as the Vibe process that has it open runs; its process gone, it is idle (no “your turn” knock for a Vibe you closed); nothing to tell by (no lease): half an hour, as before', async () => {
+  const vibe = require('../vibe.js'), sha = 'b'.repeat(64), ACTIVE = path.join(ROOT, 'active'), mk = (id, type) => { const d = path.join(ROOT, 'unified', id), g = path.join(d, 'generations', 'g1'); for (const x of [g, path.join(d, 'chunks'), path.join(d, 'journal')]) fs.mkdirSync(x, { recursive: true });
+    fs.writeFileSync(path.join(d, 'chunks', sha + '.json'), JSON.stringify([umsg('user-1', 'user', 'Delete the old logs?', 0)])); fs.writeFileSync(path.join(d, 'journal', '1.jsonl'), '');
+    fs.writeFileSync(path.join(g, 'manifest.json'), JSON.stringify({ projection_state: { chunks: [sha] }, recovery_journal_segment: { path: 'journal/1.jsonl' } })); fs.writeFileSync(path.join(g, 'projection-state.json'), JSON.stringify({ snapshot: { session: { id, status: { type }, title: 'Clean the logs' } } }));
+    fs.writeFileSync(path.join(d, 'CURRENT'), JSON.stringify({ generation: 'g1', snapshot_sequence: 1, session_id: id })); return d; };
+  const lease = (id, pid) => { fs.mkdirSync(ACTIVE, { recursive: true }); fs.writeFileSync(path.join(ACTIVE, id + '.lock'), ''); fs.writeFileSync(path.join(ACTIVE, id + '.lock.json'), JSON.stringify({ acquired_at: new Date().toISOString(), lease_version: 1, process_id: pid, session_id: id }) + '\n'); };   // as Vibe 2.26 writes it while the session is open
+  const gone = require('child_process').spawnSync(process.execPath, ['-e', '']).pid;   // a process that has ended
+  const dirs = [mk('blocked-open', 'blocked'), mk('blocked-crashed', 'blocked'), mk('blocked-closed', 'blocked'), mk('running-long', 'running')];
+  try {
+    await new Promise((r) => setTimeout(r, 2100));   // the lists are remembered for two seconds
+    const at = (id, later) => { const r = vibe.row(id), b = vibe.boardRow(r, r.mtime + later); return b.state + (b.sure ? '!' : ''); };
+    assert.deepEqual([at('blocked-open', 60e3), at('blocked-open', 45 * 60e3)], ['blocked!', 'idle'], 'no lease folder (a Vibe that keeps none): Vibe\'s word for half an hour, then idle, as before');
+    lease('blocked-open', process.pid); lease('blocked-crashed', gone);
+    assert.deepEqual([at('blocked-open', 60e3), at('blocked-open', 45 * 60e3), at('blocked-open', 3 * 3600e3), at('blocked-open', 5 * 3600e3)], ['blocked!', 'blocked!', 'blocked!', 'idle'], 'its process runs: an approval or a question left open over lunch is still open, for four hours (a crashed Vibe leaves its lock, and its process number can be reused)');
+    assert.deepEqual([at('blocked-crashed', 60e3), at('blocked-crashed', 45 * 60e3)], ['idle', 'idle'], 'its process ended without closing it: no one is there to answer');
+    assert.deepEqual([at('blocked-closed', 60e3), at('blocked-closed', 45 * 60e3)], ['idle', 'idle'], 'closed: Vibe took its lease away');
+    fs.writeFileSync(path.join(ACTIVE, 'blocked-crashed.lock.json'), '{"lease_ver');   // read while Vibe writes it: not known
+    assert.deepEqual([at('blocked-crashed', 60e3), at('blocked-crashed', 45 * 60e3)], ['blocked!', 'idle']);
+    assert.deepEqual([at('running-long', 60e3), at('running-long', 45 * 60e3)], ['working', 'idle'], 'quiet for half an hour while at work: idle, as before');
+  } finally { for (const d of [...dirs, ACTIVE]) fs.rmSync(d, { recursive: true, force: true }); }
 });

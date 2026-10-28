@@ -1,6 +1,7 @@
 // npm run stats — what the project can see about itself: the public counters of the stores and of GitHub (no server, no tracking of people).
 //   npm run stats                        today's figures, what moved since you last looked, and the trend day by day
 //   node scripts/stats.js --record FILE  adds today's line to the history FILE (one JSON line per day; a second run the same day replaces the line)
+//   STATS_NO_RANK=1 skips the VS Code search ranks (about 40 searches), STATS_NO_WEBSITE=1 the website
 // The history is the file history.jsonl of the "stats" release on GitHub, beside the counters of the landing page. .github/workflows/stats.yml adds a line every day.
 // What each number is worth: Marketplace "installs" are people (installed from inside VS Code); the "downloads" of the Marketplace, of Open VSX and of npm
 // are fetches of the package, and every published version brings a burst of automatic ones (mirrors, scanners). Compare days, not totals.
@@ -19,15 +20,32 @@ async function collect() {
   const ovsx = await soft(async () => { const j = await json('https://open-vsx.org/api/' + ext.replace('.', '/')); return { downloads: j.downloadCount || 0, reviews: j.reviewCount || 0 }; });
   const npm = await soft(async () => (await json('https://api.npmjs.org/downloads/point/last-year/' + pkg)).downloads);   // a year back: the whole life of the package for a long while
   const hub = await soft(async () => {
-    const r = gh(['api', `repos/${repo}`]), files = { vsix: 0, mac: 0, windows: 0, linux: 0, cli: 0 }, landing = {}; let active = 0, week = 0;
+    const r = gh(['api', `repos/${repo}`]), files = { vsix: 0, mac: 0, windows: 0, linux: 0, cli: 0 }, landing = {}, weeks = {}; let active = 0, week = 0;
     for (const rel of gh(['api', `repos/${repo}/releases`, '--paginate'])) for (const a of rel.assets) {
-      if (rel.tag_name === 'stats') { if (a.name === 'app-active.gif') active = a.download_count; else if (a.name === 'app-week.gif') week = a.download_count; else if (/^pixel-.*\.gif$/.test(a.name)) landing[a.name.slice(6, -4)] = a.download_count; continue; }   // the history file sits there too and is not a counter
+      if (rel.tag_name === 'stats') { if (a.name === 'app-active.gif') active = a.download_count; else if (a.name === 'app-week.gif') week = a.download_count; else if (/^(plugin|cli|desktop)-week\.gif$/.test(a.name)) weeks[a.name.split('-')[0]] = a.download_count; else if (/^pixel-.*\.gif$/.test(a.name)) landing[a.name.slice(6, -4)] = a.download_count; continue; }   // the history file sits there too and is not a counter
       files[/\.vsix$/.test(a.name) ? 'vsix' : /mac/.test(a.name) ? 'mac' : /windows/.test(a.name) ? 'windows' : /linux/.test(a.name) ? 'linux' : 'cli'] += a.download_count;
     }
-    return { stars: r.stargazers_count, forks: r.forks_count, files, active, week, landing };
+    return { stars: r.stargazers_count, forks: r.forks_count, files, active, week, weeks, landing };   // week: the VS Code extension; weeks: the plugin, the command line and the desktop app (server.js, usageWeek)
   });
-  const yt = await soft(youtube);
-  return { d: new Date().toISOString().slice(0, 10), mp, ovsx, npm, hub, ...(yt ? { yt } : {}) };
+  const yt = await soft(youtube), rank = process.env.STATS_NO_RANK ? null : await soft(ranks);
+  return { d: new Date().toISOString().slice(0, 10), mp, ovsx, npm, hub, ...(yt ? { yt } : {}), ...(rank ? { rank } : {}) };
+}
+// Where the extension comes in VS Code's own search (the Extensions view asks the same gallery, and ranks mostly on the words of the name), for phrases people type.
+// 0: not in the first RANK_DEPTH results. RANK_BEFORE: the ranks of 20 October 2026, before the name became "Agent Standup: Claude Code & Codex Agent Monitor" (1.40.0); 0 there: past the 100th.
+const RANK_PHRASES = ['agent standup', 'claude code agent monitor', 'claude code monitor', 'claude code dashboard', 'claude code subagents', 'claude code agents', 'claude code sessions', 'claude code usage', 'agent monitor', 'agent dashboard', 'subagents', 'sub-agents', 'codex monitor', 'mistral vibe', 'standup', 'codex', 'claude code'], RANK_DEPTH = 500;
+const RANK_BEFORE = { 'agent standup': 1, 'claude code monitor': 179, 'claude code dashboard': 0, 'claude code subagents': 44, 'claude code agents': 0, 'claude code sessions': 0, 'claude code usage': 0, 'agent monitor': 17, 'agent dashboard': 13, subagents: 40, 'sub-agents': 5, 'mistral vibe': 3, standup: 2, codex: 0, 'claude code': 0 };
+async function ranks() {
+  const page = async (q, n) => (((await json('https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json;api-version=3.0-preview.1' }, body: JSON.stringify({ filters: [{ criteria: [{ filterType: 8, value: 'Microsoft.VisualStudio.Code' }, { filterType: 10, value: q }, { filterType: 12, value: '4096' }], pageNumber: n, pageSize: 100, sortBy: 0, sortOrder: 0 }], flags: 0x200 | 0x100 | 0x2 }) })).results[0] || {}).extensions || []);
+  const one = async (q) => { for (let n = 1, seen = 0; seen < RANK_DEPTH; n++) { const ex = await page(q, n), i = ex.findIndex((e) => e.publisher.publisherName + '.' + e.extensionName === ext); if (i >= 0) return seen + i + 1; if (ex.length < 100) break; seen += ex.length; } return 0; };
+  const out = {}; let k = 0; await Promise.all(Array.from({ length: 4 }, async () => { while (k < RANK_PHRASES.length) { const q = RANK_PHRASES[k++]; out[q] = await one(q); } }));   // four searches at a time
+  return Object.fromEntries(RANK_PHRASES.map((q) => [q, out[q]]));
+}
+function printRanks(now, was, hist) {
+  const r = (n) => (n ? '#' + n : '>' + RANK_DEPTH), first = hist.find((x) => x.rank && x.d < new Date().toISOString().slice(0, 10));   // the first day the daily job recorded them
+  console.log(`\nVS Code search rank (the Extensions view; lower is better; >${RANK_DEPTH}: not in the first ${RANK_DEPTH}):`);
+  console.log('  ' + 'search'.padEnd(28) + 'now'.padEnd(8) + 'since you looked'.padEnd(18) + (first ? ('on ' + first.d.slice(5)).padEnd(10) : '') + 'before the rename (10-20)');
+  for (const q of RANK_PHRASES) { const n = now[q], p = was && was[q], b = RANK_BEFORE[q], moved = typeof p === 'number' && p !== n ? (p && n ? (n < p ? '▲ ' : '▼ ') + Math.abs(p - n) : r(p) + ' → ' + r(n)) : '';
+    console.log('  ' + q.padEnd(28) + r(n).padEnd(8) + moved.padEnd(18) + (first ? (first.rank[q] == null ? '-' : r(first.rank[q])).padEnd(10) : '') + (b == null ? '-' : b ? '#' + b : '>100')); }
 }
 // The YouTube channel's public counts: subscribers, and the views of each video and Short, read from the channel's own pages (the consent cookie skips the EU consent page)
 async function youtube() {
@@ -35,6 +53,7 @@ async function youtube() {
   const num = (t) => { const m = /([\d.,]+)\s*([KM])?/.exec(String(t || '')); return m ? Math.round(parseFloat(m[1].replace(/,/g, '')) * (m[2] === 'K' ? 1e3 : m[2] === 'M' ? 1e6 : 1)) : 0; };
   const videos = [], walk = (o, short) => { if (!o || typeof o !== 'object') return;
     if (o.lockupViewModel) { const t = o.lockupViewModel.metadata && o.lockupViewModel.metadata.lockupMetadataViewModel, parts = JSON.stringify((t && t.metadata) || {}).match(/"content":"([^"]*)"/g) || []; if (t) videos.push({ title: t.title && t.title.content, views: num((parts[0] || '').slice(11, -1)) }); }
+    if (o.videoRenderer && o.videoRenderer.title) { const v = o.videoRenderer, t = (v.title.runs && v.title.runs[0] && v.title.runs[0].text) || v.title.simpleText; if (t) videos.push({ title: t, views: num((v.viewCountText && (v.viewCountText.simpleText || (v.viewCountText.runs || []).map((x) => x.text).join(''))) || '') }); }   /* the older layout of the videos page, still served at times */
     if (o.shortsLockupViewModel) { const m = o.shortsLockupViewModel.overlayMetadata || {}; videos.push({ title: m.primaryText && m.primaryText.content, views: num(m.secondaryText && m.secondaryText.content), short: 1 }); }
     for (const k in o) walk(o[k], short); };
   const v = await get('videos'), sh = await get('shorts'); if (!v && !sh) return null; walk(v); walk(sh);
@@ -43,7 +62,7 @@ async function youtube() {
 // The website, from Vercel Web Analytics through the Vercel command line (needs `npx vercel login` on this computer; the daily job on GitHub has no login and skips it).
 // Per UTC day: page views, the visitors who saw a home page (any language), how many of them saw only that one page (bounce: Vercel's visitor id lasts a day),
 // and the clicks on the install buttons (counted since WEB_CLICKS_SINCE). The days of WEB_MARKS split the summary, to compare a change of the home page with what came before.
-const WEB_SINCE = '2026-10-13', WEB_CLICKS_SINCE = '2026-10-17', WEB_MARKS = { '2026-10-17': 'new hero "Stop checking on your agents."' };
+const WEB_SINCE = '2026-10-13', WEB_CLICKS_SINCE = '2026-10-17', WEB_MARKS = { '2026-10-17': 'new hero "Stop checking on your agents."', '2026-10-19': 'hero: the "Stop babysitting" video' };
 const INSTALL_CLICKS = /^(Install VS Code|Install Open VSX|Download|Copy command)$/, HOME = /^\/([a-z]{2}(-[a-z]{2,4})?\/?)?$/i;
 async function website() {
   const run = (metric, ...a) => new Promise((ok, no) => execFile('npx', ['-y', 'vercel@latest', 'metrics', metric, '--scope', 'dg-team-fe3d9cf0', '-p', 'agent-standup', '--prod', '--json', ...a], { encoding: 'utf8', timeout: 180000, maxBuffer: 64e6 }, (err, out) => {
@@ -59,7 +78,7 @@ async function website() {
   const [perDay, sources, countries, evDay, evAll] = await Promise.all([pool(days.map((d) => () => homeDay(d))), top('referrerHostname'), top('country'),
     run(EV, '--since', since, '-g', '1d', '--group-by', 'eventName', '-l', '50').catch(() => ({ data: [] })), run(EV, '--since', '7d', '--group-by', 'eventName', '--group-by', 'eventData', '-l', '200').catch(() => ({ data: [] }))]);
   const clicks = {}; for (const r of evDay.data || []) if (INSTALL_CLICKS.test(r.eventName || '')) clicks[r.timestamp.slice(0, 10)] = (clicks[r.timestamp.slice(0, 10)] || 0) + num(r);
-  const ev = {}; for (const r of evAll.data || []) { if (!r.eventName || !num(r)) continue; let dt = r.eventData; try { if (typeof dt === 'string') dt = JSON.parse(dt); } catch { dt = {}; } const e = (ev[r.eventName] = ev[r.eventName] || { n: 0, where: {}, what: {} }); e.n += num(r); if (dt && dt.where) e.where[dt.where] = (e.where[dt.where] || 0) + num(r); if (dt && dt.what) e.what[dt.what] = (e.what[dt.what] || 0) + num(r); }
+  const ev = {}; for (const r of evAll.data || []) { if (!r.eventName || !num(r)) continue; let dt = r.eventData; const key = typeof dt === 'string' && !/^\s*\{/.test(dt) ? dt : null; if (key && key !== 'where') continue; if (key) dt = {}; else try { if (typeof dt === 'string') dt = JSON.parse(dt); } catch { dt = {}; } const e = (ev[r.eventName] = ev[r.eventName] || { n: 0, where: {}, what: {} }); e.n += num(r); if (dt && dt.where) e.where[dt.where] = (e.where[dt.where] || 0) + num(r); if (dt && dt.what) e.what[dt.what] = (e.what[dt.what] || 0) + num(r); }
   return { perDay: perDay.map((x) => ({ ...x, clicks: x.d >= WEB_CLICKS_SINCE ? clicks[x.d] || 0 : null })), sources, countries, events: Object.entries(ev).sort((a, b) => b[1].n - a[1].n) };
 }
 function printWebsite(w) {
@@ -73,12 +92,12 @@ function printWebsite(w) {
     console.log('  ' + p[0].d.slice(5) + ' to ' + p[p.length - 1].d.slice(5) + ' (' + p.length + ' day' + (p.length > 1 ? 's' : '') + (WEB_MARKS[p[0].d] ? ', ' + WEB_MARKS[p[0].d] : '') + '): ' + Math.round(home / p.length) + ' home visitors a day, bounce ' + pct(one, home) + (c.length ? ', ' + per100(cl, ch) + ' install clicks per 100 home visitors' : '')); }
   console.log('  last 3 days, by source: ' + w.sources.map(([k, n]) => k + ' ' + n).join(', ') + '\n  last 3 days, by country: ' + w.countries.map(([k, n]) => k + ' ' + n).join(', '));
   const top3 = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, n]) => k + ' ' + n).join(', ');
-  console.log('  clicks, last 7 days' + (w.events.length ? ':\n' + w.events.map(([k, e]) => '    ' + k.padEnd(18) + String(e.n).padStart(5) + '   where: ' + top3(e.where) + (Object.keys(e.what).length ? '   · ' + top3(e.what) : '')).join('\n') : ': none yet (counted since ' + WEB_CLICKS_SINCE + ')'));
+  console.log('  clicks, last 7 days' + (w.events.length ? ':\n' + w.events.map(([k, e]) => '    ' + k.padEnd(18) + String(e.n).padStart(5) + (Object.keys(e.where).length ? '   where: ' + top3(e.where) : '') + (Object.keys(e.what).length ? '   · ' + top3(e.what) : '')).join('\n') : ': none yet (counted since ' + WEB_CLICKS_SINCE + ')'));
 }
 const flat = (x) => ({ 'Marketplace installs': x.mp && x.mp.installs, 'Marketplace downloads': x.mp && x.mp.downloads, 'Marketplace updates': x.mp && x.mp.updates, 'Marketplace ratings': x.mp && x.mp.ratings,
   'Open VSX downloads': x.ovsx && x.ovsx.downloads, 'Open VSX reviews': x.ovsx && x.ovsx.reviews, 'npm downloads': x.npm, 'GitHub stars': x.hub && x.hub.stars, 'GitHub forks': x.hub && x.hub.forks,
   'GitHub: extension files': x.hub && x.hub.files && x.hub.files.vsix, 'GitHub: desktop app (Mac / Windows / Linux)': x.hub && x.hub.files && [x.hub.files.mac, x.hub.files.windows, x.hub.files.linux].join(' / '), 'GitHub: command line file': x.hub && x.hub.files && x.hub.files.cli,
-  'Opt-in active installs (1 request a day each)': x.hub && x.hub.active, 'Opt-in people who opened the call (1 request a week each)': x.hub && x.hub.week, 'YouTube subscribers': x.yt && x.yt.subs, 'YouTube views (all videos)': x.yt && x.yt.views });
+  'Opt-in active installs (1 request a day each)': x.hub && x.hub.active, 'Opt-in people who opened the call (1 request a week each)': x.hub && x.hub.week, 'the same from the plugin / command line / desktop app': x.hub && x.hub.weeks ? ['plugin', 'cli', 'desktop'].map((k) => x.hub.weeks[k] || 0).join(' / ') : null, 'YouTube subscribers': x.yt && x.yt.subs, 'YouTube views (all videos)': x.yt && x.yt.views });
 const lines = (text) => text.split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((x) => x && x.d);
 
 (async () => {
@@ -102,11 +121,17 @@ const lines = (text) => text.split('\n').filter(Boolean).map((l) => { try { retu
   // The number to follow: how many people opened the call, week by week (only those who said yes to "share usage"). A week runs from Monday (UTC); the daily job reads the counter early
   // in the morning, so the first hours of a Monday are counted in the week before.
   const monday = (d) => { const t = Date.parse(d + 'T00:00:00Z'); return new Date(t - ((new Date(t).getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10); }, wk = [];
-  for (const x of lines(hist).filter((x) => x.d !== now.d).concat(now)) { const n = x.hub && x.hub.week; if (typeof n !== 'number') continue; const m = monday(x.d), w = wk[wk.length - 1]; if (w && w.m === m) w.n = n; else wk.push({ m, n, from: w ? w.n : null }); }
-  if (wk.length) console.log('\nPeople who opened the call, week by week (opt-in):\n' + wk.map((w, i) => `  week of ${w.m}  ${w.from == null ? 'counting starts at ' + w.n : w.n - w.from}${i === wk.length - 1 ? ' so far' : ''}`).join('\n'));
+  // Each kind has its counter (VS Code since 1.34, the plugin, the command line and the desktop app since 1.39): a week is the last count of the week minus the last count of the week before;
+  // a counter's first week counts from zero, since each started at zero.
+  const KINDS = [['VS Code', (x) => x.hub && x.hub.week], ['plugin', (x) => x.hub && x.hub.weeks && x.hub.weeks.plugin], ['command line', (x) => x.hub && x.hub.weeks && x.hub.weeks.cli], ['desktop app', (x) => x.hub && x.hub.weeks && x.hub.weeks.desktop]], byWeek = {};
+  for (const [name, get] of KINDS) { const kw = []; for (const x of lines(hist).filter((x) => x.d !== now.d).concat(now)) { const n = get(x); if (typeof n !== 'number') continue; const m = monday(x.d), w = kw[kw.length - 1]; if (w && w.m === m) w.n = n; else kw.push({ m, n, from: w ? w.n : 0 }); }
+    for (const w of kw) (byWeek[w.m] = byWeek[w.m] || {})[name] = w.n - w.from; }
+  for (const m of Object.keys(byWeek).sort()) wk.push({ m, by: byWeek[m], n: Object.values(byWeek[m]).reduce((t, v) => t + v, 0) });
+  if (wk.length) console.log('\nPeople who opened the call, week by week (opt-in):\n' + wk.map((w, i) => `  week of ${w.m}  ${w.n}${i === wk.length - 1 ? ' so far' : ''}  (${Object.entries(w.by).filter(([, v]) => v).map(([k, v]) => k + ' ' + v).join(', ') || 'none'})`).join('\n'));
   if (days.length < 3) console.log('\n  The daily job on GitHub adds one line a day: the trend is worth reading after a week or two.');
+  if (now.rank) printRanks(now.rank, prev.r || null, lines(hist));
   if (now.yt && now.yt.videos.length) console.log('\nYouTube (public counts):\n' + now.yt.videos.map((x) => '  ' + String(x.views).padStart(6) + '  ' + (x.short ? '[Short] ' : '') + x.title).join('\n'));
   if (!process.env.STATS_NO_WEBSITE) { try { printWebsite(await website()); } catch { console.log('\nWebsite: not read (the Vercel command line needs `npx vercel login` on this computer)'); } }
   console.log('\nThe funnel of the Marketplace page (views, then installs, per day) is only in your publisher account: https://marketplace.visualstudio.com/manage (Acquisition tab).');
-  fs.writeFileSync(snap, JSON.stringify({ at: new Date().toISOString().slice(0, 16).replace('T', ' '), f }));
+  fs.writeFileSync(snap, JSON.stringify({ at: new Date().toISOString().slice(0, 16).replace('T', ' '), f, ...(now.rank ? { r: now.rank } : prev.r ? { r: prev.r } : {}) }));
 })().catch((e) => { console.error(e.message || e); process.exit(1); });

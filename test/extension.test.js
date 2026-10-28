@@ -2,7 +2,7 @@
 // VS Code tells a tab's label, not its session, so the label is looked up among the titles of the recent sessions.
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), os = require('os'), path = require('path'), Module = require('module');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-ext-'));
-process.env.AGENT_STANDUP_PREFS = path.join(tmp, 'prefs.json'); process.env.AGENT_STANDUP_KOKORO_DIR = path.join(tmp, 'kokoro'); process.env.AGENT_STANDUP_PROJECTS = path.join(tmp, 'projects'); process.env.AGENT_STANDUP_CODEX = 'off'; process.env.AGENT_STANDUP_VIBE = 'off';
+process.env.AGENT_STANDUP_PREFS = path.join(tmp, 'prefs.json'); process.env.AGENT_STANDUP_KOKORO_DIR = path.join(tmp, 'kokoro'); process.env.AGENT_STANDUP_PROJECTS = path.join(tmp, 'projects'); process.env.AGENT_STANDUP_CODEX = 'off'; process.env.AGENT_STANDUP_VIBE = 'off'; process.env.AGENT_STANDUP_CC_SESSIONS = path.join(tmp, 'sessions'); process.env.AGENT_STANDUP_ANSWER = 'dry';   // not the status of the sessions open on the machine the tests run on
 
 // ---- sessions with a title, the way Claude Code writes one ----
 function titled(proj, id, title, minutesAgo) {
@@ -87,7 +87,7 @@ test('the extension registers its commands, its panel and its sidebar view, also
   } finally { await x.close(); }
 });
 
-test('a rating is asked once, on the third day the call is opened, for the store the editor installs from; "Later" or closing it asks again a week later, one time', async () => {
+test('a rating is asked on the third day the call is opened, for the store the editor installs from; "Later", closing it or no answer asks again a week later, one last time', async () => {
   const v = standIn(), x = await activated(v), asked = [], tick = () => new Promise((r) => setImmediate(r));
   let answer; v.vscode.window.showInformationMessage = (m, ...b) => { asked.push([m, ...b]); return Promise.resolve(answer === undefined ? undefined : b[answer]); };
   const store = () => { const m = new Map(); return { get: (k) => m.get(k), update: async (k, val) => { m.set(k, val); } }; };
@@ -102,6 +102,11 @@ test('a rating is asked once, on the third day the call is opened, for the store
     answer = 0; await use(store(), '2026-10-01', '2026-10-02', '2026-10-03'); assert.deepEqual(v.opened, [x.ext._ratePages.vscode]);   // the review page of the Marketplace, link as text
     v.vscode.env.uriScheme = 'cursor'; await use(store(), '2026-10-01', '2026-10-02', '2026-10-03'); assert.deepEqual(v.opened.slice(-1), [x.ext._ratePages.other]);   // Cursor, VSCodium… install from Open VSX
     answer = 2; await use(store(), '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-20'); assert.equal(asked.length, 5); assert.equal(v.opened.length, 2);   // "No thanks": never again
+    v.vscode.window.showInformationMessage = (m, ...b) => { asked.push([m, ...b]); return new Promise(() => {}); };   // left alone: VS Code tucks it into the bell, and no answer ever comes
+    const left = store(); await use(left, '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-09'); assert.equal(asked.length, 6);
+    await use(left, '2026-10-10', '2026-10-30'); assert.equal(asked.length, 7);   // a week later, one last time
+    const old = store(); await old.update('rate.days', 3); await old.update('rate.last', '2026-10-03'); await old.update('rate.done', true);   // asked by an earlier version, which ended it as it showed
+    await use(old, '2026-10-27', '2026-11-30'); assert.equal(asked.length, 8);   // once more, the last time
     assert.match(x.ext._ratePages.vscode, /^https:\/\/marketplace\.visualstudio\.com\/items\?itemName=DoubleGeste\.agent-standup&/); assert.match(x.ext._ratePages.other, /^https:\/\/open-vsx\.org\/extension\/DoubleGeste\/agent-standup\//);
   } finally { await x.close(); }
 });
@@ -113,7 +118,7 @@ test('a day an agent works counts towards the rating, call opened or not; ⚙ �
     await new Promise((r) => setTimeout(r, 50));
     assert.equal(m.get('rate.days'), 1); assert.equal(m.get('rate.last'), new Date().toISOString().slice(0, 10));   // the status bar saw the sessions of this folder at work
     assert.equal(process.env.AGENT_STANDUP_RATE, x.ext._ratePages.vscode);   // the page opened in a browser rates on the same store
-    x.ext._rateNow(st); assert.deepEqual(v.opened, [x.ext._ratePages.vscode]); assert.equal(m.get('rate.done'), true);
+    x.ext._rateNow(st); assert.deepEqual(v.opened, [x.ext._ratePages.vscode]); assert.equal(m.get('rate.over'), true);
   } finally { await x.close(); if (r0 == null) delete process.env.AGENT_STANDUP_RATE; else process.env.AGENT_STANDUP_RATE = r0; }
 });
 
@@ -200,17 +205,16 @@ test('a link the page asks for is opened on a known site only; the draft of a pr
 const waits = (over = {}) => ({ proj: '-work-app', id: 'wait-1', title: 'Fix the  login\tpage', state: 'blocked', since: 1e12, mtime: 1e12, tool: 'Bash', ask: 'Bash(npm test)', ...over });
 const tick = () => new Promise((r) => setImmediate(r));
 
-test('a session that starts to wait on you is told once, naming it and what it asks; once more 5 minutes later if it still waits, then not again until it waits again', async () => {
+test('a session that starts to wait on you is told once, naming it and what it asks, never reminded, and told again only when it waits again', async () => {
   const v = standIn(), told = [], x = await activated(v, undefined, { noOpen: true }), T = 1e12;
   v.vscode.window.showInformationMessage = (m, ...b) => { told.push([m, ...b]); return Promise.resolve(undefined); };
   try {
     x.ext._needsYou([waits()], T); assert.deepEqual(told, [['✋ Fix the login page is waiting for you: Bash(npm test)', 'Go to session', 'Open call']]);
     x.ext._needsYou([waits()], T + 4000); x.ext._needsYou([waits()], T + 5 * 60e3 - 1); assert.equal(told.length, 1, 'not at every scan');
-    x.ext._needsYou([waits()], T + 5 * 60e3); assert.deepEqual(told[1], ['✋ Still waiting: Fix the login page is waiting for you: Bash(npm test)', 'Go to session', 'Open call']);
-    x.ext._needsYou([waits()], T + 6 * 60e3); x.ext._needsYou([waits()], T + 60 * 60e3); assert.equal(told.length, 2, 'one reminder only');
-    x.ext._needsYou([waits({ state: 'working' })], T + 61 * 60e3); x.ext._needsYou([waits({ since: T + 62 * 60e3 })], T + 62 * 60e3); assert.equal(told.length, 3, 'answered, then waiting again: told again');
+    x.ext._needsYou([waits()], T + 5 * 60e3); x.ext._needsYou([waits()], T + 60 * 60e3); assert.equal(told.length, 1, 'no reminder');
+    x.ext._needsYou([waits({ state: 'working' })], T + 61 * 60e3); x.ext._needsYou([waits({ since: T + 62 * 60e3 })], T + 62 * 60e3); assert.equal(told.length, 2, 'answered, then waiting again: told again');
     x.ext._needsYou([waits({ id: 'q', title: 'Pick a name', tool: 'AskUserQuestion', ask: 'Which name do you want for the new command, the short one or the long one that says exactly what it does?' }), waits({ id: 'p', title: 'Plan it', tool: 'ExitPlanMode', ask: undefined }), waits({ id: 'm', title: 'A menu', tool: '', ask: undefined }), waits({ id: 'w', state: 'working' })], T);
-    assert.deepEqual(told.slice(3).map((t) => t[0]), ['✋ Pick a name is waiting for you: Which name do you want for the new command, the short one or the long one that…', '✋ Plan it is waiting for you: a plan to approve', '✋ A menu is waiting for you'], 'one per session; the question cut to about 80 characters');
+    assert.deepEqual(told.slice(2).map((t) => t[0]), ['✋ Pick a name is waiting for you: Which name do you want for the new command, the short one or the long one that…', '✋ Plan it is waiting for you: a plan to approve', '✋ A menu is waiting for you'], 'one per session; the question cut to about 80 characters');
   } finally { await x.close(); }
 });
 
@@ -223,7 +227,8 @@ test('no "needs you" notification when the setting is off, when the call is in v
     v.relay({ agentStandup: 'notify', text: 'An agent may be waiting for you ✋' }); assert.equal(told.length, 1, 'the page\'s own alert, call in view');
     v.panelObj.visible = false; x.ext._needsYou([waits()], T + 60e3); assert.equal(told.length, 1, 'already seen in the call');
     v.relay({ agentStandup: 'notify', text: 'An agent may be waiting for you ✋' }); v.relay({ agentStandup: 'notify', text: 'Your agents are done 🎉' }); assert.deepEqual(told.slice(1).map((t) => t[0]), ['Agent Standup: An agent may be waiting for you ✋', 'Agent Standup: Your agents are done 🎉'], 'call out of view and nothing told by the extension: the page\'s ✋ is the only word of it (a stalled agent, a sub-agent, another folder)');
-    answer = 0; const n = v.sent.length; x.ext._needsYou([waits()], T + 5 * 60e3); assert.match(told[3][0], /^✋ Still waiting: Fix the login page/, 'the reminder, once the call is out of view');
+    x.ext._needsYou([waits()], T + 5 * 60e3); assert.equal(told.length, 3, 'seen in the call: no reminder once it is out of view'); x.ext._needsYou([], T + 6 * 60e3);
+    answer = 0; const n = v.sent.length; x.ext._needsYou([waits({ since: T + 7 * 60e3 })], T + 7 * 60e3); assert.match(told[3][0], /^✋ Fix the login page/, 'answered, then a new wait, the call out of view');
     v.relay({ agentStandup: 'notify', text: 'An agent may be waiting for you ✋' }); assert.equal(told.length, 4, 'right after the notification that names the session, the page\'s generic ✋ is the same news: not shown');
     await tick(); await tick(); assert.deepEqual(v.sent.slice(n), [{ where: 'panel', agentStandup: 'pin', id: 'wait-1', proj: '-work-app' }], 'Go to session: what the status bar does for it');
     v.active = { viewColumn: 1, activeTab: claude('Fix the login page and i…') }; x.ext._needsYou([waits({ id: 'tab', title: 'Fix the login page and its tests' })], T); assert.equal(told.length, 4, 'you are on its tab');
@@ -234,21 +239,102 @@ test('no "needs you" notification when the setting is off, when the call is in v
 test('the status bar\'s scan tells the sessions of this workspace that wait on you, once', async () => {
   const dir = path.join(tmp, 'projects', '-work-app'), file = path.join(dir, 'asking.jsonl'), at = Date.now() - 20000, told = [];
   fs.writeFileSync(file, [{ type: 'user', message: { role: 'user', content: 'name it' } }, { type: 'custom-title', customTitle: 'Name the command' }, { type: 'assistant', message: { id: 'm2', role: 'assistant', stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tu1', name: 'AskUserQuestion', input: { questions: [{ question: 'Short or long name?', header: 'Name', options: [{ label: 'Short' }, { label: 'Long' }] }] } }] } }].map((r) => JSON.stringify({ timestamp: new Date(at).toISOString(), ...r })).join('\n') + '\n');
-  fs.utimesSync(file, at / 1000, at / 1000); await new Promise((r) => setTimeout(r, 1300));   // past the scan the other tests shared
+  fs.utimesSync(file, at / 1000, at / 1000); fs.mkdirSync(process.env.AGENT_STANDUP_CC_SESSIONS, { recursive: true }); const sf = path.join(process.env.AGENT_STANDUP_CC_SESSIONS, '4242.json'); fs.writeFileSync(sf, JSON.stringify({ pid: process.pid, sessionId: 'asking', status: 'waiting', waitingFor: 'input needed', statusUpdatedAt: at }));   // Claude Code says its question is open: a call left pending alone is only a guess, never told
+  await new Promise((r) => setTimeout(r, 1300));   // past the scan the other tests shared
   const v = standIn(); v.vscode.window.showInformationMessage = (m, ...b) => { told.push(m); return Promise.resolve(undefined); };
   const x = await activated(v, undefined, { noOpen: true });
   try {
     await tick(); assert.deepEqual(told, ['✋ Name the command is waiting for you: Short or long name?']);
     await new Promise((r) => setTimeout(r, 4300)); assert.equal(told.length, 1, 'the next scan says nothing');
-  } finally { await x.close(); fs.unlinkSync(file); }
+  } finally { await x.close(); fs.unlinkSync(file); fs.unlinkSync(sf); }
 });
 
-test('two windows on the same folder tell a wait once between them, and its reminder once', async () => {
+test('two windows on the same folder tell a wait once between them', async () => {
   const dir = path.join(tmp, 'storage-needs'), told = [], xs = [], T = 1e12;
   try {
     for (let i = 0; i < 2; i++) { const v = standIn(); xs.push(await activated(v, undefined, { globalStorageUri: { fsPath: dir }, noOpen: true })); v.vscode.window.showInformationMessage = (m) => { told.push([i, m]); return Promise.resolve(undefined); }; }
     for (const x of xs) x.ext._needsYou([waits()], T); assert.equal(told.length, 1);
-    for (const x of xs) x.ext._needsYou([waits()], T + 5 * 60e3); assert.equal(told.length, 2); assert.match(told[1][1], /Still waiting/);
-    for (const x of xs) { x.ext._needsYou([], T + 6 * 60e3); x.ext._needsYou([waits({ since: T + 7 * 60e3 })], T + 7 * 60e3); } assert.equal(told.length, 3, 'a new wait');
+    for (const x of xs) x.ext._needsYou([waits()], T + 5 * 60e3); assert.equal(told.length, 1, 'no reminder');
+    for (const x of xs) { x.ext._needsYou([], T + 6 * 60e3); x.ext._needsYou([waits({ since: T + 7 * 60e3 })], T + 7 * 60e3); } assert.equal(told.length, 2, 'a new wait');
   } finally { for (const x of xs) await x.close(); }
+});
+
+// ---- which sessions are this workspace's: its folder, or a folder inside it (a worktree, a package), never the folder beside it with a longer name ----
+function started(cwd, id, title, secondsAgo) {   // a session started in that folder, asking a question, that Claude Code says is open
+  const proj = cwd.replace(/[^a-zA-Z0-9]/g, '-'), dir = path.join(tmp, 'projects', proj), file = path.join(dir, id + '.jsonl'), at = Date.now() - secondsAgo * 1000; fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(file, [{ type: 'user', cwd, sessionId: id, message: { role: 'user', content: 'go' } }, { type: 'custom-title', customTitle: title }, { type: 'assistant', cwd, sessionId: id, message: { id: 'm-' + id, role: 'assistant', stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tu-' + id, name: 'AskUserQuestion', input: { questions: [{ question: 'Which one?', header: 'Pick', options: [{ label: 'A' }, { label: 'B' }] }] } }] } }].map((r) => JSON.stringify({ timestamp: new Date(at).toISOString(), ...r })).join('\n') + '\n');
+  fs.utimesSync(file, at / 1000, at / 1000); fs.mkdirSync(process.env.AGENT_STANDUP_CC_SESSIONS, { recursive: true });
+  const sf = path.join(process.env.AGENT_STANDUP_CC_SESSIONS, (started.n = (started.n || 5000) + 1) + '.json'); fs.writeFileSync(sf, JSON.stringify({ pid: process.pid, sessionId: id, status: 'waiting', waitingFor: 'input needed', statusUpdatedAt: at }));
+  return { proj, files: [file, sf] };
+}
+
+test('the status bar and its notifications count the sessions of a folder inside the workspace (a worktree, a package), not those of a folder beside it', async () => {
+  const made = [started('/work/app/.claude/worktrees/feat-x', 'wt', 'In a worktree', 30), started('/work/app/packages/api', 'pkg', 'In a package', 90), started('/work/app-old', 'old', 'Beside it', 20)], told = [];
+  await new Promise((r) => setTimeout(r, 1300));   // past the scan the other tests shared
+  const v = standIn(); let item = null; const make = v.vscode.window.createStatusBarItem; v.vscode.window.createStatusBarItem = () => (item = make());
+  v.vscode.window.showInformationMessage = (m) => { told.push(m); return Promise.resolve(undefined); };
+  const x = await activated(v, undefined, { noOpen: true });
+  try {
+    await tick(); assert.deepEqual(told.sort(), ['✋ In a package is waiting for you: Which one?', '✋ In a worktree is waiting for you: Which one?']);
+    assert.match(item.text, /2 needs you/); assert.ok(!/Beside it/.test(item.tooltip), 'app-old is beside app, not in it');
+    assert.match(item.tooltip, /✋ In a worktree · Which one\? · for less than a minute/); assert.match(item.tooltip, /✋ In a package · Which one\? · for 1 min/);
+    const ws = '-work-app', is = (r) => x.ext._inWorkspace(r, ws);
+    assert.deepEqual([is({ proj: ws }), is({ proj: made[0].proj, id: 'wt' }), is({ proj: made[1].proj, id: 'pkg' }), is({ proj: made[2].proj, id: 'old' }), is({ proj: '-work-application', id: 'x' }), is({ proj: '-other', id: 'x' })], [true, true, true, false, false, false]);
+    assert.equal(is({ proj: '-work-app-new', id: 'not-written-yet' }), true, 'no folder to tell by: counted by its name, as the call does');
+    assert.deepEqual([is({ proj: '_vibe', id: 'v', dir: ws }), is({ proj: '_codex', id: 'c', dir: '-elsewhere' })], [true, false], 'a Codex or Vibe session, by the folder it was started in');
+  } finally { await x.close(); for (const m of made) for (const f of m.files) fs.unlinkSync(f); }
+});
+
+test('a folder inside the workspace and a folder beside it with the same project name are told apart session by session, whichever is read first', async () => {
+  const v = standIn(), x = await activated(v, undefined, { noOpen: true }), made = [];
+  const put = (proj, id, cwd) => { const d = path.join(tmp, 'projects', proj); fs.mkdirSync(d, { recursive: true }); const f = path.join(d, id + '.jsonl'); fs.writeFileSync(f, JSON.stringify({ type: 'user', cwd, message: { role: 'user', content: 'go' } }) + '\n'); made.push(f); };
+  put('-w3-app-old', 'in3', '/w3/app/old'); put('-w3-app-old', 'by3', '/w3/app-old'); put('-w4-app-old', 'in4', '/w4/app/old'); put('-w4-app-old', 'by4', '/w4/app-old');   // Claude Code names app/old and app-old alike
+  try {
+    const is = (proj, id, ws) => x.ext._inWorkspace({ proj, id }, ws);
+    assert.deepEqual([is('-w3-app-old', 'in3', '-w3-app'), is('-w3-app-old', 'by3', '-w3-app')], [true, false], 'the one inside read first');
+    assert.deepEqual([is('-w4-app-old', 'by4', '-w4-app'), is('-w4-app-old', 'in4', '-w4-app')], [false, true], 'the one beside read first');
+  } finally { await x.close(); for (const f of made) fs.unlinkSync(f); }
+});
+
+test('on Windows the workspace is found whatever the case of its drive letter: VS Code writes c:\\, Claude Code C:\\', async () => {
+  const v = standIn(), x = await activated(v, undefined, { noOpen: true }), real = Object.getOwnPropertyDescriptor(process, 'platform');
+  const wt = path.join(tmp, 'projects', 'C--work-app--claude-worktrees-b'), old = path.join(tmp, 'projects', 'C--work-app-old');
+  fs.mkdirSync(wt, { recursive: true }); fs.mkdirSync(old, { recursive: true });
+  fs.writeFileSync(path.join(wt, 'w1.jsonl'), JSON.stringify({ type: 'user', cwd: 'C:\\work\\app\\.claude\\worktrees\\b', message: { role: 'user', content: 'go' } }) + '\n');
+  fs.writeFileSync(path.join(old, 'o1.jsonl'), JSON.stringify({ type: 'user', cwd: 'C:\\work\\app-old', message: { role: 'user', content: 'go' } }) + '\n');
+  try {
+    v.vscode.workspace.workspaceFolders = [{ uri: { fsPath: 'c:\\work\\app' } }];
+    Object.defineProperty(process, 'platform', { ...real, value: 'win32' });
+    const key = x.ext._projKey(), is = (r) => x.ext._inWorkspace(r, key);
+    assert.equal(key, 'C--work-app', 'the name Claude Code gives the project, sent to the call too');
+    assert.deepEqual([is({ proj: 'C--work-app' }), is({ proj: 'c--work-app' }), is({ proj: 'C--work-app--claude-worktrees-b', id: 'w1' }), is({ proj: 'C--work-app-old', id: 'o1' })], [true, true, true, false]);
+    Object.defineProperty(process, 'platform', real); assert.equal(x.ext._projKey(), 'c--work-app', 'elsewhere a name is taken as it is written');
+  } finally { Object.defineProperty(process, 'platform', real); await x.close(); fs.rmSync(wt, { recursive: true, force: true }); fs.rmSync(old, { recursive: true, force: true }); }
+});
+
+test('the status bar\'s tooltip says what a session that waits asks and for how long; one stopped by the usage limit, or logged out, says so instead of having given up', async () => {
+  const v = standIn(), x = await activated(v, undefined, { noOpen: true }), T = 1e12, line = (r) => x.ext._tipLine({ proj: '-work-app', id: 'i', title: 'Ship it', state: 'turn', mtime: T, ...r }, T);
+  try {
+    assert.equal(line({ state: 'blocked', tool: 'Bash', ask: 'Bash(npm test)', since: T - 30e3 }), '✋ Ship it · Bash(npm test) · for less than a minute');
+    assert.equal(line({ state: 'blocked', tool: 'ExitPlanMode', since: T - 7 * 60e3 }), '✋ Ship it · a plan to approve · for 7 min');
+    assert.equal(line({ state: 'blocked', tool: '', since: T - 125 * 60e3 }), '✋ Ship it · for 2 h 5 min');
+    assert.equal(line({ state: 'blocked', tool: 'AskUserQuestion' }), '✋ Ship it', 'no time known: none said');
+    assert.equal(line({ limit: { resets: '7:20pm (Europe/Paris)' } }), '⏳ Ship it · usage limit · resets 7:20pm (Europe/Paris)');
+    assert.equal(line({ limit: { resets: '' } }), '⏳ Ship it · usage limit');
+    assert.equal(line({ auth: 1 }), '⚠ Ship it · logged out');
+    assert.deepEqual([line({ gave: 1 }), line({}), line({ state: 'working' })], ['⚠ Ship it', '✓ Ship it', '⚙ Ship it'], 'the others as before');
+  } finally { await x.close(); }
+});
+
+test('the status bar says "your turn" only for a turn you can take: sessions stopped by the usage limit say when it resets, a lost login says so', async () => {
+  const v = standIn(), x = await activated(v, undefined, { noOpen: true }), bar = (...rows) => x.ext._barText(rows.map((r, i) => ({ proj: '-work-app', id: 'i' + i, title: 'T' + i, state: 'turn', mtime: 1e12, ...r })));
+  try {
+    assert.equal(bar({}, { limit: { resets: '7:20pm (Europe/Paris)' } }), '$(device-camera-video) $(check) your turn', 'one turn you can take: your turn');
+    assert.equal(bar({ limit: { resets: '7:20pm (Europe/Paris)' } }, { limit: { resets: '7:20pm (Europe/Paris)' } }), '$(device-camera-video) ⏳ usage limit · resets 7:20pm', 'all stopped by the limit: when it resets, without its zone');
+    assert.equal(bar({ limit: { resets: '' } }), '$(device-camera-video) ⏳ usage limit');
+    assert.equal(bar({ auth: 1 }), '$(device-camera-video) $(warning) logged out');
+    assert.equal(bar({ state: 'working' }, { limit: { resets: '3pm' } }), '$(device-camera-video) $(sync~spin) 1 working', 'another at work: as before');
+    assert.equal(bar({ state: 'blocked' }, {}), '$(device-camera-video) $(warning) 1 needs you');
+    assert.equal(bar(), '$(device-camera-video) Agent Standup');
+  } finally { await x.close(); }
 });

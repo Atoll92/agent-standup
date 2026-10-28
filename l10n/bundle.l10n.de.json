@@ -13,8 +13,13 @@
   "Privacy policy": "Datenschutzerklärung",
   "{0} is waiting for you: {1}": "{0} wartet auf dich: {1}",
   "{0} is waiting for you": "{0} wartet auf dich",
-  "Still waiting: {0}": "Wartet immer noch: {0}",
   "a plan to approve": "ein Plan zum Freigeben",
   "Go to session": "Zur Sitzung",
-  "Open call": "Anruf öffnen"
+  "Open call": "Anruf öffnen",
+  "usage limit · resets {0}": "Nutzungslimit · wieder ab {0}",
+  "usage limit": "Nutzungslimit",
+  "logged out": "abgemeldet",
+  "for less than a minute": "seit weniger als einer Minute",
+  "for {0} min": "seit {0} Min.",
+  "for {0} h {1} min": "seit {0} Std. {1} Min."
 }

@@ -5,7 +5,7 @@ Agent Standup shows the Claude Code, Codex, Mistral Vibe and Cowork sessions of 
 ## Map
 | Path | What |
 |---|---|
-| `server.js` | The whole backend: reads `~/.claude/projects/**/*.jsonl` incrementally, merges sub-agents, serves `/api/*` and `public/`. Also handles translation, prefs, characters, packs and the shop client. |
+| `server.js` | The whole backend: reads `~/.claude/projects/**/*.jsonl` incrementally, merges sub-agents, serves `/api/*` and `public/`. For the shared screen it also reads the live output of background commands from Claude Code's temp folder (`/tmp/claude-<uid>/<project>/<session>/tasks/<id>.output`, `/api/taskout`). Also handles translation, prefs, characters, packs and the shop client. |
 | `codex.js`, `vibe.js` | Readers for Codex and Mistral Vibe. Each lists its sessions under one made-up project (`SOURCES` in server.js). Cowork is read like Claude Code, from the desktop app's folder (`coworkHomes`). |
 | `demo.js` | The built-in demo: a made-up session (English and French) that `server.js` serves. |
 | `kokoro.js`, `kokoro-worker.js` | Natural voices (Kokoro TTS), installed on demand. |
@@ -14,6 +14,7 @@ Agent Standup shows the Claude Code, Codex, Mistral Vibe and Cowork sessions of 
 | `bin/agent-standup.js` | The CLI (`status`, `statusline`, `--open`). `scripts/build-cli.js` builds it into `dist-cli/`. |
 | `desktop/` | Electron app (`main.js`). `scripts/build-desktop.js` builds it. |
 | `plugin/` | The Claude Code plugin (skills `open`, `status`). `scripts/sync-plugin.js` keeps its version in step. |
+| `plugin-band/` | A second plugin, a Claude Code mod (function hooks, `hooks/register.tsx`): a line above the prompt when another session waits for you. Reads only `~/.claude/sessions/*.json`. Check it with `claude plugin validate plugin-band` and `claude plugin test plugin-band`, with the newest `claude` and an old one (2.1.59 is at `/opt/homebrew/bin/claude`): no `$.state`, no `types` key, which old versions refuse. |
 | `api/` | Vercel functions of agent-standup.com: Stripe checkout, pack download, the sales page (`sales.js`) and the growth dashboard (`stats.js` with `_growth.js`, at `/api/stats/?k=<STATS_KEY>`). They have no dependencies. |
 | `website/` | agent-standup.com (Vercel; a push to main deploys it). `npm run website` builds `website/dist`. |
 | `landing/` → `docs/` | The GitHub Pages landing (`npm run landing`). Do not redesign it without asking. |
@@ -23,9 +24,11 @@ Agent Standup shows the Claude Code, Codex, Mistral Vibe and Cowork sessions of 
 ## Run and test
 - `node server.js` → http://localhost:4747 (`PORT=…`). `?live=0` opens the replay picker, `?proj=<dir>` limits the call to one project.
 - To run against chosen data, set `AGENT_STANDUP_PROJECTS` (sessions folder), `AGENT_STANDUP_PREFS` (settings file), `AGENT_STANDUP_CC_SESSIONS` (Claude Code's per-session status folder, `~/.claude/sessions`), `AGENT_STANDUP_CHARACTERS`, `AGENT_STANDUP_PACKS`, `AGENT_STANDUP_KOKORO_DIR`, `AGENT_STANDUP_COWORK=off`, `AGENT_STANDUP_CODEX=0`, `AGENT_STANDUP_VIBE=0`, `AGENT_STANDUP_CLAUDE` (a stand-in `claude` for translation) and `AGENT_STANDUP_STORE` (the shop; `scripts/shop-dev.js` is a pretend one). Never point a test server at the user's real prefs.
+- The live tests get their own empty packs and characters folders and treat the Halloween line as done; a change that depends on the date or on installed packs can pass here and fail in CI.
 - `npm test` takes about 2.5 minutes: the four browser files run side by side. While iterating, run one file: `node --test test/server.test.js`.
 - `npm run i18n` checks that every language has every key, and rebuilds the website and landing locale files.
 - The app leaves out sessions in temporary folders. Put throwaway sessions and test copies under `reports/` (git-ignored), not `/tmp`.
+- A live `claude` that an agent starts to probe Claude Code (a question, a permission menu) runs in its scratchpad or another temporary folder, with `CLAUDE_CODE_ENTRYPOINT` and `CLAUDECODE` unset (it then says `sdk-cli`). Under `reports/` its menus reach Arthur as "needs you" in his own call and editor.
 
 ## Checks after every edit (CI runs the same ones)
 - `node --check` on each `.js` you touched.
@@ -52,6 +55,8 @@ Agent Standup shows the Claude Code, Codex, Mistral Vibe and Cowork sessions of 
 1. Bump the version in `package.json`, `desktop/package.json` and both `version` fields of `desktop/package-lock.json`. Add a `## x.y.z` entry to `CHANGELOG.md`. Run `node scripts/sync-plugin.js`. Run CI's "One version everywhere" step by hand.
 2. `npm run landing`, then commit `Landing x.y.z`.
 3. Push the exact commit and wait for CI to pass.
-4. Build from `git archive <release commit>`, never from the working tree, which may hold other work. Build the vsix (`npm run package`), the CLI tgz (`build-cli.js` + `npm pack dist-cli`), and the two macOS zips (`build-desktop.js --arch arm64|x64`, zipped with `ditto -c -k --keepParent`).
+4. Build from `git archive <release commit>`, never from the working tree, which may hold other work. Build the vsix (`npm run package`) in an archive copy of its own: it takes every file not in `.vscodeignore`, so logs or the CLI tgz built beside it end up inside (compare `unzip -Z1` with the previous release's list). Then the CLI tgz (`build-cli.js` + `npm pack ./dist-cli`) and the two macOS zips (`build-desktop.js --arch arm64|x64`, zipped with `ditto -c -k --keepParent`).
 5. `gh release create vx.y.z --target <full sha> …`. The tag publishes npm and Open VSX and attaches the Windows/Linux zips. The VS Code Marketplace upload is done by hand by Arthur.
-6. Before a release that touches `server.js`, a reader or `extension.js`, also compare the old and new servers on real sessions, activate the packaged vsix with a stand-in `vscode`, and have a reviewer try to prove the release breaks existing users.
+6. Before a release that touches `server.js`, a reader or `extension.js`, also compare the old and new servers on real sessions, activate the packaged vsix with a stand-in `vscode`, and have a reviewer try to prove the release breaks existing users. Fixes made after the review get a review of their own: in 1.39.0 they overreached.
+7. After publishing, check that what people download runs: `npx -y @double_geste/agent-standup@x.y.z` (as the plugin starts it, `AGENT_STANDUP_FROM=plugin`), the macOS zip from the release (`--user-data-dir` of its own, and unset the `AGENT_STANDUP_*` variables a shell started from VS Code inherits), and the vsix in a real VS Code with its own `--user-data-dir`/`--extensions-dir` (the extension's `agentStandup.charactersPath` setting replaces `AGENT_STANDUP_CHARACTERS`). Each with throwaway settings, never Arthur's.
+8. Then delete the build and test copies: everything in `reports/prerelease/` except `scripts/`, and the release-check copies (~700 MB per build; the disk runs short). Keep `dist-release-<version>/` of this release. Arthur asked for this at the end of every release.

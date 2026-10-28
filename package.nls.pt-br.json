@@ -1,5 +1,5 @@
 {
-  "extension.description": "Acompanhe sua sessão do Claude Code, do Codex ou do Mistral Vibe como uma chamada de vídeo animada ao vivo: o agente principal dá ordens, os subagentes entram, compartilham a tela e reportam — com vozes, árvore de subagentes, linha do tempo, resumo e exportação de vídeo.",
+  "extension.description": "Veja quais dos seus agentes do Claude Code e do Codex estão trabalhando, travados ou esperando por você, numa chamada de equipe ao vivo: os subagentes entram, compartilham a tela e reportam. Um painel com todas as sessões, os tokens de cada agente, replay e vozes. Também Mistral Vibe e Cowork. Só lê arquivos locais.",
   "command.open.title": "Agent Standup: Abrir chamada ao vivo",
   "command.openInBrowser.title": "Agent Standup: Abrir no navegador (voz + som)",
   "command.focus.title": "Agent Standup: Mostrar barra lateral",
@@ -8,12 +8,13 @@
   "config.port.description": "Porta local do servidor do Agent Standup. 0 (padrão) escolhe automaticamente uma porta livre para cada janela do VS Code.",
   "config.autoOpen.description": "Abrir a chamada ao vivo automaticamente quando o VS Code iniciar.",
   "config.onlyThisWorkspace.description": "Acompanhar apenas as sessões do Claude Code iniciadas na pasta do espaço de trabalho atual.",
-  "config.statusBar.description": "Mostrar contagens ao vivo na barra de status (agentes trabalhando, precisam de você, sua vez) para este espaço de trabalho; o item fica vermelho quando um agente pode estar esperando por você.",
+  "config.statusBar.description": "Mostrar contagens ao vivo na barra de status (agentes trabalhando, precisam de você, sua vez) para este espaço de trabalho; o item fica vermelho quando uma sessão espera a sua resposta (uma pergunta ou uma permissão está aberta).",
   "config.shareUsage.description": "Ajude o projeto a contar quantas pessoas o usam: uma vez por dia quando o editor inicia, e no máximo uma vez por semana quando você abre a chamada, envia uma requisição vazia a um arquivo de 1 pixel no GitHub (sem identificador, sem conteúdo; o GitHub vê seu IP como em qualquer download). Desativado até você dizer sim (perguntado uma vez, na primeira vez que você abre a chamada); ignorado se a telemetria do VS Code estiver desativada.",
   "config.codex.description": "Mostrar também as sessões do Codex (lidas de ~/.codex/sessions ou $CODEX_HOME). Desative para mostrar apenas as sessões do Claude Code.",
   "config.vibe.description": "Mostrar também as sessões do Mistral Vibe (lidas de ~/.vibe/logs/session, ou $VIBE_HOME). Desative para não mostrá-las.",
   "config.reply.description": "Permite que a chamada digite sua mensagem no painel tmux da sessão do Claude Code acompanhada (somente Linux, desativado por padrão). Qualquer pessoa que possa executar comandos como você poderá então digitar nas suas sessões.",
   "config.claudePath.description": "Caminho completo do executável do Claude Code, se não for encontrado automaticamente (usado para a tradução).",
   "config.charactersPath.description": "Pasta com suas próprias imagens de personagens (PNG, GIF ou WebP, até 300 KB cada). Vazio usa ~/.agent-standup/characters. lead.png é o agente principal, you.png é você, qualquer outra imagem é um subagente, name-talk.png é um quadro opcional de boca aberta.",
-  "config.notifyNeedsYou.description": "Mostrar uma notificação quando uma sessão deste workspace começa a esperar por você (uma pergunta, uma aprovação, um plano), com o nome da sessão e o que ela pede, e mais uma vez se ainda estiver esperando 5 minutos depois. Não aparece enquanto a chamada está à vista."
+  "config.leadName.description": "Nome do agente principal na chamada (as cópias levam o nome dele: Nome 2, Nome 3…). Vazio: o nome escolhido nas configurações da chamada, ou Margot. No máximo 24 caracteres.",
+  "config.notifyNeedsYou.description": "Mostrar uma notificação quando uma sessão deste workspace começa a esperar por você (uma pergunta, uma aprovação, um plano), com o nome da sessão e o que ela pede; uma vez por espera, nunca um lembrete. Não aparece enquanto a chamada está à vista, nem quando você está na aba do Claude Code dessa sessão."
 }

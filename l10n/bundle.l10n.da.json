@@ -13,8 +13,13 @@
   "Privacy policy": "Privatlivspolitik",
   "{0} is waiting for you: {1}": "{0} venter på dig: {1}",
   "{0} is waiting for you": "{0} venter på dig",
-  "Still waiting: {0}": "Venter stadig: {0}",
   "a plan to approve": "en plan, der skal godkendes",
   "Go to session": "Gå til sessionen",
-  "Open call": "Åbn opkaldet"
+  "Open call": "Åbn opkaldet",
+  "usage limit · resets {0}": "forbrugsgrænse · nulstilles {0}",
+  "usage limit": "forbrugsgrænse",
+  "logged out": "logget ud",
+  "for less than a minute": "i under et minut",
+  "for {0} min": "i {0} min.",
+  "for {0} h {1} min": "i {0} t. {1} min."
 }

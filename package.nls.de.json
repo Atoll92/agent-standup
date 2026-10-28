@@ -1,5 +1,5 @@
 {
-  "extension.description": "Verfolge deine Claude Code-, Codex- oder Mistral-Vibe-Sitzung als lebendigen, animierten Team-Videoanruf: Der Hauptagent gibt Aufträge, Subagenten treten bei, teilen ihren Bildschirm und berichten zurück — mit Stimmen, Subagenten-Baum, Zeitleiste, Zusammenfassung und Videoexport.",
+  "extension.description": "Sieh, welche deiner Claude Code- und Codex-Agenten arbeiten, festhängen oder auf dich warten – als lebendiger Team-Videoanruf: Subagenten treten bei, teilen ihren Bildschirm und berichten zurück. Ein Dashboard aller Sitzungen, Token-Verbrauch pro Agent, Wiedergabe und Stimmen. Auch Mistral Vibe und Cowork. Liest nur lokale Dateien und kostet keine Tokens.",
   "command.open.title": "Agent Standup: Live-Videoanruf öffnen",
   "command.openInBrowser.title": "Agent Standup: Im Browser öffnen (Stimme + Ton)",
   "command.focus.title": "Agent Standup: Seitenleiste anzeigen",
@@ -8,12 +8,13 @@
   "config.port.description": "Lokaler Port des Agent Standup-Servers. 0 (Standard) wählt für jedes VS Code-Fenster automatisch einen freien Port.",
   "config.autoOpen.description": "Den Live-Videoanruf beim Start von VS Code automatisch öffnen.",
   "config.onlyThisWorkspace.description": "Nur Claude Code-Sitzungen verfolgen, die im aktuellen Arbeitsbereichsordner gestartet wurden.",
-  "config.statusBar.description": "Live-Zähler in der Statusleiste anzeigen (Agenten arbeiten, brauchen dich, du bist dran) für diesen Arbeitsbereich; das Element wird rot, wenn ein Agent auf dich warten könnte.",
+  "config.statusBar.description": "Live-Zähler in der Statusleiste anzeigen (Agenten arbeiten, brauchen dich, du bist dran) für diesen Arbeitsbereich; das Element wird rot, wenn eine Sitzung auf deine Antwort wartet (eine Frage oder eine Freigabe ist offen).",
   "config.shareUsage.description": "Hilf dem Projekt zu zählen, wie viele Leute es nutzen: Einmal täglich beim Start des Editors und höchstens einmal pro Woche beim Öffnen des Anrufs wird eine leere Anfrage an eine 1-Pixel-Datei auf GitHub gesendet (keine Kennung, kein Inhalt; GitHub sieht deine IP wie bei jedem Download). Aus, bis du zustimmst (einmal gefragt, beim ersten Öffnen des Anrufs); wird ignoriert, wenn die VS Code-Telemetrie aus ist.",
   "config.codex.description": "Auch Codex-Sitzungen anzeigen (gelesen aus ~/.codex/sessions oder $CODEX_HOME). Ausschalten, um nur Claude Code-Sitzungen anzuzeigen.",
   "config.vibe.description": "Auch Mistral-Vibe-Sitzungen anzeigen (gelesen aus ~/.vibe/logs/session oder $VIBE_HOME). Ausschalten, um sie wegzulassen.",
   "config.reply.description": "Lässt den Anruf deine Nachricht in den tmux-Bereich der verfolgten Claude Code-Sitzung tippen (nur Linux, standardmäßig aus). Jeder, der Befehle unter deinem Konto ausführen kann, kann dann in deine Sitzungen tippen.",
   "config.claudePath.description": "Vollständiger Pfad zur Claude Code-Programmdatei, falls sie nicht automatisch gefunden wird (für die Übersetzung verwendet).",
   "config.charactersPath.description": "Ordner mit deinen eigenen Figurenbildern (PNG, GIF oder WebP, je bis 300 KB). Leer verwendet ~/.agent-standup/characters. lead.png ist der Hauptagent, you.png bist du, jedes andere Bild ist ein Subagent, name-talk.png ist ein optionales Bild mit offenem Mund.",
-  "config.notifyNeedsYou.description": "Eine Benachrichtigung anzeigen, wenn eine Sitzung dieses Arbeitsbereichs auf dich zu warten beginnt (eine Frage, eine Freigabe, ein Plan), mit dem Namen der Sitzung und ihrer Frage, und noch einmal, wenn sie 5 Minuten später immer noch wartet. Nicht, solange der Anruf sichtbar ist."
+  "config.leadName.description": "Name des Hauptagenten im Call (seine Kopien heißen nach ihm: Name 2, Name 3 …). Leer: der in den Einstellungen des Calls gewählte Name oder Margot. Höchstens 24 Zeichen.",
+  "config.notifyNeedsYou.description": "Eine Benachrichtigung anzeigen, wenn eine Sitzung dieses Arbeitsbereichs auf dich zu warten beginnt (eine Frage, eine Freigabe, ein Plan), mit dem Namen der Sitzung und ihrer Frage; einmal pro Wartezeit, nie eine Erinnerung. Nicht, solange der Anruf sichtbar ist, und nicht, wenn du im Claude-Code-Tab dieser Sitzung bist."
 }

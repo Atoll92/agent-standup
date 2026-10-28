@@ -4,6 +4,7 @@ docs/**
 landing/**
 brand/**
 plugin/**
+plugin-band/**
 website/**
 vercel.json
 .vercelignore

@@ -13,8 +13,13 @@
   "Privacy policy": "隱私權政策",
   "{0} is waiting for you: {1}": "{0} 在等你：{1}",
   "{0} is waiting for you": "{0} 在等你",
-  "Still waiting: {0}": "仍在等待：{0}",
   "a plan to approve": "一個待核准的計畫",
   "Go to session": "前往工作階段",
-  "Open call": "開啟視訊通話"
+  "Open call": "開啟視訊通話",
+  "usage limit · resets {0}": "用量上限 · {0} 重設",
+  "usage limit": "用量上限",
+  "logged out": "已登出",
+  "for less than a minute": "不到 1 分鐘",
+  "for {0} min": "已 {0} 分鐘",
+  "for {0} h {1} min": "已 {0} 小時 {1} 分鐘"
 }

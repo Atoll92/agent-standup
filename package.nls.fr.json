@@ -1,5 +1,5 @@
 {
-  "extension.description": "Suivez votre session Claude Code, Codex ou Mistral Vibe comme un appel d’équipe animé en direct : le chef donne ses ordres, les sous-agents rejoignent l’appel, partagent leur écran et rendent compte — avec des voix, un arbre des sous-agents, une frise, un récap et l’export vidéo.",
+  "extension.description": "Voyez lesquels de vos agents Claude Code et Codex travaillent, bloquent ou vous attendent, en appel d’équipe animé en direct : les sous-agents rejoignent l’appel, partagent leur écran et rendent compte. Un tableau de toutes les sessions, les tokens de chaque agent, le replay et des voix. Aussi Mistral Vibe et Cowork. Lit seulement des fichiers locaux.",
   "command.open.title": "Agent Standup : ouvrir l’appel en direct",
   "command.openInBrowser.title": "Agent Standup : ouvrir dans le navigateur (voix + son)",
   "command.focus.title": "Agent Standup : afficher la barre latérale",
@@ -8,12 +8,13 @@
   "config.port.description": "Port local du serveur Agent Standup. 0 (par défaut) choisit automatiquement un port libre pour chaque fenêtre VS Code.",
   "config.autoOpen.description": "Ouvrir l’appel en direct automatiquement au démarrage de VS Code.",
   "config.onlyThisWorkspace.description": "Ne suivre que les sessions Claude Code lancées dans le dossier de travail actuel.",
-  "config.statusBar.description": "Afficher des compteurs en direct dans la barre d’état (agents au travail, besoin de vous, à vous) pour cet espace de travail ; l’élément devient rouge quand un agent attend peut-être votre feu vert.",
+  "config.statusBar.description": "Afficher des compteurs en direct dans la barre d’état (agents au travail, besoin de vous, à vous) pour cet espace de travail ; l’élément devient rouge quand une session attend votre réponse (une question ou une autorisation est ouverte).",
   "config.shareUsage.description": "Aider le projet à compter combien de personnes l’utilisent : une fois par jour au démarrage de l’éditeur, et au plus une fois par semaine à l’ouverture de l’appel, envoyer une requête vide vers un fichier d’un pixel sur GitHub (aucun identifiant, aucun contenu ; GitHub voit votre adresse IP comme pour tout téléchargement). Désactivé tant que vous n’avez pas dit oui (la question est posée une fois, à la première ouverture de l’appel) ; ignoré si la télémétrie de VS Code est désactivée.",
   "config.codex.description": "Afficher aussi les sessions Codex (lues dans ~/.codex/sessions, ou $CODEX_HOME). Désactivez pour n’afficher que les sessions Claude Code.",
   "config.vibe.description": "Afficher aussi les sessions Mistral Vibe (lues dans ~/.vibe/logs/session, ou $VIBE_HOME). Désactivez pour ne pas les afficher.",
   "config.reply.description": "Permettre à l’appel de taper votre message dans le panneau tmux de la session Claude Code suivie (Linux uniquement, désactivé par défaut). Toute personne pouvant lancer des commandes sous votre compte peut alors taper dans vos sessions.",
   "config.claudePath.description": "Chemin complet de l’exécutable Claude Code, s’il n’est pas trouvé automatiquement (utilisé pour la traduction).",
   "config.charactersPath.description": "Dossier contenant vos propres images de personnages (PNG, GIF ou WebP, 300 Ko maximum chacune). Vide : ~/.agent-standup/characters. lead.png est le chef, you.png est vous, toute autre image est un sous-agent, nom-talk.png est une image facultative bouche ouverte.",
-  "config.notifyNeedsYou.description": "Afficher une notification quand une session de cet espace de travail se met à vous attendre (une question, une autorisation, un plan), avec le nom de la session et ce qu’elle demande, puis une fois encore si elle attend toujours 5 minutes plus tard. Rien tant que l’appel est à l’écran."
+  "config.leadName.description": "Nom de l’agent principal dans l’appel (ses copies portent son nom : Nom 2, Nom 3…). Vide : le nom choisi dans les réglages de l’appel, ou Margot. 24 caractères maximum.",
+  "config.notifyNeedsYou.description": "Afficher une notification quand une session de cet espace de travail se met à vous attendre (une question, une autorisation, un plan), avec le nom de la session et ce qu’elle demande ; une fois par attente, jamais de rappel. Rien tant que l’appel est à l’écran, ni quand vous êtes sur l’onglet Claude Code de cette session."
 }

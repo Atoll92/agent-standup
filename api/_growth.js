@@ -7,7 +7,7 @@
 const REPO = 'Atoll92/agent-standup', EXT = 'DoubleGeste.agent-standup', PKG = '@double_geste/agent-standup';
 const TEAM = process.env.VERCEL_TEAM || 'team_jz9SDQBcNGP3p0ylwU1PcxNN', PROJECT = process.env.VERCEL_PROJECT || 'prj_gi6WoJ9EOm5BOdnoZkhh9hxURRVe';
 // The website's numbers start when Vercel Web Analytics did; clicks are counted since WEB_CLICKS_SINCE. A day of WEB_MARKS splits the summary (to compare a change of the home page).
-const WEB_SINCE = '2026-10-13', WEB_CLICKS_SINCE = '2026-10-17', WEB_MARKS = { '2026-10-17': 'new hero "Stop checking on your agents."' };
+const WEB_SINCE = '2026-10-13', WEB_CLICKS_SINCE = '2026-10-17', WEB_MARKS = { '2026-10-17': 'new hero "Stop checking on your agents."', '2026-10-19': 'hero: the "Stop babysitting" video; the coffee section moved up, right under Install' };
 const INSTALL_CLICKS = /^(Install VS Code|Install Open VSX|Download|Copy command)$/, HOME = /^\/([a-z]{2}(-[a-z]{2,4})?\/?)?$/i;
 
 const json = async (url, init = {}) => { const r = await fetch(url, { ...init, signal: AbortSignal.timeout(15000) }); if (!r.ok) { const e = new Error(url.split('?')[0] + ' ' + r.status); e.status = r.status; throw e; } return r.json(); };
@@ -30,13 +30,13 @@ async function npm() {
 // The repository, the files of every release, the opt-in counters, and the history file the daily job writes (.github/workflows/stats.yml)
 async function github() {
   const [r, rels] = await Promise.all([json('https://api.github.com/repos/' + REPO, { headers: ghHeaders() }), json('https://api.github.com/repos/' + REPO + '/releases?per_page=100', { headers: ghHeaders() })]);
-  const files = { vsix: 0, mac: 0, windows: 0, linux: 0, cli: 0 }, landing = {}; let active = 0, week = 0, hist = '';
+  const files = { vsix: 0, mac: 0, windows: 0, linux: 0, cli: 0 }, landing = {}, weeks = {}; let active = 0, week = 0, hist = '';
   for (const rel of rels) for (const a of rel.assets) {
-    if (rel.tag_name === 'stats') { if (a.name === 'app-active.gif') active = a.download_count; else if (a.name === 'app-week.gif') week = a.download_count; else if (/^pixel-.*\.gif$/.test(a.name)) landing[a.name.slice(6, -4)] = a.download_count; else if (a.name === 'history.jsonl') hist = a.browser_download_url; continue; }
+    if (rel.tag_name === 'stats') { if (a.name === 'app-active.gif') active = a.download_count; else if (a.name === 'app-week.gif') week = a.download_count; else if (/^(plugin|cli|desktop)-week\.gif$/.test(a.name)) weeks[a.name.split('-')[0]] = a.download_count; else if (/^pixel-.*\.gif$/.test(a.name)) landing[a.name.slice(6, -4)] = a.download_count; else if (a.name === 'history.jsonl') hist = a.browser_download_url; continue; }
     files[/\.vsix$/.test(a.name) ? 'vsix' : /mac/.test(a.name) ? 'mac' : /windows/.test(a.name) ? 'windows' : /linux/.test(a.name) ? 'linux' : 'cli'] += a.download_count;
   }
   const history = hist ? await soft(async () => { const t = await fetch(hist, { signal: AbortSignal.timeout(15000) }); if (!t.ok) throw new Error('history ' + t.status); return lines(await t.text()); }) : null;
-  return { stars: r.stargazers_count, forks: r.forks_count, issues: r.open_issues_count, files, active, week, landing, history: history || [] };
+  return { stars: r.stargazers_count, forks: r.forks_count, issues: r.open_issues_count, files, active, week, weeks, landing, history: history || [] };   // week: VS Code; weeks: plugin, cli, desktop
 }
 // The channel's public counts, read from its own pages (the consent cookie skips the EU consent page)
 async function youtube() {
@@ -66,7 +66,7 @@ async function website() {
   const three = day(Date.now() - 2 * 864e5), week = day(Date.now() - 6 * 864e5);
   const [perDay, evDay, evAll, src, ctry] = await Promise.all([pool(days.map((d) => () => homeDay(d)), 5), q(EV, days[0], tomorrow, group(['eventName'], 50)), q(EV, week, tomorrow, group(['eventName', 'eventData'], 200)), q(PV, three, tomorrow, group(['referrerHostname'], 20)), q(PV, three, tomorrow, group(['country'], 20))]);
   const clicks = {}; for (const r of evDay) if (INSTALL_CLICKS.test(r.dimensions.eventName || '')) clicks[r.timestamp.slice(0, 10)] = (clicks[r.timestamp.slice(0, 10)] || 0) + r.values.value;
-  const ev = {}; for (const r of evAll) { let dt = r.dimensions.eventData; try { if (typeof dt === 'string') dt = JSON.parse(dt); } catch { dt = {}; } const e = (ev[r.dimensions.eventName] = ev[r.dimensions.eventName] || { n: 0, where: {}, what: {} }); e.n += r.values.value; if (dt && dt.where) e.where[dt.where] = (e.where[dt.where] || 0) + r.values.value; if (dt && dt.what) e.what[dt.what] = (e.what[dt.what] || 0) + r.values.value; }
+  const ev = {}; for (const r of evAll) { let dt = r.dimensions.eventData; const key = typeof dt === 'string' && !/^\s*\{/.test(dt) ? dt : null; if (key && key !== 'where') continue; if (key) dt = {}; else try { if (typeof dt === 'string') dt = JSON.parse(dt); } catch { dt = {}; } const e = (ev[r.dimensions.eventName] = ev[r.dimensions.eventName] || { n: 0, where: {}, what: {} }); e.n += r.values.value; if (dt && dt.where) e.where[dt.where] = (e.where[dt.where] || 0) + r.values.value; if (dt && dt.what) e.what[dt.what] = (e.what[dt.what] || 0) + r.values.value; }
   const sum = (rows, dim) => { const by = {}; for (const r of rows) { const k = r.dimensions[dim] || '(direct)'; by[k] = (by[k] || 0) + r.values.value; } return Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 8); };
   return { perDay: perDay.map((x) => ({ ...x, clicks: x.d >= WEB_CLICKS_SINCE ? clicks[x.d] || 0 : null })), marks: WEB_MARKS, clicksSince: WEB_CLICKS_SINCE, events: Object.entries(ev).sort((a, b) => b[1].n - a[1].n), sources: sum(src, 'referrerHostname'), countries: sum(ctry, 'country') };
 }

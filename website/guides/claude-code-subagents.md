@@ -18,7 +18,7 @@ Claude Code writes every session to disk as it goes, in `~/.claude/projects/<fol
 ## Try it
 
 - **In VS Code or Cursor:** search "Agent Standup" in the Extensions view, then open the call from the Activity Bar.
-- **In a terminal, without installing anything** (Node 18 or later): `npx @double_geste/agent-standup --open`. It opens the call in your browser, with a built-in demo if you have no session yet.
+- **In a terminal, without installing anything** (Node 18 or later): `npx @double_geste/agent-standup@latest --open`. It opens the call in your browser, with a built-in demo if you have no session yet.
 - **Inside Claude Code:** the plugin adds `/agent-standup:open` and `/agent-standup:status`.
 - **As a desktop app** for macOS, Windows and Linux, from https://agent-standup.com
 

@@ -89,17 +89,18 @@ test('live call: sessions, tabs and replays', { skip: missing || false, timeout:
     assert.ok(!(await c.page.evaluate(() => document.querySelector('#tabs').textContent)).includes('📌'), 'the visitor takes the call there without pinning it'); await c.page.click('#tabs .stab.on'); await wait(1500); assert.deepEqual([await at(), await c.page.evaluate(() => document.querySelector('#tabs .stab.on').textContent.includes('📌'))], ['b', true], 'a click on the call’s own tab pins it there');
     q.user('Third session'); await goes('q'); await rowIs(['First session turn', 'Second session turn', '>Third session working']);   // a third one is started while the call was kept in the second: it goes there, nothing was to be let go first
     await tabOf('First session'); await goes('s'); await rowIs(['>First session turn', 'Second session turn', 'Third session working']);
-    const ask = () => q.tool('AskUserQuestion', { questions: [{ question: 'Which one?', header: 'Choice', options: [{ label: 'A', description: 'a' }, { label: 'B', description: 'b' }], multiSelect: false }] }), first = ask();
+    const CC = process.env.AGENT_STANDUP_CC_SESSIONS, qst = (st) => { fs.mkdirSync(CC, { recursive: true }); fs.writeFileSync(path.join(CC, '2.json'), JSON.stringify({ pid: process.pid, sessionId: 'q', status: st, ...(st === 'waiting' ? { waitingFor: 'input needed' } : {}), statusUpdatedAt: Date.now() })); };   // what Claude Code writes while its question is open, then once it is answered: a question alone in the transcript is only a guess, which never brings a visitor
+    const ask = () => { const tid = q.tool('AskUserQuestion', { questions: [{ question: 'Which one?', header: 'Choice', options: [{ label: 'A', description: 'a' }, { label: 'B', description: 'b' }], multiSelect: false }] }); qst('waiting'); return tid; }, first = ask();
     await comes('blocked'); v = await visitor(); assert.match(v.says, /Third session/); assert.match(v.says, /question/); await rowIs(['>First session turn', 'Second session turn', 'Third session blocked']);   // a question: said as such, in red
     await c.page.click('#visit .vx'); assert.equal(await visitor(), null, '✕ sends the visitor away'); assert.equal(await at(), 's'); const visited = Date.now();
-    q.result(first); await rowIs(['>First session turn', 'Second session turn', 'Third session working']); ask(); await rowIs(['>First session turn', 'Second session turn', 'Third session blocked']);   // answered there, and a second question at once
+    q.result(first); qst('busy'); await rowIs(['>First session turn', 'Second session turn', 'Third session working']); ask(); await rowIs(['>First session turn', 'Second session turn', 'Third session blocked']);   // answered there, and a second question at once
     assert.equal(await visitor(), null, 'less than 20 s after the last visit: not yet'); await comes('blocked'); assert.ok(Date.now() - visited > 10000); await c.page.click('#visit .vx');   // told when the 20 s are over: it used to be lost
     await c.page.evaluate(() => document.querySelector('#prefs .mi[data-t=visits]').click());   // ⚙: no visitor
     b.user('One more thing'); await goes('b'); await rowIs(['First session turn', '>Second session working', 'Third session blocked']);   // you type in the second one: the call is there again
     await tabOf('First session'); await goes('s'); b.say('Done as well.'); await rowIs(['>First session turn', 'Second session turn', 'Third session blocked']);
     await wait(11000); assert.equal(await visitor(), null, 'off in the settings: the tab alone says it');
     await c.page.evaluate(() => document.querySelector('#prefs .mi[data-t=visits]').click());
-    await c.close();
+    fs.rmSync(path.join(CC, '2.json'), { force: true }); await c.close();
   });
 
   await t.test('a session of another tool in the same folder has its tab, which names the tool; in its call the lead says it too', async () => {
@@ -142,6 +143,9 @@ test('live call: sessions, tabs and replays', { skip: missing || false, timeout:
       await c.page.evaluate(() => document.querySelector('#prefs .mi[data-t=askCard]').click());
       await c.until(() => document.querySelector('#askc').classList.contains('on'), null, 20000);   // the page used to say "✓ your turn · 5 min" past 3 minutes of quiet, with no card
       assert.match(await c.page.evaluate(() => agentState('main', Date.now()).txt), /needs you 5 min/, 'Claude Code says a menu is open: certain, no question mark'); assert.match(await c.page.evaluate(() => document.querySelector('#askc').innerText), /npm run build/);
+      assert.deepEqual(await c.page.evaluate(() => [document.querySelector('#sline').className.split(' ')[0], document.querySelector('#attn').hidden]), ['blocked', true], 'the status line says it in red, once: no second red line under it for the same agent');
+      const posts = []; c.page.on('request', (q) => { if (q.url().endsWith('/api/answer')) posts.push(q.postData()); }); await c.page.evaluate(() => pillGo()); await c.until(() => true); await wait(800);
+      assert.deepEqual(posts.map((b) => JSON.parse(b).id), ['s'], 'a click on it also asks to open the session where it can be answered');
       await c.page.evaluate(() => document.querySelector('#prefs .mi[data-t=askCard]').click());
     } finally { fs.rmSync(path.join(CC, '1.json'), { force: true }); }   // every session of this file is called s
     await c.close();

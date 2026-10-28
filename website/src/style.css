@@ -53,8 +53,8 @@ nav a:hover, nav button:hover { color: var(--ink) }
 .fine { font-size: 14.5px; color: var(--dim); margin-top: 12px }
 .frame { border-radius: 20px; overflow: hidden; background: #0a1a1f; box-shadow: 0 0 0 3px var(--gold), 0 24px 60px rgba(0, 0, 0, .45) }   /* the gold border of whoever is speaking */
 .frame video, .frame img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover }
-.pinned a.frame { display: block } .pin { margin-top: 14px; color: var(--soft); font-size: 15.5px; line-height: 1.5 } .pin a { color: var(--gold); font-weight: 600; white-space: nowrap }   /* the Halloween pack pinned in the hero */
-.pin .new { display: inline-block; margin-right: 4px; padding: 1px 9px; border-radius: 99px; background: #f58a1f; color: #1d1205; font: 700 12px/1.6 Figtree, sans-serif; letter-spacing: .05em; text-transform: uppercase }
+.pinned a.frame { display: block } .pin { margin-top: 14px; color: var(--soft); font-size: 15.5px; line-height: 1.5 } .pin a { color: var(--gold); font-weight: 600; white-space: nowrap } .pin b { color: var(--ink) }   /* the latest video, pinned in the hero */
+.pin .new { display: inline-block; margin-right: 4px; padding: 1px 9px; border-radius: 99px; background: var(--gold); color: #1d1205; font: 700 12px/1.6 Figtree, sans-serif; letter-spacing: .05em; text-transform: uppercase }
 nav a.shop { display: inline-flex; gap: 6px; color: var(--soft) }
 .shot { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #0a1a1f; box-shadow: 0 16px 40px rgba(0, 0, 0, .35) }
 
@@ -140,11 +140,17 @@ footer a { color: var(--soft) }
 .doc ul { padding-left: 22px; margin: 0 0 14px } .doc li { margin: 6px 0 }
 .doc a { color: var(--gold) }
 .doc code { font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px }
+.doc pre { margin: 0 0 18px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto }
+.doc pre code { background: none; border: 0; padding: 0; font-size: 13px; line-height: 1.55; white-space: pre }
 .tbl { overflow-x: auto; margin: 0 0 14px }
 .doc table { border-collapse: collapse; width: 100%; font-size: 15.5px }
 .doc th, .doc td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); color: var(--soft) }
 .doc th { color: var(--dim); font-weight: 600 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto } .btn, .yt span { transition: none } }
 
-.packcard img { display: block; width: 100%; height: auto; border-radius: 12px; margin-bottom: 18px }
-#pack { padding-block: 56px 8px }
+.hw { padding: 56px 0; border-block: 1px solid #5a3a2a; background: radial-gradient(120% 140% at 0% 0%, rgba(245, 138, 31, .16), transparent 55%), linear-gradient(135deg, #1e1a2e, #23162a 60%, #1a1424) }   /* the Halloween pack, a band right under the hero */
+.hw .row { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) }
+@media (max-width: 860px) { .hw .row { grid-template-columns: 1fr } .hw { padding: 44px 0 } }
+.hw .frame { display: block; box-shadow: 0 0 0 3px #f58a1f, 0 24px 60px rgba(0, 0, 0, .45) }
+.hw .kicker { color: #f58a1f } .hw p a { color: #f8b26a }
+.hw .btn.primary { background: #f58a1f } .hw .btn.primary:hover { background: #f7a04a }

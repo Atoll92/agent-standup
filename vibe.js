@@ -110,12 +110,21 @@ function subFiles(id) {
 const watch = (id) => { const r = row(id); return !r ? [] : r.uni ? [path.join(r.dir, META), ...(r.journal ? [r.journal] : [])] : [path.join(r.dir, META)]; };   // written after the messages: the title, the totals and the links to the sub-agents come from it
 
 // ---- the board: is the agent in the middle of a turn, or is it the person's turn? The last message says.
+// Whether the Vibe process that has a session open still runs (Vibe 2.26, vibe/core/session/session_lease.py): while it has the session open it holds a lock on
+// <logs/session>/active/<id>.lock and writes beside it <id>.lock.json with its process_id; it removes both when it closes the session, and a crash leaves them behind with a process that is gone.
+// true, false, or null when it cannot be told: no active folder (a Vibe that keeps no lease), a file being written. Only read for a session that says it is blocked.
+function heldOpen(r) {
+  const dir = path.join(path.dirname(path.dirname(r.dir)), 'active'); if (!stat(dir)) return null;
+  let j; try { j = JSON.parse(fs.readFileSync(path.join(dir, r.id + '.lock.json'), 'utf8')); } catch (e) { return e && e.code === 'ENOENT' ? false : null; }
+  const pid = Number(j && j.process_id); if (!Number.isInteger(pid) || pid <= 0) return null;
+  try { process.kill(pid, 0); return true; } catch (e) { return !!e && e.code === 'EPERM'; }   // EPERM: it runs, as another user
+}
 const tailCache = new Map();
 function boardRow(r, now) {
   if (r.uni) {   // the current format says it outright: idle, running, or blocked on an approval or a question
-    const u = uniSummary(r), kind = u.status, age = now - r.mtime, live = u.live;
-    const state = age >= 30 * 60e3 ? 'idle' : kind === 'blocked' ? 'blocked' : kind === 'running' ? (u.waiting ? 'waiting' : 'working') : kind === 'idle' || kind === 'failed' ? 'turn' : age < 10 * 60e3 ? 'working' : 'idle';
-    return { proj: PROJ, id: r.id, title: title(r), mtime: r.mtime, state, tool: '', ageMs: age, subActive: state === 'idle' || state === 'turn' ? 0 : live, subTotal: u.kids, asked: u.asked || 0, dir: dirKey(meta(r.dir).cwd), source: SOURCE };
+    const u = uniSummary(r), age = now - r.mtime, live = u.live, held = u.status === 'blocked' ? heldOpen(r) : null, kind = held === false ? 'idle' : u.status;   // blocked, and its process still runs: it waits on you for up to four hours (a question left over lunch; a crashed Vibe leaves its lock, and its process number can be reused). Its process gone: it waits on nobody. Not known: half an hour, as before
+    const state = held === false ? 'idle' : kind === 'blocked' && (held ? age < 4 * 3600e3 : age < 30 * 60e3) ? 'blocked' : age >= 30 * 60e3 ? 'idle' : kind === 'running' ? (u.waiting ? 'waiting' : 'working') : kind === 'idle' || kind === 'failed' ? 'turn' : age < 10 * 60e3 ? 'working' : 'idle';
+    return { proj: PROJ, id: r.id, title: title(r), mtime: r.mtime, state, tool: '', ageMs: age, subActive: state === 'idle' || state === 'turn' ? 0 : live, subTotal: u.kids, asked: u.asked || 0, dir: dirKey(meta(r.dir).cwd), source: SOURCE, ...(state === 'blocked' ? { sure: 1 } : {}) };   /* blocked: Vibe wrote that it waits on an approval or a question, not a guess */
   }
   const sig = r.mtime + ':' + r.size; let t = tailCache.get(r.file);
   if (!t || t.sig !== sig) {

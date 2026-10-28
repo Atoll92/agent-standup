@@ -1,5 +1,5 @@
 {
-  "extension.description": "Mira tu sesión de Claude Code, Codex o Mistral Vibe como una videollamada de equipo animada y en directo: el agente principal da órdenes, los subagentes se unen, comparten pantalla e informan — con voces, árbol de subagentes, línea de tiempo, resumen y exportación de vídeo.",
+  "extension.description": "Mira cuáles de tus agentes de Claude Code y Codex están trabajando, atascados o esperándote, en una videollamada de equipo en directo: los subagentes se unen, comparten pantalla e informan. Un panel con todas las sesiones, los tokens de cada agente, repetición y voces. También Mistral Vibe y Cowork. Solo lee archivos locales.",
   "command.open.title": "Agent Standup: Abrir videollamada en vivo",
   "command.openInBrowser.title": "Agent Standup: Abrir en el navegador (voz + sonido)",
   "command.focus.title": "Agent Standup: Mostrar barra lateral",
@@ -8,12 +8,13 @@
   "config.port.description": "Puerto local del servidor de Agent Standup. 0 (predeterminado) elige automáticamente un puerto libre para cada ventana de VS Code.",
   "config.autoOpen.description": "Abrir la videollamada en vivo automáticamente al iniciar VS Code.",
   "config.onlyThisWorkspace.description": "Seguir solo las sesiones de Claude Code iniciadas en la carpeta del espacio de trabajo actual.",
-  "config.statusBar.description": "Mostrar contadores en vivo en la barra de estado (agentes trabajando, te necesitan, tu turno) para este espacio de trabajo; el elemento se pone rojo cuando un agente puede estar esperándote.",
+  "config.statusBar.description": "Mostrar contadores en vivo en la barra de estado (agentes trabajando, te necesitan, tu turno) para este espacio de trabajo; el elemento se pone rojo cuando una sesión espera tu respuesta (hay una pregunta o un permiso abierto).",
   "config.shareUsage.description": "Ayuda al proyecto a contar cuántas personas lo usan: una vez al día al iniciar el editor, y como mucho una vez por semana al abrir la llamada, envía una solicitud vacía a un archivo de 1 píxel en GitHub (sin identificador ni contenido; GitHub ve tu IP como en cualquier descarga). Desactivado hasta que digas que sí (se pregunta una vez, la primera vez que abres la llamada); se ignora si la telemetría de VS Code está desactivada.",
   "config.codex.description": "Mostrar también las sesiones de Codex (leídas de ~/.codex/sessions o $CODEX_HOME). Desactívalo para mostrar solo las sesiones de Claude Code.",
   "config.vibe.description": "Mostrar también las sesiones de Mistral Vibe (leídas de ~/.vibe/logs/session, o $VIBE_HOME). Desactívalo para no mostrarlas.",
   "config.reply.description": "Permite que la llamada escriba tu mensaje en el panel tmux de la sesión de Claude Code seguida (solo Linux, desactivado por defecto). Cualquiera que pueda ejecutar comandos como tú podrá escribir en tus sesiones.",
   "config.claudePath.description": "Ruta completa del ejecutable de Claude Code, si no se encuentra automáticamente (se usa para la traducción).",
   "config.charactersPath.description": "Carpeta con tus propias imágenes de personajes (PNG, GIF o WebP, hasta 300 KB cada una). Si está vacía, usa ~/.agent-standup/characters. lead.png es el agente principal, you.png eres tú, cualquier otra imagen es un subagente y name-talk.png es un fotograma opcional con la boca abierta.",
-  "config.notifyNeedsYou.description": "Mostrar una notificación cuando una sesión de este espacio de trabajo empieza a esperarte (una pregunta, una aprobación, un plan), con el nombre de la sesión y lo que pide, y una vez más si sigue esperando 5 minutos después. No se muestra mientras la videollamada está a la vista."
+  "config.leadName.description": "Nombre del agente principal en la llamada (sus copias llevan su nombre: Nombre 2, Nombre 3…). Vacío: el nombre elegido en los ajustes de la llamada, o Margot. 24 caracteres como máximo.",
+  "config.notifyNeedsYou.description": "Mostrar una notificación cuando una sesión de este espacio de trabajo empieza a esperarte (una pregunta, una aprobación, un plan), con el nombre de la sesión y lo que pide; una vez por espera, nunca un recordatorio. No se muestra mientras la videollamada está a la vista, ni cuando estás en la pestaña de Claude Code de esa sesión."
 }

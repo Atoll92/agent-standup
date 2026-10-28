@@ -185,3 +185,33 @@ test('Codex can be turned off, and is not looked for when the app is pointed at 
     delete process.env.AGENT_STANDUP_CODEX; assert.equal(codex.home(), null);   // AGENT_STANDUP_PROJECTS is set (as in every other test file): the real ~/.codex is left alone
   } finally { process.env.AGENT_STANDUP_CODEX = was; }
 });
+
+test('a thread Codex compressed (rollout….jsonl.zst) is listed, named and read like the others; the plain file wins while both exist; one compressed while it is open stays open', { skip: typeof require('zlib').zstdCompressSync !== 'function' && 'this Node has no zstd' }, async () => {
+  const zlib = require('zlib'), codex = require('../codex.js'), was = process.env.AGENT_STANDUP_CODEX, fresh = () => { process.env.AGENT_STANDUP_CODEX = process.env.AGENT_STANDUP_CODEX === CX ? CX + path.sep : CX; };   // another spelling of the folder: a fresh look at the files
+  const ZID = '01a00000-0000-7000-8000-00000000000e', BAD = '01a00000-0000-7000-8000-00000000000f', long = 'y'.repeat(200000), sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  at(-7200000); const lines = [
+    rec('session_meta', { id: ZID, timestamp: new Date(clock).toISOString(), cwd: WORK, originator: 'Codex Desktop', source: 'vscode' }),
+    ev({ type: 'task_started', turn_id: 'z' }),
+    (at(-7199000), item({ type: 'UserMessage', id: 'item-z1', content: [{ type: 'text', text: 'Compress me please' }] })),
+    (at(-7198000), item({ type: 'CommandExecution', id: 'call_z1', command: ['/bin/zsh', '-lc', 'cat big.txt'], status: 'completed', aggregated_output: long, exit_code: 0 }, -7198500)),   // a thread far longer than the 128 KB its end is read from
+    (at(-7197000), item({ type: 'AgentMessage', id: 'msg_z1', content: [{ type: 'text', text: 'Done.' }], phase: 'final_answer' })),
+    ev({ type: 'task_complete', turn_id: 'z' }),
+  ], plain = write(ZID, lines, '13'), zst = plain + '.zst', old = new Date(T0 - 2 * 3600e3), bad = fileOf(BAD, '13') + '.zst';
+  fs.utimesSync(plain, old, old);
+  const s = await serve(), q = (id) => '/api/session?proj=_codex&id=' + id, talk = (tl) => tl.events.filter((e) => e.kind === 'user' || e.kind === 'say').map((e) => e.kind + ':' + e.text);
+  try {
+    fresh(); const full = (await get(s.port, q(ZID))).json(); assert.deepEqual(talk(full), ['user:Compress me please', 'say:Done.']);   // open in a call, still plain
+    fs.writeFileSync(zst, zlib.zstdCompressSync(fs.readFileSync(plain))); fs.utimesSync(zst, old, old); fs.writeFileSync(bad, 'not zstd at all'); fs.utimesSync(bad, old, old);
+    fresh(); assert.equal(codex.fileOf(ZID), plain); assert.equal(codex.sessions(500).filter((r) => r.id === ZID).length, 1);   // both on disk for a moment: the plain one is the live one, and the thread is listed once
+    fs.unlinkSync(plain); assert.equal(codex.fileOf(ZID), zst);   // compressed while it was open: found at once, without waiting for the next look at the folder
+    const more = (await get(s.port, `${q(ZID)}&after=${full.seq}&ep=${full.ep}`)).json(); assert.equal(more.resync, undefined); assert.deepEqual(more.events, []);   // the same events under the same keys: the page goes on, nothing to add
+    const again = (await get(s.port, q(ZID))).json(); assert.deepEqual(talk(again), talk(full)); assert.equal(again.events.length, full.events.length);
+    assert.equal(flat(again)[0].d.text, 'cat big.txt'); assert.equal(again.events.filter((e) => e.kind === 'say').pop().end, 1);
+    let r = null; for (let i = 0; i < 100 && !(r = codex.sessions(500).find((x) => x.id === ZID)); i++) await sleep(20);   // read in the background, a moment after it was first seen
+    assert.ok(r && r.zst, 'listed once read'); assert.equal(codex.title(r), 'Compress me please'); assert.equal(codex.cwd(ZID), WORK); assert.equal(codex.inProject(ZID, WORK.replace(/[^a-zA-Z0-9]/g, '-')), true);
+    const b = codex.boardRow(r, Date.now()); assert.equal(b.state, 'idle'); assert.equal(b.asked, T0 - 7199000); assert.equal(b.title, 'Compress me please');   // when the person last typed there: read from the end of the uncompressed thread
+    await sleep(100); assert.ok(!codex.sessions(500).some((x) => x.id === BAD)); assert.equal((await get(s.port, q(BAD))).status, 200);   // a file that is not zstd: not listed, an empty session when asked for by id, never a crash
+    const z0 = zlib.zstdDecompressSync; zlib.zstdDecompressSync = undefined;   // a Node without zstd (VS Code's or Electron's may be older): the compressed threads are left out, as before
+    try { fresh(); assert.ok(!codex.sessions(500).some((x) => x.id === ZID)); assert.equal(codex.fileOf(ZID), null); } finally { zlib.zstdDecompressSync = z0; }
+  } finally { s.stop(); for (const f of [plain, zst, bad]) fs.rmSync(f, { force: true }); process.env.AGENT_STANDUP_CODEX = was; }
+});

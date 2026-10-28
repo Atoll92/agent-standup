@@ -13,10 +13,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
+          package-manager-cache: false   # no cache in the workflow that publishes: what it ships is built from the commit alone
       - run: npm ci
       - run: npm test
       - run: npm run i18n
@@ -27,10 +28,11 @@ jobs:
       contents: read
       id-token: write   # Open VSX trusted publishing: the registry gives this workflow a short-lived token in exchange for its identity, so there is no Open VSX secret to keep
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
+          package-manager-cache: false   # no cache in the workflow that publishes: what it ships is built from the commit alone
           registry-url: https://registry.npmjs.org
       - name: Which targets have a token   # each token is only given to the step that publishes with it, not to the tools the other steps download
         id: has

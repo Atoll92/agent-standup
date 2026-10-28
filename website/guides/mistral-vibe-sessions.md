@@ -24,7 +24,7 @@ Agent Standup never writes in Vibe's folder and makes no model call to show the 
 ## Try it
 
 - **In VS Code, Cursor or Windsurf:** search "Agent Standup" in the Extensions view.
-- **In a terminal, without installing anything** (Node 18 or later): `npx @double_geste/agent-standup --open`
+- **In a terminal, without installing anything** (Node 18 or later): `npx @double_geste/agent-standup@latest --open`
 - **As a desktop app** for macOS, Windows and Linux, from https://agent-standup.com
 
 To leave Vibe out, use the setting `agentStandup.vibe` in VS Code, or `--vibe off` on the command line. If Vibe saves its logs elsewhere (`session_logging.save_dir`), point Agent Standup at that home folder with `--vibe /path/to/vibe-home`.

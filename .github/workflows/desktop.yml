@@ -20,10 +20,10 @@ jobs:
           - { os: ubuntu-latest, name: linux-x64 }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false   # the token is not left in .git/config for the build's tools to find
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: node scripts/build-desktop.js
@@ -35,7 +35,7 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path dist-desktop\* -DestinationPath "Agent-Standup-$($env:GITHUB_REF_NAME.TrimStart('v'))-${{ matrix.name }}.zip"
       - name: Keep the archive for the release job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.name }}
           path: Agent-Standup-*.zip
@@ -48,7 +48,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: desktop-*
           merge-multiple: true

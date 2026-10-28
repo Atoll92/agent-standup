@@ -1,5 +1,5 @@
 {
-  "extension.description": "Claude Code、Codex、Mistral Vibe のセッションを、ライブのアニメーション付きチーム通話として眺められます。メインエージェントが指示を出し、サブエージェントが参加して画面を共有し、報告します。音声、サブエージェントのツリー、タイムライン、まとめ、動画書き出しにも対応。",
+  "extension.description": "Claude Code と Codex のエージェントのうち、どれが作業中で、どれが止まっていて、どれがあなたを待っているかを、ライブのチーム通話で確認できます。サブエージェントが参加し、画面を共有して報告します。全セッションのダッシュボード、エージェントごとのトークン使用量、リプレイ、音声付き。Mistral Vibe と Cowork にも対応。ローカルファイルを読むだけで、トークンを消費しません。",
   "command.open.title": "Agent Standup: ライブ通話を開く",
   "command.openInBrowser.title": "Agent Standup: ブラウザで開く（音声・サウンド対応）",
   "command.focus.title": "Agent Standup: サイドバーを表示",
@@ -8,12 +8,13 @@
   "config.port.description": "Agent Standup サーバーのローカルポート。0（既定）なら VS Code ウィンドウごとに空きポートを自動で選びます。",
   "config.autoOpen.description": "VS Code の起動時にライブ通話を自動で開きます。",
   "config.onlyThisWorkspace.description": "現在のワークスペースフォルダで開始された Claude Code セッションのみを追いかけます。",
-  "config.statusBar.description": "このワークスペースの状況（作業中のエージェント、呼び出し中、あなたの番）をステータスバーにライブ表示します。エージェントが待っていそうなときは項目が赤くなります。",
+  "config.statusBar.description": "このワークスペースの状況（作業中のエージェント、呼び出し中、あなたの番）をステータスバーにライブ表示します。セッションがあなたの返答を待っているとき（質問や許可の確認が開いているとき）は項目が赤くなります。",
   "config.shareUsage.description": "利用者数の集計にご協力ください。エディター起動時に1日1回、通話を開いたときに週1回まで、GitHub 上の1ピクセルのファイルに空のリクエストを1件送ります（識別子・内容なし。通常のダウンロードと同様、GitHub には IP アドレスが見えます）。同意するまではオフです（初めて通話を開いたときに一度だけ確認します）。VS Code のテレメトリがオフの場合は無視されます。",
   "config.codex.description": "Codex のセッションも表示します（~/.codex/sessions または $CODEX_HOME から読み込み）。オフにすると Claude Code のセッションのみを表示します。",
   "config.vibe.description": "Mistral Vibe のセッションも表示します（~/.vibe/logs/session または $VIBE_HOME から読み込み）。オフにすると表示しません。",
   "config.reply.description": "通話から、フォロー中の Claude Code セッションの tmux ペインにメッセージを入力できるようにします（Linux のみ、既定ではオフ）。あなたとしてコマンドを実行できる人は誰でも、あなたのセッションに入力できるようになります。",
   "config.claudePath.description": "Claude Code 実行ファイルのフルパス（自動で見つからない場合）。翻訳に使用します。",
   "config.charactersPath.description": "自作キャラクター画像（PNG、GIF、WebP、各300 KBまで）のフォルダ。空の場合は ~/.agent-standup/characters を使います。lead.png がメインエージェント、you.png があなた、それ以外の画像はサブエージェントになります。name-talk.png は口を開けた状態のフレーム（任意）です。",
-  "config.notifyNeedsYou.description": "このワークスペースのセッションがあなたを待ち始めたとき（質問、承認、プラン）、セッション名と内容を通知します。5 分後もまだ待っていれば、もう一度だけ通知します。通話が表示されている間は通知しません。"
+  "config.leadName.description": "通話でのメインエージェントの名前（フォークはこの名前を引き継ぎます：名前 2、名前 3…）。空欄の場合は通話の設定で選んだ名前、なければ Margot。最大 24 文字。",
+  "config.notifyNeedsYou.description": "このワークスペースのセッションがあなたを待ち始めたとき（質問、承認、プラン）、セッション名と内容を通知します。待つたびに一度だけで、リマインドはしません。通話が表示されている間や、そのセッションの Claude Code タブを開いている間は通知しません。"
 }

@@ -1,5 +1,5 @@
 {
-  "extension.description": "把你的 Claude Code、Codex 或 Mistral Vibe 工作階段變成即時動畫團隊視訊通話：主代理下達指令，子代理加入、分享畫面並回報——附語音、子代理樹狀圖、時間軸、摘要與影片匯出。",
+  "extension.description": "看清你的 Claude Code 與 Codex 代理誰在工作、誰卡住了、誰在等你——以即時團隊視訊通話的形式：子代理加入、分享畫面並回報。所有工作階段的看板、每個代理的 token 用量、重播與語音。也支援 Mistral Vibe 與 Cowork。只讀取本機檔案，不消耗 token。",
   "command.open.title": "Agent Standup: 開啟即時視訊通話",
   "command.openInBrowser.title": "Agent Standup: 在瀏覽器中開啟（語音 + 聲音）",
   "command.focus.title": "Agent Standup: 顯示側邊欄",
@@ -8,12 +8,13 @@
   "config.port.description": "Agent Standup 伺服器的本機連接埠。0（預設）會為每個 VS Code 視窗自動選用空閒連接埠。",
   "config.autoOpen.description": "VS Code 啟動時自動開啟即時視訊通話。",
   "config.onlyThisWorkspace.description": "只追蹤在目前工作區資料夾中啟動的 Claude Code 工作階段。",
-  "config.statusBar.description": "在狀態列顯示此工作區的即時數量（工作中的代理、需要你、換你了）；當有代理可能在等你時，項目會變紅。",
+  "config.statusBar.description": "在狀態列顯示此工作區的即時數量（工作中的代理、需要你、換你了）；當有工作階段在等你回答（有提問或權限請求未處理）時，項目會變紅。",
   "config.shareUsage.description": "協助專案統計有多少人在使用：編輯器啟動時每天一次、開啟通話時每週最多一次，向 GitHub 上一個 1 像素的檔案送出一次空請求（無識別碼、無內容；GitHub 會看到你的 IP，如同任何下載）。在你同意之前保持關閉（第一次開啟通話時詢問一次）；若 VS Code 遙測已關閉則忽略。",
   "config.codex.description": "同時顯示 Codex 工作階段（讀取自 ~/.codex/sessions 或 $CODEX_HOME）。關閉後僅顯示 Claude Code 工作階段。",
   "config.vibe.description": "同時顯示 Mistral Vibe 工作階段（讀取自 ~/.vibe/logs/session 或 $VIBE_HOME）。關閉後不顯示。",
   "config.reply.description": "允許通話把你的訊息輸入到所追蹤的 Claude Code 工作階段的 tmux 窗格中（僅限 Linux，預設關閉）。任何能以你的身分執行命令的人都可以藉此向你的工作階段輸入內容。",
   "config.claudePath.description": "Claude Code 可執行檔的完整路徑（若無法自動找到時使用；用於翻譯）。",
   "config.charactersPath.description": "存放你自己角色圖片的資料夾（PNG、GIF 或 WebP，每張最大 300 KB）。留空則使用 ~/.agent-standup/characters。lead.png 是主代理，you.png 是你，其他圖片是子代理，name-talk.png 是選用的張嘴畫面。",
-  "config.notifyNeedsYou.description": "當此工作區的某個工作階段開始等你（提問、核准、計畫）時顯示通知，寫明工作階段名稱和它的請求；如果 5 分鐘後仍在等待，再提醒一次。通話可見時不顯示。"
+  "config.leadName.description": "通話中主代理的名字（它的分身沿用這個名字：名字 2、名字 3…）。留空則使用通話設定中選的名字，否則為 Margot。最多 24 個字元。",
+  "config.notifyNeedsYou.description": "當此工作區的某個工作階段開始等你（提問、核准、計畫）時顯示通知，寫明工作階段名稱和它的請求；每次等待只通知一次，不再提醒。通話可見時，或你正在該工作階段的 Claude Code 分頁上時，不顯示。"
 }

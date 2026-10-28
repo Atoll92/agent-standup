@@ -1,5 +1,5 @@
 // Agent Standup desktop app: the same local server as the extension, in its own window, with an indicator in the menu bar (macOS) or tray (Windows, Linux)
-// that shows what your agents are doing and notifies you when one may need you. Nothing leaves your machine.
+// that shows what your agents are doing and notifies you when one is waiting for your answer. Nothing leaves your machine.
 const { app, BrowserWindow, Tray, Menu, nativeImage, shell, Notification, session } = require('electron');
 const path = require('path'), fs = require('fs');
 process.env.AGENT_STANDUP_HOST = 'desktop app';   // named in a problem report (⚙ › Report a problem)
@@ -30,16 +30,18 @@ function createWindow() {
 
 function counts() {
   const now = Date.now(), act = core.boardRows().filter((r) => r.state !== 'idle' || now - r.mtime < 15 * 60e3), n = (s) => act.filter((r) => r.state === s).length;
-  return { needs: n('blocked'), working: n('working') + n('waiting'), turn: n('turn'), latest: act.filter((r) => r.state === 'blocked').sort((x, y) => (y.since || y.mtime || 0) - (x.since || x.mtime || 0))[0] };   // latest: the session that started to wait last, named in the notification
+  const turn = act.filter((r) => r.state === 'turn'), lim = turn.find((r) => r.limit);   // a session stopped on your usage limit, or on a login that is gone: not a turn you can take (as the CLI's status)
+  return { needs: n('blocked'), working: n('working') + n('waiting'), free: turn.some((r) => !r.limit && !r.auth), limit: lim ? String(lim.limit.resets || '').replace(/\s*\([^)]*\)\s*$/, '') : null, auth: turn.some((r) => r.auth), latest: act.filter((r) => r.state === 'blocked').sort((x, y) => (y.since || y.mtime || 0) - (x.since || x.mtime || 0))[0] };   // latest: the session that started to wait last, named in the notification
 }
 function refreshTray() {
   if (!tray) return; let c; try { c = counts(); } catch { return; }
-  const text = [c.needs ? `✋${c.needs}` : '', c.working ? `⚙${c.working}` : '', !c.needs && !c.working && c.turn ? '✓' : ''].filter(Boolean).join(' ');
+  const rest = !c.needs && !c.working, text = [c.needs ? `✋${c.needs}` : '', c.working ? `⚙${c.working}` : '', rest && c.free ? '✓' : '', rest && !c.free && c.limit != null ? '⏳' : '', rest && !c.free && c.auth ? '⚠' : ''].filter(Boolean).join(' ');   // the reset time without its zone (Europe/Paris)
   if (process.platform === 'darwin') tray.setTitle(text ? ' ' + text : '');
-  tray.setToolTip('Agent Standup' + (text ? ' — ' + [c.needs && `${c.needs} may need you`, c.working && `${c.working} working`, !c.needs && !c.working && c.turn && 'your turn'].filter(Boolean).join(', ') : ''));
+  tray.setToolTip('Agent Standup' + (text ? ' — ' + [c.needs && `${c.needs} need you`, c.working && `${c.working} working`, rest && c.free && 'your turn', rest && !c.free && c.limit != null && 'usage limit' + (c.limit ? ' · resets ' + c.limit : ''), rest && !c.free && c.auth && 'logged out: run /login'].filter(Boolean).join(', ') : ''));
   if (c.needs > lastNeeds && !(win && win.isFocused()) && Notification.isSupported()) {
     const r = c.latest, clip = (s, k) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > k ? s.slice(0, k - 1).trimEnd() + '…' : s; };
-    const n = new Notification({ title: 'Agent Standup', body: r ? `✋ ${clip(r.title || r.id, 60)} may be waiting for you` + (r.ask ? ': ' + clip(r.ask, 80) : '') : 'An agent may be waiting for you ✋' });   // its question, or the call it waits to run: Bash(npm test)
+    const n = new Notification({ title: 'Agent Standup', body: r ? `✋ ${clip(r.title || r.id, 60)} is waiting for your answer` + (r.ask ? ': ' + clip(r.ask, 80) : '') : 'An agent is waiting for your answer ✋' });   // its question, or the call it waits to run: Bash(npm test)
+    n.on('click', () => { let a = null; try { a = r && core.answerIn(r.id); } catch {} if (!a || (a.how !== 'editor' && a.how !== 'app')) showWindow(); });   // where it can be answered, brought to the front alone: its Claude Code tab in the editor, its terminal or the Claude app (server.js, answerIn); else this window
     n.on('failed', (e, err) => { if (!notifyFailed) console.warn('notification not shown:', err); notifyFailed = true; });   // macOS refuses it when notifications are off for the app, or the app is not signed
     n.show();
   }

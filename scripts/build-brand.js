@@ -1,6 +1,6 @@
 // Renders the brand sources (brand/*.svg) into the files the extension, the desktop app, the page and the site use:
 //   media/icon.png (store icon) · plugin/.claude-plugin/icon.png (plugin listing) · media/icon.svg (side bar glyph) · media/tray.png + tray@2x.png (desktop tray) · public/icon.svg + public/favicon.svg (header, browser tab)
-//   desktop/icon.ico · desktop/icon.icns (macOS only: needs iconutil) · docs/media/social.jpg (link preview) · docs/media/banner.png (README header)
+//   desktop/icon.ico · desktop/icon.icns (macOS only: needs iconutil) · docs/media/social.jpg (link preview) · docs/media/banner.png (README header) · docs/media/install-*.png (README install buttons)
 //   npm run brand        needs puppeteer-core and a Chrome (CHROME_PATH), and the network for the two fonts of the banners
 // Three drawings of the icon: icon.svg down to 48 px, icon-32.svg for 20 to 40 px, icon-16.svg below.
 const fs = require('fs'), os = require('os'), path = require('path'), { execFileSync } = require('child_process');
@@ -50,15 +50,30 @@ function ico(pics) {   // pics: [{ n, png, rgba }], 256 px stored as PNG, the sm
   } else console.log('  desktop/icon.icns skipped (needs macOS)');
 
   console.log('banners');
-  const banner = async (file, w, h, scale, type) => {   // the banners carry text in Gabarito and Figtree: the fonts must really be there, or the picture is refused
-    const svg = src(file), [, sw, sh] = svg.match(/<svg[^>]*width="(\d+)" height="(\d+)"/).map(Number), k = Math.max(w / sw, h / sh);
+  const banner = async (file, w, h, scale, type) => {   // the banners carry text in Gabarito and Figtree: the fonts must really be there, or the picture is refused. file: a brand/ file, or the SVG itself
+    const svg = file.startsWith('<svg') ? file : src(file), [, sw, sh] = svg.match(/<svg[^>]*width="(\d+)" height="(\d+)"/).map(Number), k = Math.max(w / sw, h / sh);
     const page = await browser.newPage(); await page.setViewport({ width: w, height: h, deviceScaleFactor: scale });
     await page.setContent(`<!doctype html><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600&family=Gabarito:wght@800&display=swap" rel="stylesheet"><body style="margin:0;overflow:hidden"><div style="width:${sw * k}px;height:${sh * k}px;margin:${(h - sh * k) / 2}px 0 0 ${(w - sw * k) / 2}px">${svg.replace(/<svg([^>]*) width="\d+" height="\d+"/, '<svg$1 width="100%" height="100%"')}</div>`, { waitUntil: 'load' });
     const ok = await page.evaluate(async () => { await document.fonts.ready; return document.fonts.check('800 20px Gabarito') && document.fonts.check('600 20px Figtree') && [...document.fonts].some((f) => f.status === 'loaded'); });
     if (!ok) throw new Error('the fonts did not load (network?): ' + file + ' not written');
-    const shot = await page.screenshot(type === 'jpeg' ? { type: 'jpeg', quality: 90 } : { type: 'png' }); await page.close(); return shot;
+    const shot = await page.screenshot(type === 'jpeg' ? { type: 'jpeg', quality: 90 } : { type: 'png', omitBackground: type === 'clear' }); await page.close(); return shot;
   };
   out('docs/media/social.jpg', await banner('link-preview.svg', 1200, 630, 1, 'jpeg'));
   out('docs/media/banner.png', await banner('readme-banner.svg', 1280, 320, 2, 'png'));
+
+  console.log('README install buttons');
+  // one big button for VS Code (the app icon on the lead's peach), two smaller teal ones under it; drawn at their size in the README, rendered at 2x
+  const button = ({ w, h, bg, fg, title, sub, size, icon, arrow }) => {
+    const pad = h * 0.22, tx = icon ? h : pad * 1.2, cx = w - h / 2, cy = h / 2, r = h * 0.21, a = r * 0.45;
+    const glyph = arrow === 'down' ? `M${cx} ${cy - a * 1.15}v${a * 2.1}M${cx - a} ${cy + a * 0.05}l${a} ${a}l${a} ${-a}` : `M${cx - a * 1.15} ${cy}h${a * 2.1}M${cx - a * 0.05} ${cy - a}l${a} ${a}l${-a} ${a}`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect x=".75" y=".75" width="${w - 1.5}" height="${h - 1.5}" rx="${h * 0.25}" fill="${bg}" stroke="#F6F2EA" stroke-opacity=".22" stroke-width="1.5"/>`
+      + (icon ? src('icon.svg').replace('<svg ', `<svg x="${pad}" y="${pad}" width="${h - 2 * pad}" height="${h - 2 * pad}" `) : '')
+      + `<text x="${tx}" y="${h * 0.52}" font-family="Gabarito" font-weight="800" font-size="${size}" fill="${fg}">${title}</text><text x="${tx}" y="${h * 0.79}" font-family="Figtree" font-weight="600" font-size="${size * 0.54}" fill="${fg}" fill-opacity=".78">${sub}</text>`
+      + `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fg}"/><path d="${glyph}" fill="none" stroke="${bg}" stroke-width="${r * 0.2}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  };
+  const teal = { h: 56, bg: '#18444F', fg: '#F6F2EA', size: 20 };
+  out('docs/media/install-vscode.png', await banner(button({ w: 380, h: 76, bg: '#E8845F', fg: '#2C2F40', size: 27, icon: true, title: 'Install in VS Code', sub: 'Free and open source' }), 380, 76, 2, 'clear'));
+  out('docs/media/install-openvsx.png', await banner(button({ ...teal, w: 260, title: 'Cursor · Windsurf', sub: 'and VSCodium: from Open VSX' }), 260, 56, 2, 'clear'));
+  out('docs/media/install-macos.png', await banner(button({ ...teal, w: 260, arrow: 'down', title: 'macOS app', sub: 'Free download, no editor needed' }), 260, 56, 2, 'clear'));
   await browser.close();
 })().catch((e) => { console.error(e.message || e); process.exit(1); });

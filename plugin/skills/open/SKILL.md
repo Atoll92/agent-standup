@@ -18,8 +18,10 @@ To open it:
 2. Start it in the background, so it keeps running while the user works. It needs Node.js 18 or later.
 
    ```bash
-   npx -y @double_geste/agent-standup@1.38.0 --open
+   AGENT_STANDUP_FROM=plugin npx -y @double_geste/agent-standup@1.42.0 --open
    ```
+
+   `AGENT_STANDUP_FROM=plugin` tells the app that the plugin started it (if the user agrees to share usage, the plugin is counted apart). In a Windows terminal outside Bash, leave it out.
 
    `--open` opens the page in the user's browser. If the command says the port is already in use, another program has port 4747: run it again with `--port 4790` and use that port in the address below.
 

@@ -13,12 +13,12 @@ const decode = (s) => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/
 const pairs = (html) => [...html.matchAll(/\sdata-en="([^"]*)"\sdata-fr="([^"]*)"/g)].map((m) => decode(m[1]));
 const marked = (html) => [...html.matchAll(/\{\{([^{}]+)\}\}/g)].map((m) => m[1]);                 // {{text}}: a text that is not the content of an element (title, description, alt)
 const said = (html) => [...html.matchAll(/say: \['((?:[^'\\]|\\.)*)'/g)].map((m) => m[1]);         // the lines of the landing page's little illustration: say: ['English', 'French']
-// what each site needs: every English text, and the ones French has to find in fr.json because the page holds no French for them
+// what each site needs (its pages: one file, or a list): every English text, and the ones French has to find in fr.json because the page holds no French for them
 const SITES = {
-  website: { file: 'website/src/home.html', dir: 'website/locales', keys: (h) => [...pairs(h), ...marked(h), 'Language', ...COPY.slice(1).map((c) => c[0])], fr: (h) => marked(h) },
+  website: { file: ['website/src/home.html', 'website/src/shop.html'], dir: 'website/locales', keys: (h) => [...pairs(h), ...marked(h), 'Language', ...COPY.slice(1).map((c) => c[0])], fr: (h) => marked(h) },
   landing: { file: 'landing/template.html', dir: 'landing/locales', keys: (h) => [...pairs(h), ...said(h)], fr: () => [] },
 };
-const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const read = (rel) => [].concat(rel).map((r) => fs.readFileSync(path.join(root, r), 'utf8')).join('\n');
 const keysOf = (site) => [...new Set(SITES[site].keys(read(SITES[site].file)))].filter((k) => k.trim());
 // { code: { English: translation } } for the languages that have a file
 function load(site) {

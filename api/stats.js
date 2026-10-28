@@ -87,7 +87,7 @@ const PAGE = `<!doctype html>
   <div class="charts" id="charts"></div>
   <h2>People who opened the call</h2>
   <p class="note">Only those who said yes to “share usage”: one request a week each. A week runs from Monday (UTC).</p>
-  <div class="wrap"><table><thead><tr><th>Week of</th><th class="n">People</th></tr></thead><tbody id="weeks"></tbody></table></div>
+  <div class="wrap"><table><thead><tr><th>Week of</th><th class="n">People</th><th class="opt">From</th></tr></thead><tbody id="weeks"></tbody></table></div>
   <h2>Website</h2>
   <p class="note" id="webnote">agent-standup.com, from Vercel Web Analytics. Bounce: home visitors who saw only that page (clicking “Install” leaves the site and counts as a bounce). Install clicks: Install VS Code, Install Open VSX, Download and Copy command.</p>
   <div id="web"></div>
@@ -133,7 +133,7 @@ const PAGE = `<!doctype html>
     const h = (D.hub && D.hub.history) || [], live = { d: new Date().toISOString().slice(0, 10), mp: D.mp, ovsx: D.ovsx, npm: D.npm && D.npm.total, hub: D.hub };
     const hist = h, wk = weeks(h, live), thisWeek = wk.length ? wk[wk.length - 1] : null;
     $('tiles').innerHTML = [
-      tile('People who opened the call this week', thisWeek ? fmt(thisWeek.from == null ? thisWeek.n : thisWeek.n - thisWeek.from) : '–', 'opt-in, since Monday', 'key'),
+      tile('People who opened the call this week', thisWeek ? fmt(thisWeek.n) : '–', thisWeek ? Object.entries(thisWeek.by).filter(([, v]) => v).map(([k, v]) => esc(k) + ' ' + fmt(v)).join(' · ') || 'opt-in, since Monday' : 'opt-in, since Monday', 'key'),
       tile('VS Code Marketplace installs', D.mp ? fmt(D.mp.installs) : '–', D.mp ? (D.mp.ratings ? D.mp.rating.toFixed(1) + '★ from ' + D.mp.ratings + ' ratings · ' : '') + 'v' + esc(D.mp.version) : 'no answer'),
       tile('GitHub stars', D.hub ? fmt(D.hub.stars) : '–', D.hub ? fmt(D.hub.forks) + ' forks · ' + fmt(D.hub.issues) + ' open issues & PRs' : 'no answer'),
       tile('Open VSX downloads', D.ovsx ? fmt(D.ovsx.downloads) : '–', D.ovsx ? (D.ovsx.reviews ? D.ovsx.rating.toFixed(1) + '★ from ' + D.ovsx.reviews + ' review' + (D.ovsx.reviews > 1 ? 's' : '') + ' · ' : '') + 'v' + esc(D.ovsx.version) : 'no answer'),
@@ -151,7 +151,7 @@ const PAGE = `<!doctype html>
       bars('Open VSX downloads', 'Cursor, Windsurf and other editors (mostly automatic)', series(hist, live, (x) => x.ovsx && x.ovsx.downloads), true),
       bars('npm downloads', 'From npm’s own daily counts (mostly automatic)', npmDays),
     ].join('');
-    $('weeks').innerHTML = wk.length ? wk.slice().reverse().map((w, i) => '<tr><td>' + esc(dshort(w.m)) + (i === 0 ? ' <span class="m" style="color:var(--dim)">so far</span>' : '') + '</td><td class="n">' + (w.from == null ? 'counting starts at ' + fmt(w.n) : fmt(w.n - w.from)) + '</td></tr>').join('') : '<tr><td colspan="2">No record yet.</td></tr>';
+    $('weeks').innerHTML = wk.length ? wk.slice().reverse().map((w, i) => '<tr><td>' + esc(dshort(w.m)) + (i === 0 ? ' <span class="m" style="color:var(--dim)">so far</span>' : '') + '</td><td class="n">' + fmt(w.n) + '</td><td class="opt w">' + (Object.entries(w.by).filter(([, v]) => v).map(([k, v]) => esc(k) + ' ' + fmt(v)).join(' · ') || '–') + '</td></tr>').join('') : '<tr><td colspan="3">No record yet.</td></tr>';
     renderWeb(D.web);
     $('yt').innerHTML = D.yt && D.yt.videos.length ? D.yt.videos.slice().sort((a, b) => b.views - a.views).map((v) => '<tr><td class="w">' + (v.short ? '<span class="m" style="margin:0 6px 0 0">Short</span>' : '') + esc(v.title) + '</td><td class="n">' + fmt(v.views) + '</td></tr>').join('') : '<tr><td colspan="2">YouTube did not answer.</td></tr>';
     const land = D.hub ? Object.entries(D.hub.landing).filter(([, n]) => n).sort((a, b) => b[1] - a[1]) : [];
@@ -163,7 +163,10 @@ const PAGE = `<!doctype html>
   // People who opened the call, week by week: the weekly counter at its last record of each week, minus the week before
   function weeks(hist, live) {
     const monday = (d) => { const t = Date.parse(d + 'T00:00:00Z'); return new Date(t - ((new Date(t).getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10); }, wk = [];
-    for (const x of hist.filter((x) => x.d !== live.d).concat([live])) { const n = x.hub && x.hub.week; if (typeof n !== 'number') continue; const m = monday(x.d), w = wk[wk.length - 1]; if (w && w.m === m) w.n = n; else wk.push({ m, n, from: w ? w.n : null }); }
+    const KINDS = [['VS Code', (x) => x.hub && x.hub.week], ['plugin', (x) => x.hub && x.hub.weeks && x.hub.weeks.plugin], ['command line', (x) => x.hub && x.hub.weeks && x.hub.weeks.cli], ['desktop app', (x) => x.hub && x.hub.weeks && x.hub.weeks.desktop]], byWeek = {};
+    for (const [name, get] of KINDS) { const kw = []; for (const x of hist.filter((x) => x.d !== live.d).concat([live])) { const n = get(x); if (typeof n !== 'number') continue; const m = monday(x.d), w = kw[kw.length - 1]; if (w && w.m === m) w.n = n; else kw.push({ m, n, from: w ? w.n : 0 }); }
+      for (const w of kw) (byWeek[w.m] = byWeek[w.m] || {})[name] = w.n - w.from; }   /* a counter's first week counts from zero: each started at zero */
+    for (const m of Object.keys(byWeek).sort()) wk.push({ m, by: byWeek[m], n: Object.values(byWeek[m]).reduce((t, v) => t + v, 0) });
     return wk;
   }
   function renderWeb(w) {

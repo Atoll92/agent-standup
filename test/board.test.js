@@ -2,7 +2,7 @@
 // The browser part needs puppeteer-core (npm i) and a Chrome (CHROME_PATH, or the usual places), like the test/live-*.test.js files: skipped with a note when they are missing, except in CI where that is a failure.
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), os = require('os'), path = require('path');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-board-')), PROJECTS = path.join(tmp, 'projects');
-process.env.AGENT_STANDUP_PREFS = path.join(tmp, 'prefs.json'); process.env.AGENT_STANDUP_KOKORO_DIR = path.join(tmp, 'kokoro'); process.env.AGENT_STANDUP_PROJECTS = PROJECTS;
+process.env.AGENT_STANDUP_PREFS = path.join(tmp, 'prefs.json'); process.env.AGENT_STANDUP_KOKORO_DIR = path.join(tmp, 'kokoro'); process.env.AGENT_STANDUP_PROJECTS = PROJECTS; process.env.AGENT_STANDUP_CC_SESSIONS = path.join(tmp, 'sessions'); process.env.AGENT_STANDUP_ANSWER = 'dry';
 fs.writeFileSync(process.env.AGENT_STANDUP_PREFS, JSON.stringify({ lang: 'en', voice: false, view: 'board', _t: Date.now() }));
 let puppeteer = null; for (const m of ['puppeteer-core', path.join(process.env.PUPPETEER_DIR || '/tmp/as/pp', 'node_modules/puppeteer-core')]) { try { puppeteer = require(m); break; } catch {} }
 const CHROME = [process.env.CHROME_PATH, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium-browser', '/usr/bin/chromium', 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'].find((p) => p && fs.existsSync(p));
@@ -15,6 +15,7 @@ const call = (name, input, ago) => ({ type: 'assistant', timestamp: iso(ago), me
 const file = (n) => path.join(PROJECTS, '-work-shop', id(n) + '.jsonl'), put = (n, recs, ago) => { fs.mkdirSync(path.dirname(file(n)), { recursive: true }); fs.writeFileSync(file(n), recs.map((r) => JSON.stringify(r)).join('\n') + '\n'); const t = new Date(now - ago); fs.utimesSync(file(n), t, t); };
 const ASK = 1, PR = 2, WORK = 3, NOTES = 4, OLD = 5, LINK = 6;
 put(ASK, [title('Checkout'), user('Add the checkout', 200e3), call('AskUserQuestion', { questions: [{ question: 'Stripe or Paddle?' }, { question: 'Which currency?' }] }, 120e3)], 120e3);
+fs.mkdirSync(process.env.AGENT_STANDUP_CC_SESSIONS, { recursive: true }); fs.writeFileSync(path.join(process.env.AGENT_STANDUP_CC_SESSIONS, '4242.json'), JSON.stringify({ pid: process.pid, sessionId: id(ASK), status: 'waiting', waitingFor: 'input needed', statusUpdatedAt: now - 115e3 }));   // Claude Code says its question is open
 put(PR, [title('Flaky test'), user('Fix the flaky test', 400e3), pr('https://github.com/acme/shop/pull/29'), say('Fixed.', 180e3), pr('https://github.com/acme/shop/pull/30')], 180e3);
 put(WORK, [title('Migration'), user('Migrate orders', 90e3), call('Bash', { command: 'npm run migrate' }, 20e3)], 20e3);
 put(NOTES, [title('Release notes'), user('Release notes', 900e3), say('Here are the notes.', 600e3)], 600e3);
@@ -39,12 +40,12 @@ test('the board is in sections, what waits for you first; a session put away as 
     const kept = () => core.boardRows().filter((r) => r.done).map((r) => r.title), tabs = () => page.evaluate(() => [...document.querySelectorAll('#tabs .stab span')].map((x) => x.textContent).sort());
     const post = (body) => page.evaluate(async (body) => (await (await fetch('/api/done', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).json()).ok, body);
     await page.waitForFunction(() => document.querySelectorAll('#tabs .stab span').length === 4, { timeout: 15000 }); assert.deepEqual(await tabs(), ['Checkout', 'Flaky test', 'Migration', 'Release notes']);   // the call is in Migration, the latest; an idle session has no tab
-    assert.deepEqual(await read(), ['needs you? | 1 | Checkout', 'your turn | 2 | Flaky test, Release notes', 'working | 1 | Migration', 'idle | 2 | Pricing page, A link that is not a pull request']);
+    assert.deepEqual(await read(), ['needs you | 1 | Checkout', 'your turn | 2 | Flaky test, Release notes', 'working | 1 | Migration', 'idle | 2 | Pricing page, A link that is not a pull request']);
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.bcard')].map((c) => [c.querySelector('.bt').textContent, (c.querySelector('.bq') || {}).textContent || '', (c.querySelector('.bpr') || {}).textContent || '', !!c.querySelector('.bdo')].join(' | '))),
       ['Checkout | Stripe or Paddle? |  | false', 'Flaky test |  | PR #30 ↗ | true', 'Release notes |  |  | true', 'Migration |  |  | false', 'Pricing page |  |  | true', 'A link that is not a pull request |  |  | true']);   // a session at work, or one that waits for you, cannot be put away
     await press('Release notes', '.bdo'); assert.deepEqual(await tabs(), ['Checkout', 'Flaky test', 'Migration']);   // its tab leaves the row at once
     await press('Pricing page', '.bdo');
-    assert.deepEqual(await read(), ['needs you? | 1 | Checkout', 'your turn | 1 | Flaky test', 'working | 1 | Migration', 'idle | 1 | A link that is not a pull request', 'Done | 2 | Release notes, Pricing page']);
+    assert.deepEqual(await read(), ['needs you | 1 | Checkout', 'your turn | 1 | Flaky test', 'working | 1 | Migration', 'idle | 1 | A link that is not a pull request', 'Done | 2 | Release notes, Pricing page']);
     assert.equal(await page.evaluate(() => document.querySelector('.bdone').open), false);   // put away means out of sight: the section opens when asked
     await page.evaluate(() => { document.querySelector('.bdone').open = true; }); await sleep(3200);   // past a refresh of the board, and the time the marks take to reach the settings file
     assert.equal(await page.evaluate(() => document.querySelector('.bdone').open), true); assert.deepEqual(kept().sort(), ['Pricing page', 'Release notes']); assert.deepEqual(await tabs(), ['Checkout', 'Flaky test', 'Migration']);

@@ -13,8 +13,13 @@
   "Privacy policy": "隐私政策",
   "{0} is waiting for you: {1}": "{0} 在等你：{1}",
   "{0} is waiting for you": "{0} 在等你",
-  "Still waiting: {0}": "仍在等待：{0}",
   "a plan to approve": "一个待批准的计划",
   "Go to session": "前往会话",
-  "Open call": "打开视频通话"
+  "Open call": "打开视频通话",
+  "usage limit · resets {0}": "用量上限 · {0} 重置",
+  "usage limit": "用量上限",
+  "logged out": "已退出登录",
+  "for less than a minute": "不到 1 分钟",
+  "for {0} min": "已 {0} 分钟",
+  "for {0} h {1} min": "已 {0} 小时 {1} 分钟"
 }

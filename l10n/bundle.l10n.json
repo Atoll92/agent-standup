@@ -13,8 +13,13 @@
   "Privacy policy": "Privacy policy",
   "{0} is waiting for you: {1}": "{0} is waiting for you: {1}",
   "{0} is waiting for you": "{0} is waiting for you",
-  "Still waiting: {0}": "Still waiting: {0}",
   "a plan to approve": "a plan to approve",
   "Go to session": "Go to session",
-  "Open call": "Open call"
+  "Open call": "Open call",
+  "usage limit · resets {0}": "usage limit · resets {0}",
+  "usage limit": "usage limit",
+  "logged out": "logged out",
+  "for less than a minute": "for less than a minute",
+  "for {0} min": "for {0} min",
+  "for {0} h {1} min": "for {0} h {1} min"
 }

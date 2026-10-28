@@ -10,6 +10,11 @@
       "name": "agent-standup",
       "source": "./plugin",
       "description": "Watch the Claude Code, Codex and Mistral Vibe sessions on your computer as a live team call: who is working, who waits on whom, who needs you."
+    },
+    {
+      "name": "agent-standup-band",
+      "source": "./plugin-band",
+      "description": "A line above your Claude Code prompt when another Claude Code session on this computer needs you (an approval, an answer), and a toast when one finishes its turn. Reads only Claude Code's own session status files; sends nothing."
     }
   ],
   "metadata": {

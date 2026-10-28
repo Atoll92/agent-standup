@@ -44,10 +44,17 @@ function coworkMap() {   // session id → the folder its transcript is in; look
   }
   coworkMemo = { at: now, key, map }; return map;
 }
-const coworkNotes = new Map();   // note file → { sig, title }
+const coworkNotes = new Map(), coworkNoteOf = new Map();   // note file → { sig, title }; session folder → { f: its note in the newer layout, at: when looked for }
+function coworkNote(s, id) {   // the note of the session folder s: <s>.json, or in the newer layout (a folder named after the start of the session's own id) local_<s>-….json beside it, the one that names this transcript when there are several
+  if (mtimeOf(s + '.json')) return s + '.json';
+  const c = coworkNoteOf.get(s); if (c && (c.f ? mtimeOf(c.f) : Date.now() - c.at < 10e3)) return c.f;   // a folder without a note is looked at again after 10 s, not at every scan
+  const parent = path.dirname(s), pre = 'local_' + path.basename(s) + '-'; let names = []; try { names = fs.readdirSync(parent).filter((n) => n.startsWith(pre) && n.endsWith('.json')).map((n) => path.join(parent, n)); } catch {}
+  const f = names.length === 1 ? names[0] : names.find((p) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')).cliSessionId === id; } catch { return false; } }) || '';
+  coworkNoteOf.set(s, { f, at: Date.now() }); return f;
+}
 function coworkTitle(proj, id) {   // the name the desktop app gave the session, the one its own list shows: kept in a note beside the session's folder, of which the title alone is taken
   const dir = proj === COWORK && coworkMap().get(id); if (!dir) return '';
-  const f = path.resolve(dir, '..', '..', '..') + '.json'; let st; try { st = fs.statSync(f); } catch { return ''; }
+  const f = coworkNote(path.resolve(dir, '..', '..', '..'), id); let st; try { st = fs.statSync(f); } catch { return ''; }
   const sig = st.mtimeMs + ':' + st.size, c = coworkNotes.get(f); if (c && c.sig === sig) return c.title;
   let title = ''; try { const j = JSON.parse(fs.readFileSync(f, 'utf8')); if (typeof j.title === 'string') title = j.title.trim().slice(0, 200); } catch {}
   coworkNotes.set(f, { sig, title }); return title;
@@ -61,6 +68,7 @@ function transcripts(proj) {   // the sessions of a project: { id, file }
 }
 
 const blocks = (rec) => {
+  if (typeof rec.type === 'string' && rec.type.startsWith('api-request')) return [];   // a request Claude Code kept (2.1.300 on): its blocks repeat the conversation sent, calls and edits included, which happened once, in their own records
   const c = rec.message && rec.message.content;
   if (typeof c === 'string') return [{ type: 'text', text: c }];
   return Array.isArray(c) ? c : [];
@@ -92,6 +100,41 @@ function docPaths(text, cd) {
   return out;
 }
 const absPath = (f, cwd) => (/^~([\\/]|$)/.test(f) ? path.join(os.homedir(), f.slice(1)) : path.isAbsolute(f) ? path.normalize(f) : cwd ? path.resolve(cwd, f) : f);   // cwd: the folder the session was in when it wrote that record
+// A call that drives a browser (Claude in Chrome, written claude-in-chrome by Claude Code and Claude_in_Chrome by the desktop app; the desktop app's own browser): its steps (one, or those of a browser_batch, in order), for the browser window of the shared screen.
+// a: what it did · x, y: where it clicked, in the frame of the page's screenshots · t: what it typed or the key it pressed · u: the address it went to · q: what it looked for · n: its own one-line account of the step
+// Claude Preview (the desktop app's preview of a local server, mcp__Claude_Preview__preview_*, also offered by its browser) is one too: its steps are named after the tool, without "preview_" (start, eval, resize, screenshot, logs, stop…).
+const BROWSER_MCP = /^mcp__(?:[^_]+__)?(claude-in-chrome|Claude_in_Chrome|Claude_Browser|Claude_Preview)__/;
+const previewStep = (name, i) => {
+  const a = name.slice(8) === 'console_logs' ? 'logs' : name.slice(8, 38), s = { a };
+  if (a === 'eval' && typeof i.expression === 'string') s.q = clip(i.expression, 120); if (typeof i.url === 'string') s.u = clip(i.url, 300);   // the page a start names, as 1.40 showed it
+  if (a === 'resize') { if (Number.isFinite(+i.width) && Number.isFinite(+i.height) && i.width != null && i.height != null) { s.w = +i.width; s.h = +i.height; } else if (typeof i.preset === 'string') s.preset = clip(i.preset, 30); }   // a size, or one of its presets (desktop, mobile…)
+  return s;
+};
+const browserStep = (name, i) => {
+  i = i && typeof i === 'object' ? i : {}; if (!i.action && /^preview_/.test(name || '')) return previewStep(name, i);
+  const s = { a: String(i.action || name || '').slice(0, 30) }, c = Array.isArray(i.coordinate) ? i.coordinate : null;
+  if (c && Number.isFinite(+c[0]) && Number.isFinite(+c[1])) { s.x = +c[0]; s.y = +c[1]; }
+  if (typeof i.url === 'string') s.u = clip(i.url, 300); if (typeof i.text === 'string' && /type|key/.test(s.a)) s.t = clip(i.text, 80); if (typeof i.query === 'string') s.q = clip(i.query, 120); if (typeof i.action_summary === 'string') s.n = clip(i.action_summary, 140);
+  return s;
+};
+const browserLabel = (name, i) => ({ kind: 'browser', steps: (Array.isArray(i.actions) ? i.actions.slice(-12).map((x) => browserStep(x && x.name, x && x.input)) : [browserStep(name, i)]) });
+// What a browser call answered about the page: its address and title, the frame its clicks are counted in (a screenshot at half scale is still clicked in full-size coordinates),
+// and p: where its last click landed, which the desktop app's browser says when the agent named an element instead of a point ("left_click at (628, 441) [ref_112]"). Its tabs have names ("seed"), not numbers; the desktop app's Chrome writes a tab's address without quotes
+// A preview's answers say other things: the port of the server it started (u), the size it gave the page (f), and the last lines of the page's console or of the server's log (log, [] when there are none), shown under the page.
+function previewSeen(tool, text, web) {
+  if (tool === 'preview_start') { const m = /"port":\s*(\d{2,5})\b/.exec(text); if (m) web.u = 'http://localhost:' + m[1]; }
+  else if (tool === 'preview_resize') { const m = /\b(\d{2,5}) ?x ?(\d{2,5})\b/.exec(text); if (m && +m[1] > 0 && +m[2] > 0) web.f = [+m[1], +m[2]]; }
+  else if (tool === 'preview_console_logs' || tool === 'preview_logs') { const lines = noAnsi(text.slice(-64000)).split('\n').map((l) => l.trimEnd()).filter((l) => l.trim()); web.log = lines.length === 1 && /^No\b.*\.$/.test(lines[0]) ? [] : lines.slice(-12).map((l) => clip(l, 200)); }   // "No console logs."
+}
+function browserSeen(text, name) {
+  const all = (re) => [...text.matchAll(re)].pop(), web = {}, tab = (text.match(/Executed on tabId: ([\w-]+)/) || [])[1], row = tab && all(new RegExp(`tabId ${tab}: "(.*)" \\("?([^"\\s]*?)"?\\)\\s*$`, 'gm'));
+  const u = all(/(?:[Nn]avigated to|URL:) *(\S+)/g), t = all(/^Title: *(.+)$/gm), f = all(/coordinate frame: *(\d+)x(\d+)/g) || all(/captured screenshot \((\d+)x(\d+)/g) || all(/Screenshot size: *(\d+)x(\d+)/g), p = all(/\b(?:left_click|right_click|double_click|triple_click|hover) at \((\d+), *(\d+)\)/g);
+  const url = (u && u[1]) || (row && row[2]) || ''; if (/^(https?|file|chrome|about):/i.test(url)) web.u = clip(url, 300);
+  const title = (t && t[1]) || (row && row[1] !== row[2] && row[1]) || ''; if (title) web.t = clip(title.trim(), 120);
+  if (f && +f[1] > 0 && +f[2] > 0) web.f = [+f[1], +f[2]]; if (p) web.p = [+p[1], +p[2]];
+  const tool = String(name || '').split('__').pop(); if (/^preview_/.test(tool)) previewSeen(tool, text, web);
+  return Object.keys(web).length ? { web } : {};
+}
 // What each tool call looks like on a screen ("d"), plus its id/timestamp so the result can be matched later.
 const toolLabel = (b, ts) => {
   const i = b.input || {};
@@ -106,6 +149,9 @@ const toolLabel = (b, ts) => {
     case 'Grep': out.d = { kind: 'grep', pattern: clip(i.pattern, 100), path: i.path, glob: i.glob }; break;
     case 'Glob': out.d = { kind: 'glob', pattern: clip(i.pattern, 100), path: i.path }; break;
     case 'TodoWrite': out.d = { kind: 'todo', items: (i.todos || []).slice(0, 20).map((x) => ({ c: clip(x.content, 120), s: x.status })) }; break;
+    case 'TaskCreate': out.d = { kind: 'task', op: 'create', subject: clip(i.subject, 120), active: clip(i.activeForm, 120) }; if (typeof i.subject === 'string') out.arg = i.subject.slice(0, 90); break;   // the task list of Claude Code 2.1.200 on, one call per task (TaskStop and TaskOutput are about background commands: calls like any other)
+    case 'TaskUpdate': out.d = { kind: 'task', op: 'update', taskId: clip(i.taskId, 40), ...(typeof i.status === 'string' ? { status: i.status.slice(0, 20) } : {}), ...(typeof i.subject === 'string' ? { subject: clip(i.subject, 120) } : {}) }; break;
+    case 'ExitPlanMode': out.d = { kind: 'plan', text: clip(i.plan, 4000) }; break;
     case 'WebFetch': out.d = { kind: 'web', url: i.url }; break;
     case 'WebSearch': out.d = { kind: 'web', query: i.query }; break;
     case 'NotebookEdit': out.d = { kind: 'edit', file: i.notebook_path, old: '', new: clip(i.new_source, 500) }; break;
@@ -115,7 +161,14 @@ const toolLabel = (b, ts) => {
     case 'Artifact': if ((!i.action || i.action === 'publish') && !i.asset) { out.d = { kind: 'artifact', file: typeof i.file_path === 'string' ? i.file_path : '', title: clip(i.title, 120), note: clip(i.description, 240) }; const sent = i.files ? artSentOf(i) : [], pg = !/\.html?$/i.test(out.d.file) && sent.find((f) => /\.html?$/i.test(f)); if (sent.length > 1) out.d.sent = sent; if (pg) out.d.page = pg; break; }   // a page published on claude.ai: the call shows it in a browser window (see artifactPage). Any other use of the tool (a read, a list, an upload) is a call like any other
     if (i.action === 'open') { out.d = { kind: 'artifact', file: '', title: '', note: '', open: 1 }; break; }   // a page put on the person's screen: in the line of files when this session did not make it (see artOf)
     // falls through
-    default: if (mcp && /(^|_)Claude_Docs$/.test(mcp[1] || '') && mcp[2] === 'batch' && i.container && i.container.create && typeof i.container.create.name === 'string') { out.d = { kind: 'artifact', file: '', title: clip(i.container.create.name, 120), note: '', doc: 1 }; break; }   // a doc of the Claude Docs connector being born (its later edits are calls like any other)
+    default: if (BROWSER_MCP.test(b.name)) { out.d = browserLabel(mcp[mcp.length - 1], i); const s = out.d.steps[out.d.steps.length - 1]; if (s) out.arg = String(s.n || s.u || s.q || s.a).slice(0, 90); break; }
+      if ((b.name === 'mcp__workspace__bash' || b.name === 'mcp__terminal__run_in_terminal') && typeof i.command === 'string') { out.d = { kind: 'cmd', text: clip(i.command, 1200), note: clip(i.title || i.description, 140) }; break; }   // Cowork's commands (its sandbox, the person's own terminal): commands like Bash
+      if (b.name === 'mcp__workspace__web_fetch' && typeof i.url === 'string') { out.d = { kind: 'web', url: i.url }; break; }
+      if (b.name === 'mcp__cowork__present_files' && Array.isArray(i.files)) {   // Cowork hands files to the person: the line of files shows them (outs), as the documents a command makes
+        const outs = i.files.map((f) => (typeof f === 'string' ? f : f && f.file_path)).filter((f) => typeof f === 'string' && path.isAbsolute(f) && f.length <= 400).slice(0, 16);
+        out.d = { kind: 'text', what: 'mcp', v: 'cowork · present_files', text: clip(outs.map((f) => path.basename(f)).join('\n'), 400), ...(outs.length ? { outs } : {}) }; break;
+      }
+      if (mcp && /(^|_)Claude_Docs$/.test(mcp[1] || '') && mcp[2] === 'batch' && i.container && i.container.create && typeof i.container.create.name === 'string') { out.d = { kind: 'artifact', file: '', title: clip(i.container.create.name, 120), note: '', doc: 1 }; break; }   // a doc of the Claude Docs connector being born (its later edits are calls like any other)
       out.d = mcp ? { kind: 'text', what: 'mcp', v: (mcp[1] || '') + ' · ' + (mcp.slice(2).join('__') || ''), text: clip(JSON.stringify(i), 400) } : { kind: 'text', text: clip(JSON.stringify(i), 300) };
   }
   return out;
@@ -140,6 +193,61 @@ function artOf(st, how, u, text) {
   note(id, a.url); return a;
 }
 const resultText = (c) => (typeof c === 'string' ? c : Array.isArray(c) ? c.map((x) => x.text || '').join('\n') : '');
+// The colours and cursor moves of a terminal (ANSI escape codes) are taken out of what a tool printed: the page shows text. clipOut: clip for an output, taking them out of the part it keeps.
+const ANSI = /\x1b\[[0-?]*[ -\/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[@-Z\\-_]|\x1b/g;   // and an escape left alone (a sequence cut short, bytes that are not text)
+const noAnsi = (s) => (s.includes('\x1b') ? s.replace(ANSI, '') : s);
+const clipOut = (x, n = 700) => { const s = String(x == null ? '' : x); return noAnsi(s.length > n + 400 ? s.slice(0, n + 400) : s).slice(0, n); };
+// A test run, summed up for the shared screen: its runner, how many passed, failed and were skipped, and the names of the first that failed. Only when the output has the summary line of one of
+// these runners: node:test (its spec and TAP reporters), vitest, jest, pytest, mocha, go test, cargo test. Any other output, numbers and all, is not a test run.
+const TESTS_SEEN = /^[ \t]*(?:ℹ (?:tests|pass|fail) \d|# (?:tests|pass|fail) \d|Tests:? +\d|=+ [^\n]{0,300}?\b(?:passed|failed|errors?|skipped|no tests ran)\b[^\n]{0,300}? in [\d.]+s\b|\d+ (?:passing|failing)\b|test result: |(?:ok|FAIL)[ \t]+\S+[ \t]+(?:[\d.]+s|\(cached\))|--- FAIL: )/m;
+function testsOf(text0) {   // the patterns are bounded per line (300 characters): a long line of output must not hold the server
+  let text = String(text0 || ''); if (text.length > 400000) text = text.slice(-400000);   // a summary is at the end
+  text = noAnsi(text); if (!TESTS_SEEN.test(text)) return null;
+  const all = (re, s = text) => [...s.matchAll(re)], counts = (s) => { const o = {}; for (const x of s.matchAll(/(\d+) ([a-z]+)/g)) o[x[2]] = (o[x[2]] || 0) + +x[1]; return o; }, failed = [];
+  const name = (s) => { s = String(s || '').trim().slice(0, 120); if (s && failed.length < 6 && !failed.includes(s)) failed.push(s); };
+  const out = (runner, pass, fail, skip, total) => ({ runner, pass, fail, skip, total: total || pass + fail + skip, failed });
+  let m = all(/^test result: \w+\. (\d+) passed; (\d+) failed; (\d+) ignored/gm);   // cargo: one line per test binary
+  if (m.length) { for (const x of all(/^test (\S+) \.\.\. FAILED[ \t]*$/gm)) name(x[1]); const sum = (i) => m.reduce((s, x) => s + +x[i], 0); return out('cargo', sum(1), sum(2), sum(3)); }
+  m = all(/^=+ ([^\n=]{0,300}?\b(?:passed|failed|errors?|skipped|no tests ran)\b[^\n=]{0,300}?) in [\d.]+s\b[^\n]{0,300}?=+[ \t]*$/gm).pop();   // pytest: "=== 3 failed, 40 passed, 2 skipped in 1.2s ==="
+  if (m) { const c = counts(m[1]); for (const x of all(/^(?:FAILED|ERROR) (\S+)/gm)) name(x[1]); return out('pytest', (c.passed || 0) + (c.xpassed || 0), (c.failed || 0) + (c.error || 0) + (c.errors || 0), (c.skipped || 0) + (c.xfailed || 0)); }
+  const gp = all(/^(ok|FAIL)[ \t]+\S+[ \t]+(?:[\d.]+s|\(cached\))/gm), gt = all(/^[ \t]*--- (PASS|FAIL|SKIP): (\S+)/gm), k = (w) => gt.filter((x) => x[1] === w).length;   // go test: a line per package, and one per test with -v (failures always)
+  if (gp.length || k('FAIL')) { for (const x of gt) if (x[1] === 'FAIL') name(x[2]); return k('PASS') ? out('go', k('PASS'), k('FAIL'), k('SKIP')) : out('go', gp.filter((x) => x[1] === 'ok').length, k('FAIL') || gp.filter((x) => x[1] === 'FAIL').length, k('SKIP')); }
+  m = all(/^[ \t]*Tests[ \t]{2,}(.+?)[ \t]*\((\d+)\)[ \t]*$/gm).pop();   // vitest: "Tests  3 failed | 40 passed (43)"
+  if (m) { const c = counts(m[1]); for (const x of all(/^[ \t]*FAIL[ \t]+(.+?)[ \t]*$/gm)) name(x[1]); for (const x of all(/^[ \t]*[×✗][ \t]+(.+?)(?:[ \t]+\d+m?s)?[ \t]*$/gm)) name(x[1]); return out('vitest', c.passed || 0, c.failed || 0, (c.skipped || 0) + (c.todo || 0), +m[2]); }
+  m = all(/^[ \t]*Tests:[ \t]+(.+?)[ \t]*$/gm).pop();   // jest: "Tests: 2 failed, 40 passed, 42 total"
+  if (m) { const c = counts(m[1]); for (const x of all(/^[ \t]*● (.+?)[ \t]*$/gm)) if (!/^(Console|Test suite failed to run)$/.test(x[1])) name(x[1]); for (const x of all(/^[ \t]*[✕×][ \t]+(.+?)(?:[ \t]+\(\d+ m?s\))?[ \t]*$/gm)) name(x[1]); return out('jest', c.passed || 0, c.failed || 0, (c.skipped || 0) + (c.todo || 0), c.total); }
+  const mp = /^[ \t]*(\d+) passing\b/m.exec(text), mf = /^[ \t]*(\d+) failing\b/m.exec(text), mn = /^[ \t]*(\d+) pending\b/m.exec(text);   // mocha: "40 passing (2s)", "3 failing", then the failures, numbered
+  if (mp) {   // mocha always says how many passed: a count of failures alone is some other script's
+    const ls = mf ? text.slice(mf.index).split('\n') : [], seen = new Set();   // a failure's title runs over several lines, its suites then the test, which ends with ":"
+    for (let i = 0; i < ls.length && failed.length < 6; i++) { const x = /^[ \t]*(\d+)\) (.+?)[ \t]*$/.exec(ls[i]); if (!x || seen.has(x[1])) continue; seen.add(x[1]); let t = x[2]; for (let j = i + 1; !/:$/.test(t) && j < Math.min(ls.length, i + 6) && ls[j].trim(); j++) t += ' › ' + ls[j].trim(); name(t.replace(/:$/, '')); }
+    return out('mocha', mp ? +mp[1] : 0, mf ? +mf[1] : 0, mn ? +mn[1] : 0);
+  }
+  m = all(/^(?:ℹ|#) (tests|pass|fail|cancelled|skipped|skip|todo) (\d+)[ \t]*$/gm);   // node:test, spec reporter (ℹ) or TAP (#); a command that runs it twice prints two summaries
+  if (m.some((x) => x[1] === 'tests')) { const c = {}; for (const x of m) c[x[1]] = (c[x[1]] || 0) + +x[2]; for (const x of all(/^[ \t]*not ok \d+ - (.+?)(?:[ \t]+#.*)?[ \t]*$/gm)) name(x[1]); for (const x of all(/^[ \t]*✖ (.+?)(?: \([\d.]+m?s\))?[ \t]*$/gm)) if (x[1] !== 'failing tests:') name(x[1]); return out('node', c.pass || 0, (c.fail || 0) + (c.cancelled || 0), (c.skipped || 0) + (c.skip || 0), c.tests); }
+  return null;
+}
+// A change shown as a diff, from what Claude Code noted of an Edit or a Write (structuredPatch), or of a command that changed files (bashEditDiff, 2.1.283 on). At most 3 files, 4 parts of each, 40 lines a part. more: the files left out.
+function diffOf(files, moreFiles) {
+  const fl = files.filter((f) => f && typeof f.file === 'string' && Array.isArray(f.hunks) && f.hunks.length); if (!fl.length) return null;
+  const out = { files: fl.slice(0, 3).map((f) => ({ file: clip(f.file, 400), hunks: f.hunks.slice(0, 4).map((h) => ({ o: +(h && h.oldStart) || 0, n: +(h && h.newStart) || 0, lines: (h && Array.isArray(h.lines) ? h.lines : []).slice(0, 40).map((l) => clip(l, 200)) })) })) };
+  const more = (+moreFiles > 0 ? +moreFiles : 0) + fl.length - out.files.length; if (more) out.more = more;
+  return out;
+}
+// What else a result says, for the shared screen, from its text and from what Claude Code noted about the call (u: the record's toolUseResult): tests, diff, search (the links a search found), fetch (a page read),
+// task (a task created), bg (the id of a command left running in the background, whose output /api/taskout reads). The original of an edited file, which Claude Code also notes, is never kept.
+const CMD_TOOL = new Set(['Bash', 'mcp__workspace__bash', 'mcp__terminal__run_in_terminal']), taskId = (v) => (typeof v === 'string' && /^[\w-]{1,40}$/.test(v) ? v : '');
+function resultMore(n, text, u) {
+  const o = {}; if (CMD_TOOL.has(n)) { const t = testsOf(text); if (t) o.tests = t; }
+  if (!u || typeof u !== 'object' || Array.isArray(u)) return o;
+  if (n === 'Bash') { const d = u.bashEditDiff, x = d && Array.isArray(d.files) && diffOf(d.files.map((f) => ({ file: f && f.filePath, hunks: f && f.hunks })), d.moreFiles); if (x) o.diff = x; if (taskId(u.backgroundTaskId)) o.bg = u.backgroundTaskId; }
+  else if (n === 'Edit' || n === 'MultiEdit' || n === 'Write') { const x = Array.isArray(u.structuredPatch) && diffOf([{ file: u.filePath, hunks: u.structuredPatch }], 0); if (x) o.diff = x; }
+  else if (n === 'WebSearch' && Array.isArray(u.results)) { const s = []; for (const r of u.results) for (const c of r && Array.isArray(r.content) ? r.content : []) if (c && typeof c.url === 'string' && s.length < 8) s.push({ t: clip(c.title, 120), u: clip(c.url, 300) }); if (s.length) o.search = s; }
+  else if (n === 'WebFetch' && typeof u.url === 'string') o.fetch = { u: clip(u.url, 300), ...(Number.isFinite(u.code) ? { code: u.code } : {}), ...(Number.isFinite(u.bytes) ? { bytes: u.bytes } : {}), ...(Number.isFinite(u.durationMs) ? { ms: u.durationMs } : {}) };
+  else if (n === 'TaskCreate' && u.task && u.task.id != null) o.task = { id: clip(u.task.id, 40), subject: clip(u.task.subject, 120) };
+  else if (n === 'Monitor' && taskId(u.taskId)) o.bg = u.taskId;
+  else if (n === 'TaskOutput' && u.task && taskId(u.task.task_id) && !/agent/.test(String(u.task.task_type || ''))) o.bg = u.task.task_id;   // a command's output asked for; a sub-agent's is its transcript
+  return o;
+}
 // Pictures a tool returned (a screenshot, an image file that was read). They are served from the transcript itself, so nothing outside the session files is ever read, and only bitmap types are sent.
 const IMG_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']), mediaMemo = new Map();
 const isImg = (x) => !!x && x.type === 'image' && !!x.source && x.source.type === 'base64' && typeof x.source.data === 'string' && IMG_TYPES.has(x.source.media_type);
@@ -161,12 +269,12 @@ function subFiles(proj, id) {
 }
 const subFilesOf = (proj, id) => { const sx = sourceOf(proj); return sx && sx.subFiles ? guard(() => sx.subFiles(id), Object.assign([], { dirs: [], journals: [] })) : subFiles(proj, id); };   // Mistral Vibe keeps its sub-agents its own way
 function mediaFile(proj, sid, agent) {
-  if (agent === 'main') return path.join(projDir(proj, sid), sid + '.jsonl');
+  if (agent === 'main' || agent === 'user') return path.join(projDir(proj, sid), sid + '.jsonl');   // user: the pictures pasted with a message, in the lead's file
   const hit = subFiles(proj, sid).find((x) => x.aid === agent);
   return hit ? hit.file : null;
 }
-function toolImage(file, toolId, n) {   // looks for the tool's result line in the transcript, 8 MB at a time; the few pictures asked last are kept in memory
-  const key = file + '|' + toolId + '|' + n, memo = mediaMemo.get(key); if (memo && memo.buf) return memo;
+function toolImage(file, toolId, n, user) {   // looks for the tool's result line in the transcript, 8 MB at a time; the few pictures asked last are kept in memory. user: toolId is the id of a message the person sent (its uuid), and the pictures are the ones pasted with it
+  const key = file + '|' + toolId + '|' + n + (user ? '|u' : ''), memo = mediaMemo.get(key); if (memo && memo.buf) return memo;
   const needle = Buffer.from('"' + toolId + '"'), mark = Buffer.from('"image"'), until = Date.now() + 2000; let fd, found = null, carry = Buffer.alloc(0), pos = 0, size = 0;   // the id between its quotes, so a made-up one-letter id does not match on every line; and never more than 2 s of searching
   try {
     fd = fs.openSync(file, 'r'); size = fs.fstatSync(fd).size; if (memo && memo.miss === size) return null;   // already searched in vain, and nothing was written since
@@ -177,6 +285,7 @@ function toolImage(file, toolId, n) {   // looks for the tool's result line in t
         const a = all.lastIndexOf(10, hit) + 1, b = all.indexOf(10, hit); if (b < 0) break;   // the line goes on in the next chunk
         from = b + 1; if (all.subarray(a, b).indexOf(mark) < 0) continue;
         let r; try { r = JSON.parse(all.subarray(a, b).toString('utf8')); } catch { continue; }
+        if (user) { const im = r.type === 'user' && r.uuid === toolId ? blocks(r).filter(isImg)[n] : null; if (im) found = { type: im.source.media_type, buf: Buffer.from(im.source.data, 'base64') }; continue; }
         for (const blk of blocks(r)) if (blk.type === 'tool_result' && blk.tool_use_id === toolId) { const im = resultImages(blk.content)[n]; if (im) found = { type: im.source.media_type, buf: Buffer.from(im.source.data, 'base64') }; }
       }
       carry = all.subarray(all.lastIndexOf(10) + 1);
@@ -184,6 +293,32 @@ function toolImage(file, toolId, n) {   // looks for the tool's result line in t
   } catch {} finally { if (fd != null) fs.closeSync(fd); }
   mediaMemo.delete(key); mediaMemo.set(key, found || { miss: size }); if (mediaMemo.size > 12) mediaMemo.delete(mediaMemo.keys().next().value);
   return found;
+}
+// ---- A command left running in the background (Bash sent to the background, Monitor): Claude Code writes what it prints, as it comes, to <its temporary folder>/<project>/<session id>/tasks/<task id>.output,
+// and ends the file with "[exited with code N]" once it stops. The shared screen shows the end of it while it runs. Only that file is read, of a session the call knows; nothing is sent anywhere.
+// The temporary folder is claude-<uid> in /tmp (macOS and Linux), in the system's own (os.tmpdir) or in CLAUDE_CODE_TMPDIR. The project is found by the session's folder: a session that moved to a worktree writes under another name.
+const TASKOUT_MAX = 12 * 1024;
+function claudeTemps() {
+  const uid = typeof process.getuid === 'function' ? process.getuid() : null, out = []; if (uid == null) return out;
+  for (const d of ['/tmp', os.tmpdir(), process.env.CLAUDE_CODE_TMPDIR]) { if (!d) continue; let real; try { real = fs.realpathSync(path.join(d, 'claude-' + uid)); const st = fs.statSync(real); if (st.uid !== uid || (st.mode & 0o022)) continue; } catch { continue; } if (!out.includes(real)) out.push(real); }   // yours, and nobody else can write in it (a shared /tmp)
+  return out;
+}
+function taskOutput(proj, id, task) {   // { text: its last whole lines (12 KB at most), done, code: its exit code once it said it, size, mtime }, or null
+  for (const root of claudeTemps()) {
+    let keys = []; try { keys = fs.readdirSync(root); } catch { continue; }
+    for (const key of keys.includes(proj) ? [proj, ...keys.filter((k) => k !== proj)] : keys) {
+      const fp = path.join(root, key, id, 'tasks', task + '.output'); let st; try { st = fs.lstatSync(fp); } catch { continue; }
+      if (!st.isFile()) continue;   // a link (a sub-agent's output is one, to its transcript) is not followed
+      let buf = Buffer.alloc(0), size = st.size; const fd = fs.openSync(fp, 'r');
+      try { size = fs.fstatSync(fd).size; const n = Math.min(size, TASKOUT_MAX + 4096); buf = Buffer.alloc(n); fs.readSync(fd, buf, 0, n, size - n); } finally { fs.closeSync(fd); }
+      let text = buf.toString('utf8'); if (buf.length < size) { const nl = text.indexOf('\n'); text = nl >= 0 ? text.slice(nl + 1) : text.slice(text.lastIndexOf('\r') + 1); }   // whole lines only; with no line at all, a progress bar redrawn with \r: from its last state
+      text = noAnsi(text).split('\n').map((l) => { l = l.replace(/\r$/, ''); const r = l.lastIndexOf('\r'); return r >= 0 ? l.slice(r + 1) : l; }).join('\n');   // a progress bar redrawn in place: its last state
+      const over = Buffer.byteLength(text) - TASKOUT_MAX; if (over > 0) { const b = Buffer.from(text), nl = b.indexOf(10, over); text = nl >= 0 && nl < b.length - 1 ? b.subarray(nl + 1).toString('utf8') : b.subarray(b.length - TASKOUT_MAX / 4).toString('utf8'); }   // cut once, at the first whole line that fits
+      const m = /\[exited with code (-?\d+)\]\s*$/.exec(text);
+      return { text, done: !!m || Date.now() - st.mtimeMs > 10 * 60e3, code: m ? +m[1] : null, size, mtime: st.mtimeMs };   // done: it said so, or it has been silent for 10 minutes
+    }
+  }
+  return null;
 }
 // ---- Artifacts: a page a session published on claude.ai is shown in the call, in a browser window on the shared screen. claude.ai lets no other page frame it, and the file that was published
 // is most often in a temporary folder that is emptied later: the page is put together again from the session file, which keeps in full the Write call that created it and the Edit calls that followed,
@@ -345,12 +480,12 @@ function timelineEntry(proj, id) {
 // ---- Live feed. The timeline is sorted again at each build and events already sent can change (an order typed mid-turn is stamped at typing time and lands before what the page has; a sub-agent's last line becomes its report; a tool call joins an earlier beat),
 // so a page cannot ask for "what comes after index n". Every event has a key `k` that never changes, each build that changes something gets the next sequence number, and a page asks for the events that are new or different since the number it holds.
 // `ep` names this memory: it is a new one after a restart, after the session left the cache, or when a transcript was rewritten, and the page then loads the whole session again.
-const sigOf = (e) => e.kind + '|' + e.agent + '|' + (e.to || '') + '|' + (e.end || '') + '|' + (e.kind === 'tools' ? e.tools.length + ':' + e.tools[e.tools.length - 1].id : e.kind === 'usage' ? e.u.i + ',' + e.u.o + ',' + e.u.r + ',' + e.u.w + ',' + e.model : e.kind === 'order' ? e.toolId + ',' + e.bg + ',' + e.title : e.kind === 'finish' ? e.ts : '');   // everything about an event that can differ from one build to the next. Its text, its tool calls, its results and its time never do: they come from one transcript record (same key = same record); and `t` moves only when time zero does, which feedStep looks at once for all
+const sigOf = (e) => e.kind + '|' + e.agent + '|' + (e.to || '') + '|' + (e.end || '') + '|' + (e.kind === 'tools' ? e.tools.length + ':' + e.tools[e.tools.length - 1].id + ':' + e.tools.map((t) => (t.d && t.d.kind === 'plan' ? (t.d.text || '').length + (t.d.text || '').slice(-24) : '')).join(',') : e.kind === 'usage' ? e.u.i + ',' + e.u.o + ',' + e.u.r + ',' + e.u.w + ',' + e.model : e.kind === 'order' ? e.toolId + ',' + e.bg + ',' + e.title + ',' + e.text : e.kind === 'finish' ? e.ts : '');   // everything about an event that can differ from one build to the next (a plan's text too: its answer names the plan approved). Except for an order's late-arriving prompt, its text, its tool calls, its results and its time never do: they come from one transcript record (same key = same record); and `t` moves only when time zero does, which feedStep looks at once for all
 function feedStep(prev, tl, files) {
   let f = prev && files.every((x) => { const was = prev.gens.get(x); return was === undefined || was === (fileStates.get(x) || {}).gen; }) ? prev : null;   // a transcript read again from its start numbers its events again: the keys no longer mean the same thing
   for (let pass = 0; ; pass++) {
     if (!f) f = { ep: crypto.randomBytes(6).toString('hex'), seq: 0, known: new Map(), gens: new Map() };
-    const n = tl.events.length, sq = new Uint32Array(n), seq = f.seq + 1, before = f.known.size, z = tl.events.find((e) => e.kind !== 'usage' && e.kind !== 'finish' && e.kind !== 'compact'), t0 = z ? z.ts : 0, moved = f.t0 !== t0; let hits = 0, changed = false; f.t0 = t0;   // time zero moved (something now comes before the first line): every `t` is different
+    const n = tl.events.length, sq = new Uint32Array(n), seq = f.seq + 1, before = f.known.size, z = tl.events.find((e) => e.kind !== 'usage' && e.kind !== 'finish' && e.kind !== 'compact' && e.kind !== 'tasks'), t0 = z ? z.ts : 0, moved = f.t0 !== t0; let hits = 0, changed = false; f.t0 = t0;   // time zero moved (something now comes before the first line): every `t` is different
     for (let i = 0; i < n; i++) {
       const e = tl.events[i], s = sigOf(e), was = f.known.get(e.k);
       if (was) { hits++; if (was.s !== s || moved) { was.s = s; was.q = seq; changed = true; } sq[i] = was.q; } else { f.known.set(e.k, { s, q: seq }); sq[i] = seq; changed = true; }
@@ -368,7 +503,30 @@ const feedSince = (entry, after) => { const ev = entry.tl.events, sq = entry.sq,
 // ---- Board: one cheap row per recent session (state from the tail of its transcript), so many parallel sessions can be watched at once.
 const readTail = (file, bytes) => { const fd = fs.openSync(file, 'r'); try { const sz = fs.fstatSync(fd).size, n = Math.min(bytes, sz), buf = Buffer.alloc(n); fs.readSync(fd, buf, 0, n, sz - n); return { text: buf.toString('utf8'), cut: sz > bytes }; } finally { fs.closeSync(fd); } };
 const readHead = (file, bytes) => { const fd = fs.openSync(file, 'r'); try { const n = Math.min(bytes, fs.fstatSync(fd).size), buf = Buffer.alloc(n); fs.readSync(fd, buf, 0, n, 0); return buf.toString('utf8'); } finally { fs.closeSync(fd); } };
+// Since Claude Code 2.1.300 a transcript also keeps each request it sent (system prompt, tools, parameters) and a snapshot of the prompt: lines of 100 KB and more, about 40% of a new file.
+// A card reads the last 192 KB of the other records: further back when those fill it (3 MB at most). Right after an order, the order itself was out of the 192 KB 1 time in 20.
+const BULKY = /^\{"type":"api-request|"attachment":\{"type":"prompt_snapshot"/, TAIL = 192 * 1024;
+function boardTail(file) {
+  for (let n = TAIL; ; n *= 4) { const { text, cut } = readTail(file, n), lines = text.split('\n'); if (cut) lines.shift(); let rest = 0; for (const l of lines) if (!BULKY.test(l.slice(0, 200))) rest += l.length; if (!cut || rest >= TAIL || n >= 3 * 1024 * 1024) return { lines, cut }; }
+}
 const APPROVAL = /^(Edit|Write|MultiEdit|NotebookEdit)/, ASKS = /^(AskUserQuestion|ExitPlanMode)/, SUBTOOL = /^(Task|Agent)$/;
+// A turn that ended without doing what was asked ("I couldn't verify how old the posts were, so 0 drafts"): to the eye, the same "your turn" as one that did. It says so in its first sentence;
+// later on, "I couldn't" is mostly a caveat on work that was done ("Done. I couldn't test on Windows"), and so is a first sentence that says what worked before a "but". On 1,676 real ends of turn
+// this flags 11, each a real "could not". A turn that ended on an error Claude Code wrote itself (the API, the login, the limit) is one too; "No response requested." is not.
+const GAVE = /\b(?:I|we) (?:couldn't|could not|can't|cannot|wasn't able to|was unable to|am unable to|'m unable to|was not able to|failed to|did not manage|didn't manage)\b|\b(?:gave up|giving up|unable to (?:proceed|continue|complete))\b|je n'ai pas (?:pu|réussi)|\bimpossible de\b|\bje ne (?:peux|parviens|suis pas parvenu)|je n'arrive pas|\bno (?:pude|he podido|puedo|logré)\b|\bnão (?:consegui|posso|pude)\b|\bich (?:konnte|kann) (?:\S+ )?nicht\b/i;
+// "I couldn't find any bugs", "I can't see a problem with it", "I can't reproduce it: it already works": a check that came out clean, not work left undone.
+const CLEAN = /^\s+(?:(?:find|see|spot|detect|identify|trouver|voir|repérer|détecter|relever)\b[^.!?,;:]{0,30}?\b(?:bugs?|issues?|problems?|errors?|regressions?|mistakes?|flaws?|faults?|wrong|problèmes?|erreurs?|soucis|anomalies?|fautes?)\b|(?:reproduce|reproduire)\b[^.!?]{0,60}?\b(?:works|working|passes|already|fonctionne|marche|déjà|passent)\b)/i;
+function gaveUp(text) {   // the first sentence when it says it could not, else ''
+  const s = String(text || '').replace(/[’‘]/g, "'").replace(/^\s*#{1,6} ([^\n]*)\n+/, (h, t) => (GAVE.test(t) ? t + '. ' : '')).replace(/^[#>*\s]+/, '').replace(/\*\*/g, ''), m = s.match(/^[\s\S]{0,240}?[.!?:](?:\s|$)/), lead = (m ? m[0] : s.slice(0, 240)).trim(), all = new RegExp(GAVE.source, 'gi');
+  for (let f; (f = all.exec(lead));) {   // each "could not" of the sentence: one that is a clean check does not count, the next one may
+    if (CLEAN.test(s.slice(f.index + f[0].length, f.index + f[0].length + 200))) continue;   /* s, not lead: "I can't reproduce it: it already works" goes on after the colon (s and lead start at the same place) */
+    if (/\b(?:but|though|however|mais|cependant|pero|mas|aber)\b|;/i.test(lead.slice(0, f.index))) return '';
+    const rest = lead.slice(f.index + f[0].length), clear = /,\s*(?:but|however) (?:I|we) (?!(?:couldn't|could not|can't|cannot|didn't|did not|still)\b)|,\s*mais j'ai\b|,\s*pero (?:he|hemos)\b|\binstead\b(?! of)|\bà la place\b|,\s*so (?:I|we) (?:ran|used|switched|fell back|went with|worked around|tested|checked|verified|fixed|replaced|chose)\b|,\s*so (?:it|this|that|the \w+)(?:'s| is| are) (?:safe|done|complete|ready)\b/i;
+    if (clear.test(rest) && !/\b(?:still|also fails?|fail(?:s|ed)?|doesn't|didn't|won't|couldn't|can't|cannot|not|only|untested|yourself|left|what I could|partly|partially)\b|, but (?!I |we )/i.test(rest)) return '';   /* the same sentence goes on to what was done instead ("I couldn't reproduce it, but I found the cause", "…, so I switched to https.get"); not "…, so I wrote 0 drafts", a workaround that failed too, or work handed back ("but the commit is ready: push it yourself") */
+    return lead.replace(/\s+/g, ' ').replace(/\s*:$/, '');
+  }
+  return '';
+}
 const boardCache = new Map();   // file → { sig, parsed, title }
 let boardMemo = { at: 0, rows: [] }, boardForced = 0;
 const PR_URL = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;   // nothing else is given to the page as a link to open
@@ -376,6 +534,7 @@ const askOf = (b) => { const q = b.name === 'AskUserQuestion' && b.input && Arra
 const callOf = (b) => { const i = b.input || {}, v = b.name === 'Bash' ? i.command : /^(Edit|Write|MultiEdit|NotebookEdit)$/.test(b.name) ? path.basename(String(i.file_path || i.notebook_path || '')) : b.name === 'WebFetch' ? i.url : ''; return typeof v === 'string' && v.trim() ? b.name + '(' + clip(v.replace(/\s+/g, ' ').trim(), 160) + ')' : ''; };   // what a call waiting for your go-ahead would do, written the way Claude Code shows it: Bash(npm test)
 const PLAN_FILE = /[\\/]\.claude[\\/]plans[\\/][^\\/]+\.md$/, PLAN_DIR = process.env.CLAUDE_CONFIG_DIR ? path.join(process.env.CLAUDE_CONFIG_DIR, 'plans') + path.sep : '';
 const planFile = (f) => PLAN_FILE.test(f) || (!!PLAN_DIR && f.startsWith(PLAN_DIR) && f.endsWith('.md'));   // also where a CLAUDE_CONFIG_DIR set elsewhere keeps them
+const planDoc = (f) => { try { const st = fs.statSync(f); if (!st.isFile() || st.size > 262144) return ''; return clip(fs.readFileSync(f, 'utf8').trim(), 4000); } catch { return ''; } };   // the whole plan, for the shared screen
 const planText = (f) => { try { const st = fs.statSync(f); if (!st.isFile() || st.size > 262144) return ''; return clip(fs.readFileSync(f, 'utf8').trim(), 1200); } catch { return ''; } };
 const menuOf = (b) => {   // what a menu waiting for you shows, from the call it waits on, word for word: the questions and their options in their order (the terminal numbers them the same way), the command, the file, the plan
   const i = b.input || {}, t = (x, n) => (typeof x === 'string' ? clip(x.trim(), n) : '');
@@ -390,10 +549,32 @@ const menuOf = (b) => {   // what a menu waiting for you shows, from the call it
 // It is the only sign of a Bash approval: in the transcript, a command waiting for your go-ahead looks just like one that runs. A file whose process has ended is left out.
 const CC_SESSIONS = process.env.AGENT_STANDUP_CC_SESSIONS || path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'sessions');
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
-function liveStatus() {   // session id → { status, since }
+function liveStatus() {   // session id → { status, since, pid, ep (where it runs: claude-vscode, cli, claude-desktop, sdk-cli…), and for missingTranscripts: raw (the status as written), cwd, kind, startedAt, version, updatedAt (when the file was last written: a /clear moves it, and the id, but not statusUpdatedAt) }
   const out = new Map(); let names = []; try { names = fs.readdirSync(CC_SESSIONS); } catch { return out; }
-  for (const n of names) { if (!/^\d+\.json$/.test(n)) continue; try { const s = JSON.parse(fs.readFileSync(path.join(CC_SESSIONS, n), 'utf8')); if (s && typeof s.sessionId === 'string' && /^(busy|idle|waiting)$/.test(s.status) && Number.isInteger(s.pid) && s.pid > 0 && alive(s.pid)) out.set(s.sessionId, { status: s.status === 'waiting' && s.waitingFor === 'dialog open' ? 'idle' : s.status, since: Number(s.statusUpdatedAt) || 0 }); } catch {} }   /* a dialog you opened yourself (/model, /config, /mcp…) also says waiting: it is not a question for you */
+  for (const n of names) { if (!/^\d+\.json$/.test(n)) continue; try { const s = JSON.parse(fs.readFileSync(path.join(CC_SESSIONS, n), 'utf8')); if (s && typeof s.sessionId === 'string' && /^(busy|idle|waiting)$/.test(s.status) && Number.isInteger(s.pid) && s.pid > 0 && alive(s.pid)) out.set(s.sessionId, { status: s.status !== 'waiting' ? s.status : s.waitingFor === 'dialog open' ? 'idle' : s.entrypoint === 'sdk-cli' ? 'busy' : s.status, since: Number(s.statusUpdatedAt) || 0, pid: s.pid, ep: String(s.entrypoint || ''), raw: s.status, cwd: typeof s.cwd === 'string' ? s.cwd : '', kind: typeof s.kind === 'string' ? s.kind : '', startedAt: Number(s.startedAt) || 0, version: typeof s.version === 'string' ? s.version : '', updatedAt: Number(s.updatedAt) || 0 }); } catch {} }   /* a dialog you opened yourself (/model, /config, /mcp…) also says waiting: it is not a question for you. Nor is a menu of a session started with claude -p (entrypoint sdk-cli): its question goes to the program that started it. An Agent SDK host (sdk-ts, sdk-py: Zed, a home-made app) may show its menus to a person, so those are kept */
   return out;
+}
+// A Claude Code session that is open and has worked, yet whose transcript is nowhere in the projects folder read here. The call cannot show it; the page says so, and why it may be (issue #9). Read from the status files alone, nothing sent.
+// Only one cause is visible this way (Claude Code 2.1.304, tried): CLAUDE_CODE_SKIP_PROMPT_HISTORY=1 writes the status file (interactive, idle/busy) and shows "Transcript saving is off", but no transcript.
+// An inherited CLAUDE_CODE_CHILD_SESSION=1 writes neither, and another CLAUDE_CONFIG_DIR puts the status file in that other folder: neither leaves anything here. What is listed may also be a cause not known yet.
+// Listed only once this server has seen the session busy, under its current id, for 5 s: a session just opened, one where you opened /model or /config, and one right after /clear
+// (a new id and updatedAt, while status and statusUpdatedAt are still those of the id before) have written no transcript yet, and need none.
+let missingMemo = { at: 0, list: [] }; const transcriptSeen = new Set(), busySeen = new Map();   // transcriptSeen: ids found once are not looked for again, a transcript stays where it was written · busySeen: id → when it was first seen busy (at most 500)
+function missingTranscripts() {   // [{ id, cwd, name, version, ep, since }]: one look every 10 s at most
+  if (process.env.AGENT_STANDUP_PROJECTS && !process.env.AGENT_STANDUP_CC_SESSIONS) return [];   // sessions read from another folder than the one these status files belong to: every live session would look as if it wrote nothing
+  const now = Date.now(); if (now - missingMemo.at < 10e3) return missingMemo.list;
+  const list = []; let dirs = null;
+  for (const [id, w] of liveStatus()) {
+    if ((w.kind && w.kind !== 'interactive') || /^sdk-(cli|ts|py)$/.test(w.ep) || transcriptSeen.has(id) || !/^[\w-]+$/.test(id)) continue;   // a session a program runs keeps no transcript a person would look for
+    if (w.raw === 'busy' && w.since >= w.updatedAt && !busySeen.has(id)) { if (busySeen.size >= 500) busySeen.delete(busySeen.keys().next().value); busySeen.set(id, Math.min(now, w.since || now)); }   // a status written for this id (an older Claude Code writes no updatedAt: 0)
+    if (!(now - (busySeen.get(id) || now) >= 5e3)) continue;   // Claude Code writes the transcript with the first message: never busy yet, or only just
+    const name = id + '.jsonl', key = w.cwd.replace(/[^a-zA-Z0-9]/g, '-');   // Claude Code's project folder naming: the folder of its cwd, looked at first
+    if ((key && mtimeOf(path.join(ROOT, key, name))) || coworkMap().has(id)) { transcriptSeen.add(id); continue; }
+    if (!dirs) { dirs = []; try { dirs = fs.readdirSync(ROOT); } catch {} }   // a long path is shortened in its folder name: every folder, then
+    if (dirs.some((d) => mtimeOf(path.join(ROOT, d, name)))) { transcriptSeen.add(id); continue; }
+    list.push({ id, cwd: w.cwd, name: w.cwd ? path.basename(w.cwd) : '', version: w.version, ep: w.ep, since: w.startedAt || w.since });
+  }
+  missingMemo = { at: now, list }; return list;
 }
 // When the person last did something in a session: an order, a slash command, a "!" command, an order typed while the lead was working. It is what moves the live call (see currentSession).
 // Not what the harness writes as a user record: the result of a tool, a reminder, the news that a background task ended, the summary of a compaction, an Esc.
@@ -411,20 +592,89 @@ function typedBefore(file) {   // the first look at a session whose last order i
   for (let i = lines.length - 1; i >= (cut ? 1 : 0); i--) { if (!lines[i].includes('"type":"user"') && !lines[i].includes('"queued_command"')) continue; try { const a = typedAt(JSON.parse(lines[i])); if (a) return a; } catch {} }
   return 0;
 }
+// Answer in Claude Code: a click on what needs you goes where it can be answered. The session's process (its status file) leads to the editor window that runs it: each Agent Standup
+// extension notes its window in <settings folder>/editors/<extension host pid>.json (its link scheme, its window number), and Claude Code's extension opens
+// <scheme>://anthropic.claude-code/open?session=<id>&windowId=<n> in that window, which brings up the session's tab. Without that note: the editor among the session's parent processes (macOS),
+// in whichever window was last used. A session in a terminal or in the Claude app (macOS): that app is brought to the front. Nothing leaves the computer: a local link or app is opened.
+const editorsDir = () => path.join(path.dirname(PREFS), 'editors'), EDITOR_APPS = [[/Visual Studio Code - Insiders\.app|Code - Insiders\.app/, 'vscode-insiders'], [/Visual Studio Code\.app|\/Code\.app\//, 'vscode'], [/\/Cursor\.app\//, 'cursor'], [/\/Windsurf\.app\//, 'windsurf'], [/\/VSCodium\.app\//, 'vscodium']];
+function noteEditor(info) {   // the extension, for its window: { scheme, windowId } (forgetEditor when the window closes)
+  try {
+    const d = editorsDir(); fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(path.join(d, process.pid + '.json'), JSON.stringify({ pid: process.pid, ppid: process.ppid, scheme: String((info && info.scheme) || ''), windowId: String((info && info.windowId) || '') }));   // ppid: a note left by a crash is not taken for another process that gets its number
+    for (const n of fs.readdirSync(d)) { const p = +n.replace(/\.json$/, ''); if (/^\d+\.json$/.test(n) && !alive(p)) try { fs.unlinkSync(path.join(d, n)); } catch {} }   // the notes of windows that closed without saying so
+  } catch (e) { logError('editor note', e); }
+}
+function forgetEditor() { try { fs.unlinkSync(path.join(editorsDir(), process.pid + '.json')); } catch {} }
+function procTree() {   // pid → { ppid, cmd }: one look at every process (macOS and Linux; nothing on Windows)
+  const m = new Map(); if (process.platform === 'win32') return m;
+  try { for (const l of execFileSync('ps', ['-axo', 'pid=,ppid=,comm='], { encoding: 'utf8', timeout: 3000, maxBuffer: 16 << 20 }).split('\n')) { const x = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(l); if (x) m.set(+x[1], { ppid: +x[2], cmd: x[3] }); } } catch {}
+  return m;
+}
+function openLocal(args) {   // a link or an app, opened as a click on it would be (AGENT_STANDUP_ANSWER=dry: said, not opened, for the tests)
+  if (process.env.AGENT_STANDUP_ANSWER === 'dry') return;
+  const [cmd, a] = process.platform === 'darwin' ? ['open', args] : process.platform === 'win32' ? ['rundll32', ['url.dll,FileProtocolHandler', args[args.length - 1]]] : ['xdg-open', [args[args.length - 1]]];
+  try { spawn(cmd, a, { stdio: 'ignore', detached: true, windowsHide: true }).on('error', () => {}).unref(); } catch {}
+}
+function answerIn(id, opts = {}) {   // { how: 'editor' | 'app' | '', app, link }: where the session that waits can be answered, opened. opts.here(id): the extension, for a session of its own window (no link, and no prompt from the editor)
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id))) return { how: '' };
+  const w = liveStatus().get(String(id)); if (!w || !w.pid || !/^(claude-vscode|cli|claude-desktop)$/.test(w.ep)) return { how: '' };   // a session a program runs (sdk-…) has no one to answer it there
+  const tree = procTree(), up = []; for (let p = w.pid, i = 0; p > 1 && i < 20 && tree.has(p); i++) { up.push(p); p = tree.get(p).ppid; }
+  const link = (scheme, win) => `${scheme}://anthropic.claude-code/open?session=${String(id).toLowerCase()}${win ? '&windowId=' + win : ''}`;
+  if (w.ep === 'claude-vscode') {
+    for (const p of up) {   // the window that runs it: its extension host is one of its parents
+      let e = null; try { e = JSON.parse(fs.readFileSync(path.join(editorsDir(), p + '.json'), 'utf8')); } catch {} if (!e || e.ppid !== tree.get(p).ppid) continue;
+      if (e.pid === process.pid && typeof opts.here === 'function') { try { opts.here(String(id).toLowerCase()); } catch {} return { how: 'editor', here: 1 }; }
+      if (/^[a-z][a-z0-9+.-]{1,30}$/.test(e.scheme) && /^\d{1,9}$/.test(String(e.windowId))) { const l = link(e.scheme, e.windowId); openLocal([l]); return { how: 'editor', link: l }; }
+    }
+    for (const p of up) for (const [re, scheme] of EDITOR_APPS) if (re.test(tree.get(p).cmd)) {   // no note: the link goes to the editor's last used window, so only when it has one (one extension host); else the editor comes to the front, and its tab is yours to pick
+      const host = tree.get(p).cmd, hosts = [...tree.values()].filter((x) => x.cmd === host && (tree.get(x.ppid) || {}).cmd !== host).length;   // an extension host per window, started by the app itself (language servers and the like are its children)
+      if (hosts === 1 && /Helper \(Plugin\)/.test(host)) { const l = link(scheme, ''); openLocal([l]); return { how: 'editor', link: l }; }
+      break;
+    }
+  }
+  if (process.platform === 'darwin' && up.some((p) => /\/iTermServer/.test(tree.get(p).cmd))) { openLocal(['-b', 'com.googlecode.iterm2']); return { how: 'app', app: 'iTerm' }; }   // iTerm2 runs its shells under a server of its own, not under the app
+  if (process.platform === 'darwin') for (const p of up.slice().reverse()) { const m = /^(\/.+?\.app)\//.exec(tree.get(p).cmd); if (m) { openLocal(['-a', m[1]]); return { how: 'app', app: path.basename(m[1], '.app') }; } }   // the outermost app: Terminal, iTerm, Claude…
+  return { how: '' };
+}
+// Does this session's Claude Code write a status in ~/.claude/sessions (the terminal since 2.1.221; the VS Code panel, the desktop app's Code tab and the Agent SDK since 2.1.269; Cowork keeps its own elsewhere)?
+// Where it does, no status means its process has ended: a question left open there was given up, not asked.
+const verAtLeast = (v, min) => { const x = String(v || '').split('.').map((n) => parseInt(n, 10) || 0); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== min[i]) return (x[i] || 0) > min[i]; return true; };
+const statusWritten = (proj, p) => proj !== COWORK && !!p.ver && p.ep !== 'local-agent' && verAtLeast(p.ver, p.ep === 'cli' ? [2, 1, 221] : [2, 1, 269]);
+// The error Claude Code writes as the last message when it cannot go on: your plan's usage limit ("You've hit your limit · resets 7:20pm (Europe/Paris)"; before, "Claude AI usage limit reached|<epoch>",
+// "5-hour limit reached ∙ resets 3pm"…) or a login that is gone ("Not logged in · Please run /login", "Failed to authenticate: OAuth session expired…", "Invalid API key"). Said as what it is, not as "gave up".
+const LIMIT_ERR = /hit your (?:[\w-]+ )?limit|\b(?:usage|5-hour|weekly|daily|monthly|session|spend(?:ing)?) (?:[\w-]+ )?limit (?:reached|exceeded)|limit will reset/i, NOT_LIMIT = /context|not your usage limit|temporarily limiting/i;
+const AUTH_ERR = /not logged in|please run \/login|oauth (?:token|session) (?:has )?expired|failed to authenticate|invalid api key|authentication_error/i;
+function errKind(text, code) {   // { limit: { resets } } | { auth: 1 } | null; code: the error field of the record (authentication_failed…), which older versions do not write
+  if (code === 'authentication_failed') return { auth: 1 };
+  if (!LIMIT_ERR.test(text) || NOT_LIMIT.test(text)) return AUTH_ERR.test(text) ? { auth: 1 } : null;   // a limit first: its text may offer /login to switch accounts
+  const at = /limit reached\|(\d{9,11})\b/i.exec(text), m = /\breset(?:s)?(?: at)?\s+([^\n·∙|]+)/i.exec(text);
+  let resets = m ? m[1].trim().replace(/\.$/, '').slice(0, 80) : ''; if (!resets && at) { const d = new Date(+at[1] * 1000); resets = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }   // the oldest form gives the time as a number: said in this computer's hours
+  return { limit: { resets } };
+}
 function parseTail(file, st) {
   const sig = st.mtimeMs + ':' + st.size, hit = boardCache.get(file); if (hit && hit.sig === sig) return hit;
-  const { text, cut } = readTail(file, 192 * 1024), lines = text.split('\n'); if (cut) lines.shift();
-  const pend = new Map(); let lastType = null, lastTool = false, lastStop = null, stops = false, esc = false, lastTs = 0, custom = (hit && hit.custom) || null, ai = (hit && hit.ai) || null, first = hit ? hit.first : undefined, pr = (hit && hit.pr) || null, asked = (hit && hit.asked) || 0, plan = (hit && hit.plan) || null;
+  const { lines, cut } = boardTail(file);
+  const pend = new Map(), bg = new Map(), runs = new Map(); let ver = '', ep = '', idle = false, lastType = null, lastTool = false, lastStop = null, stops = false, esc = false, lastTs = 0, stamp = 0, bare = false, custom = (hit && hit.custom) || null, ai = (hit && hit.ai) || null, first = hit ? hit.first : undefined, pr = (hit && hit.pr) || null, asked = (hit && hit.asked) || 0, plan = (hit && hit.plan) || null, say = '', err = '', errK = null;   // say: the first text since the last call or message of yours, the start of what closes the turn; err: an error that closed it, errK: what kind (errKind)
   for (const l of lines) try {   // one odd record costs that record, not the whole card
     if (!l) continue; let r; try { r = JSON.parse(l); } catch { continue; }
-    const a = typedAt(r); if (a > asked) asked = a;
+    const a = typedAt(r); if (a > asked) asked = a; if (a && r.type === 'user') pend.clear(); if (typeof r.version === 'string') ver = r.version; if (typeof r.entrypoint === 'string') ep = r.entrypoint;   /* which Claude Code, and where: does it write a status that says a menu is open (statusWritten) */   /* an order of yours: a call still without its answer was given up (a menu you passed over by typing, a session closed mid-call), it waits on nothing any more */
     if (r.type === 'custom-title' && typeof r.customTitle === 'string') custom = r.customTitle; else if (r.type === 'ai-title' && typeof r.aiTitle === 'string') ai = r.aiTitle;   // a session is renamed, or named, long after its row was first shown: the latest one read wins
     if (r.type === 'pr-link' && PR_URL.test(r.prUrl)) pr = { n: +r.prUrl.slice(r.prUrl.lastIndexOf('/') + 1), url: r.prUrl };   // the pull request Claude Code noted for the session: the latest one, shown on its card
-    const t = Date.parse(r.timestamp) || 0, bl = blocks(r);
-    if (r.type === 'assistant' || r.type === 'user') { lastType = r.type; lastTool = bl.some((b) => b.type === 'tool_use'); lastStop = (r.type === 'assistant' && r.message && r.message.stop_reason) || null; if (lastStop) stops = true; if (t) lastTs = t;
+    const t = Date.parse(r.timestamp) || 0, bl = blocks(r); if (t) { stamp = t; bare = false; } else bare = true;   // bare: only records without a time since the last one that has one (last-prompt, ai-title, mode, cost-state…), which Claude Code also writes when its tab is closed: no one moved there
+    if (r.type === 'system' && r.subtype === 'compact_boundary') idle = /^idle/.test(String((r.compactMetadata && r.compactMetadata.trigger) || ''));   // Claude Code 2.1.299 compacts a large session left idle for about 54 minutes: nobody moved there
+    if (r.isCompactSummary) continue;   // the summary of a compaction is not a message: the turn stands as it was
+    if (r.type === 'assistant' || r.type === 'user') { idle = false; lastType = r.type; lastTool = bl.some((b) => b.type === 'tool_use'); lastStop = (r.type === 'assistant' && r.message && r.message.stop_reason) || null; if (lastStop) stops = true; if (t) lastTs = t;
       esc = r.type === 'user' && bl.some((b) => b.type === 'text' && /^\s*\[Request interrupted/i.test(b.text || '')); if (esc) pend.clear(); }   // Esc: the turn stops there, and no call is waited for any more
+    if (r.type === 'user' || (r.type === 'assistant' && lastTool)) { say = ''; err = ''; errK = null; }
+    else if (r.type === 'assistant' && !r.isSidechain) { const tx = bl.filter((b) => b.type === 'text' && typeof b.text === 'string').map((b) => b.text).join('\n').trim(), m = r.message || {}; err = (r.isApiErrorMessage || m.model === '<synthetic>') && tx && !/^No response requested/i.test(tx) ? tx : ''; errK = err ? errKind(err, r.error) : null; if (tx && !say) say = tx; }
     for (const b of bl) if (b.type === 'tool_use' && /^(Write|Edit|MultiEdit)$/.test(b.name) && b.input && planFile(String(b.input.file_path || ''))) plan = { file: String(b.input.file_path), ts: t };   // the plan, written in its own file before it is shown for approval
     for (const b of bl) { if (b.type === 'tool_use') pend.set(b.id, { id: String(b.id || ''), name: b.name, ts: t, q: askOf(b), c: callOf(b), m: menuOf(b) }); else if (b.type === 'tool_result') pend.delete(b.tool_use_id); }
+    if (r.type === 'user' && !r.isSidechain) for (const b of bl) {   // the sub-agents the lead launched in the background, until the news that each one ended (Claude Code 2.1.302 runs them all in the background in VS Code and the desktop app)
+      if (b.type === 'tool_result') { const rt = resultText(b.content), m = /^\s*Async agent launched[\s\S]*?agentId: ?([\w-]+)/i.exec(rt), wf = !m && /^\s*Workflow launched in background\.\s*Task ID: ?([\w-]+)/i.exec(rt); if (m) bg.set(m[1], t);
+        else if (wf) { bg.set(wf[1], t); const run = /\bRun ID: ?([\w-]+)/.exec(rt) || /[\\/]subagents[\\/]workflows[\\/]([\w-]+)/.exec(rt); if (run) runs.set(wf[1], run[1]); } }   // a workflow too, until the news of its task id; its agents write in subagents/workflows/<run id>
+      else if (b.type === 'text') for (const m of String(b.text || '').matchAll(/<task-notification>[\s\S]*?<task-id>([\w-]+)<\/task-id>/g)) bg.delete(m[1]);
+    }
+    const queued = r.isSidechain ? '' : r.type === 'attachment' && r.attachment && r.attachment.type === 'queued_command' && typeof r.attachment.prompt === 'string' ? r.attachment.prompt : r.type === 'queue-operation' && r.operation === 'enqueue' && typeof r.content === 'string' ? r.content : '';
+    for (const m of queued.matchAll(/<task-notification>[\s\S]*?<task-id>([\w-]+)<\/task-id>/g)) bg.delete(m[1]);   // before Claude Code 2.1.302 the news that a background agent ended is often only queued (and handed over inside the next order): it has ended all the same
   } catch {}
   if (!hit && !custom) {   // first look at this file: a little further back than the lines read above, and without needing whole lines
     const big = readTail(file, 256 * 1024).text, un = (m) => { try { return m ? JSON.parse('"' + m[1] + '"') : null; } catch { return null; } };
@@ -432,8 +682,8 @@ function parseTail(file, st) {
   }
   if (!custom && !ai && first == null) first = firstPrompt(file) || (st.size > 64 * 1024 ? '' : null);   // '' = looked for and not there; a file that has just been created is looked at again
   if (!hit && !asked && cut) asked = typedBefore(file);
-  const out = { sig, title: custom || ai || first || null, custom, ai, first, pr, lastType, lastTool, lastStop, stops, esc, lastTs, pending: [...pend.values()] };   // a title the person typed wins over the generated one, and both over the first prompt
-  out.asked = asked; out.plan = plan; boardCache.set(file, out); if (boardCache.size > 3 * ROWS_MAX) boardCache.delete(boardCache.keys().next().value); return out;   // more than the list can hold: a full list never pushes its own rows out, which read every row again at each scan
+  const out = { sig, title: custom || ai || first || null, custom, ai, first, pr, lastType, lastTool, lastStop, stops, esc, lastTs, pending: [...pend.values()], ...(lastType === 'assistant' && errK ? errK : lastType === 'assistant' && (err || gaveUp(say)) ? { gave: (err || gaveUp(say)).replace(/\s+/g, ' ').slice(0, 240) } : {}) };   // limit, auth: it stopped on your usage limit, or a login that is gone, not of its own accord   // a title the person typed wins over the generated one, and both over the first prompt
+  out.ver = ver || (hit && hit.ver) || ''; out.ep = ep || (hit && hit.ep) || ''; out.asked = asked; out.plan = plan; out.bg = [...bg].filter(([, ts]) => ts >= asked).map(([k, ts]) => (runs.has(k) ? [k, ts, runs.get(k)] : [k, ts])); if (idle && lastTs) out.quiet = lastTs; else if (bare && stamp) out.quiet = stamp; boardCache.set(file, out); if (boardCache.size > 3 * ROWS_MAX) boardCache.delete(boardCache.keys().next().value); return out;   // more than the list can hold: a full list never pushes its own rows out, which read every row again at each scan
 }
 function firstPrompt(file) {   // the first thing the person typed, read record by record: a pattern over the raw text ran from a user record into the assistant's first answer and took that as the title
   const ONE = (t) => t.replace(/\s+/g, ' ').trim().slice(0, 90);
@@ -458,6 +708,19 @@ function capRows(list, most, folderOf) {   // list: newest first
   for (const r of real) { if (keep.size >= ROWS_MAX) break; const k = folderOf(r), n = per.get(k) || 0; if (n < PER_FOLDER) { keep.add(r); per.set(k, n + 1); } }
   return real.filter((r) => keep.has(r)).concat(list.filter((r) => tmpKey(folderOf(r))).slice(0, TMP_ROWS));
 }
+function bgAtWork(proj, id, bg, now) {   // bg: [agent id, launched at] or [workflow task id, launched at, run id]. Still at work: not marked finished in its meta file (Claude Code 2.1.302 on) and written to, or launched, in the last 30 minutes
+  for (const [aid, ts, run] of bg || []) {
+    if (!/^[\w-]+$/.test(aid)) continue;
+    if (run) {   // a workflow: done once Claude Code writes its record in <session>/workflows/<run>.json (it does at the end); at work while one of its agents wrote in the last 30 minutes
+      if (!/^[\w-]+$/.test(run)) continue; const d = path.join(projDir(proj, id), id), wd = path.join(d, 'subagents', 'workflows', run); let last = 0; const w = readMeta(path.join(d, 'workflows', run + '.json')), done = !!w && typeof w === 'object' && Object.keys(w).length > 0 && !/^(running|pending)$/.test(String(w.status));   // readMeta: read again only when the file changes
+      if (!done) { try { for (const f of fs.readdirSync(wd)) if (f.endsWith('.jsonl')) last = Math.max(last, mtimeOf(path.join(wd, f))); } catch {} if (now - Math.max(last, ts || 0) < 30 * 60e3) return true; }
+      continue;
+    } const f = path.join(projDir(proj, id), id, 'subagents', 'agent-' + aid);
+    const done = (readMeta(f + '.meta.json') || {}).finished === true;
+    if (!done && now - Math.max(mtimeOf(f + '.jsonl'), ts || 0) < 30 * 60e3) return true;
+  }
+  return false;
+}
 function boardRows0() {
   const now = Date.now(), rows = [], live = liveStatus();
   for (const m of SOURCES) for (const r of guard(() => m.sessions(), [])) if (now - r.mtime < 12 * 3600e3) rows.push({ proj: m.PROJ, id: r.id, st: { mtimeMs: r.mtime, size: r.size }, cx: r, src: m });
@@ -469,22 +732,24 @@ function boardRows0() {
   return capRows(rows.filter((r) => !r.cx && r.proj !== COWORK), 40, own).concat(...SOURCES.map((m) => capRows(rows.filter((r) => r.src === m), 20, folder)), rows.filter((r) => r.proj === COWORK).slice(0, 20)).sort((a, b) => b.st.mtimeMs - a.st.mtimeMs).map(({ proj, id, st, cx, src }) => {
     if (cx) { const r = guard(() => src.boardRow(cx, now), null); if (r && tmpKey(r.dir)) r.tmp = 1; return r; }   // tmp: started in the temporary folder (see tmpKey)
     const file = path.join(projDir(proj, id), id + '.jsonl'); let p; try { p = parseTail(file, st); } catch { p = { pending: [] }; }
-    const age = now - st.mtimeMs, pend = p.pending || [], w = live.get(id), lp = (w && w.status === 'waiting' && pend.find((c) => !SUBTOOL.test(c.name))) || pend[pend.length - 1]; let state = 'idle', tool = '', ageMs = age, since = 0, open = null;   // lp: with a menu open and several calls waiting, Claude Code asks about the first of them
+    const moved = p.quiet || st.mtimeMs, age = now - moved, pend = p.pending || [], w = live.get(id), lp = (w && w.status === 'waiting' && pend.find((c) => !SUBTOOL.test(c.name))) || pend[pend.length - 1]; let state = 'idle', tool = '', ageMs = age, since = 0, open = null, maybe = 0, asks = 0;   // lp: with a menu open and several calls waiting, Claude Code asks about the first of them
     if (w && w.status === 'waiting' && lp) { state = 'blocked'; tool = lp.name; since = w.since || lp.ts || st.mtimeMs; ageMs = now - since; }   // a menu is open in the session and a call waits on it: it needs you now, however long ago it was written
     else if (w && w.status === 'waiting') { state = 'blocked'; since = w.since || st.mtimeMs; ageMs = now - since; const pt = p.plan && p.plan.ts > (p.asked || 0) ? planText(p.plan.file) : ''; open = { id: 'w' + since, tool: pt ? 'ExitPlanMode' : '', ...(pt ? { kind: 'plan', text: pt } : { kind: 'menu' }), sure: 1 }; }   // a menu is open and the transcript has no call waiting on it: the plan to approve (Claude Code writes that call only once it is answered, the plan itself is in its file, written this turn), or a menu it does not record
     else if (age < 30 * 60e3) {
       if (lp) { ageMs = now - (lp.ts || st.mtimeMs); tool = lp.name;
-        state = SUBTOOL.test(lp.name) ? 'waiting' : (ASKS.test(lp.name) && ageMs > 4000) || (APPROVAL.test(lp.name) && ageMs > 15000) ? 'blocked' : 'working'; if (state === 'blocked') since = lp.ts || st.mtimeMs; }   // still a guess from how long a call has waited: a session in VS Code asks in its panel, which may not say "waiting"
+        state = SUBTOOL.test(lp.name) ? 'waiting' : 'working'; if (!w && ASKS.test(lp.name) && ageMs > 4000 && !statusWritten(proj, p)) { state = 'blocked'; asks = 1; since = lp.ts || st.mtimeMs; } else if (!w && ((APPROVAL.test(lp.name) && ageMs > 15000) || (ASKS.test(lp.name) && ageMs > 4000))) { maybe = 1; since = lp.ts || st.mtimeMs; } }   // asks: no status (Cowork, Claude Code before 2.1.269), but a question or a plan open in the transcript is one: it needs you   // maybe: only a guess from how long a call has waited, for a session whose status Claude Code does not write (Cowork, before 2.1.2xx): shown on its tile, never as "needs you" (no visitor, no red, no notification). A status that says busy or idle is believed: the panel in VS Code also says "waiting" while it asks
       else if (p.esc) state = 'turn';   // you stopped it (Esc): it is your turn there, not "working" for the next ten minutes
-      else if (p.lastType === 'assistant' && !p.lastTool && p.lastStop !== 'tool_use' && !(p.lastStop == null && p.stops && age < 45000)) state = 'turn';   // a line whose message goes on with a tool call is not the end of the turn: the call is written after it, a long one many seconds after.
+      else if (p.lastType === 'assistant' && !p.lastTool && p.lastStop !== 'tool_use' && !(p.lastStop == null && p.stops && age < 45000)) state = !p.gave && !p.limit && !p.auth && bgAtWork(proj, id, p.bg, now) ? 'waiting' : 'turn';   // a line whose message goes on with a tool call is not the end of the turn: the call is written after it, a long one many seconds after.
+      // A lead that ends its turn on "the agents are running, I'll wait" is not waiting for you: it goes on when they report (a sub-agent launched in the background, and not since an order of yours)
       // Claude Code up to 2.1.87 writes that line without saying why it stopped: in a transcript that does say it elsewhere, such a line is given 45 s for its call to come (1 in 100 takes longer than 25 s)
       else state = age < 10 * 60e3 ? 'working' : 'idle';
       if (state === 'turn') since = p.lastTs || st.mtimeMs;
     }
+    else if (p.bg && p.bg.length && p.lastType === 'assistant' && !p.lastTool && !p.gave && !p.limit && !p.auth && bgAtWork(proj, id, p.bg, now)) state = 'waiting';   // a lead quiet for more than 30 minutes while what it launched in the background still works (a long workflow): waiting on it, not idle
     let subActive = 0, subTotal = 0;
     for (const x of subFiles(proj, id)) { subTotal++; if (now - mtimeOf(x.file) < 90e3) subActive++; }
-    const ran = since && p.asked && p.asked < since ? since - p.asked : 0, ask = state === 'blocked' && lp ? lp.q || lp.c : '';   // since: when it started to wait on you; ran: how long it worked, from your last order to then
-    return { proj, id, title: coworkTitle(proj, id) || p.title || id, mtime: st.mtimeMs, state, tool, ageMs, subActive, subTotal, asked: p.asked || 0, ...(since ? { since } : {}), ...(ran ? { ran } : {}), ...(p.pr ? { pr: p.pr } : {}), ...(ask ? { ask } : {}), ...(state === 'blocked' && w && w.status === 'waiting' ? { sure: 1 } : {}), ...(open ? { menu: open } : state === 'blocked' && lp && lp.m && !SUBTOOL.test(lp.name) ? { menu: { id: lp.id, tool: lp.name, ...lp.m, ...(w && w.status === 'waiting' ? { sure: 1 } : {}) } } : {}), ...(p.esc ? { cut: 1 } : {}), ...(tmpKey(proj) ? { tmp: 1 } : {}) };   // cut: stopped by you, which is no news to tell you
+    const ran = since && p.asked && p.asked < since ? since - p.asked : 0, ask = (state === 'blocked' || maybe) && lp ? lp.q || lp.c : '';   // since: when it started to wait on you; ran: how long it worked, from your last order to then
+    return { proj, id, title: coworkTitle(proj, id) || p.title || id, mtime: moved, state, tool, ageMs, subActive, subTotal, asked: p.asked || 0, ...(since ? { since } : {}), ...(ran ? { ran } : {}), ...(p.pr ? { pr: p.pr } : {}), ...(ask ? { ask } : {}), ...(state === 'blocked' && ((w && w.status === 'waiting') || asks) ? { sure: 1 } : {}), ...(maybe ? { maybe } : {}), ...(w ? { known: 1 } : {}), ...(open ? { menu: open } : (state === 'blocked' || maybe) && lp && lp.m && !SUBTOOL.test(lp.name) ? { menu: { id: lp.id, tool: lp.name, ...lp.m, ...((w && w.status === 'waiting') || asks ? { sure: 1 } : {}) } } : {}), ...(state === 'turn' && p.gave ? { gave: p.gave } : {}), ...(state === 'turn' && p.limit ? { limit: p.limit } : {}), ...(state === 'turn' && p.auth ? { auth: 1 } : {}), ...(p.esc ? { cut: 1 } : {}), ...(tmpKey(proj) ? { tmp: 1 } : {}) };   // cut: stopped by you, which is no news to tell you
   }).filter(Boolean);
 }
 // Settings live in a file, not only in the page's localStorage: the port changes between VS Code windows and reloads, and localStorage is per origin (port included).
@@ -545,9 +810,71 @@ function logError(where, e) {
 // (a star on GitHub: they have no store). Only the desktop app and the command line ask on their own, on the third day: the extension asks in its own way (extension.js, noteUse).
 const RATE_STORES = /^https:\/\/(marketplace\.visualstudio\.com|open-vsx\.org)\//, GITHUB_REPO = 'https://github.com/Atoll92/agent-standup';
 function appKind() {
-  const h = String(process.env.AGENT_STANDUP_HOST || ''), rate = String(process.env.AGENT_STANDUP_RATE || '');
-  const kind = h === 'desktop app' ? 'desktop' : h === 'command line' ? 'cli' : h ? 'editor' : '';
-  return { kind, rate: kind === 'editor' && RATE_STORES.test(rate) ? rate : GITHUB_REPO };
+  const h = String(process.env.AGENT_STANDUP_HOST || ''), rate = String(process.env.AGENT_STANDUP_RATE || ''), lead = String(process.env.AGENT_STANDUP_LEAD_NAME || '').trim().slice(0, 100);
+  const kind = h === 'desktop app' ? 'desktop' : h === 'command line' ? 'cli' : h === 'claude code plugin' ? 'plugin' : h ? 'editor' : '';
+  return { kind, rate: kind === 'editor' && RATE_STORES.test(rate) ? rate : GITHUB_REPO, track: !noTrack(), updates: !noUpdate(), ...(lead ? { lead } : {}) };   // track: false when DO_NOT_TRACK is set, and the page does not ask about usage. lead: the lead's name set in the editor (agentStandup.leadName), which the page cleans and prefers to its own setting
+}
+// Usage, counted only for those who said yes, in the desktop app, the command line and the Claude Code plugin (the editor counts itself: extension.js, pingWeek). The page asks once
+// (prefs.shareUsage, which this server reads again in the settings file before it sends anything); when the call is opened it asks this server, which sends at most one empty request a week (weeks from Monday, UTC) for the 1-pixel file of its kind in the "stats"
+// release on GitHub: the requests of a week are the people who opened the call that week from there. Nothing is sent in a request: no id, no path, no content. Never with DO_NOT_TRACK set.
+// A file per week beside the settings (sent-<kind>-week-<monday>) makes several servers and pages send it once. AGENT_STANDUP_PING_BASE: where the tests receive it.
+const USAGE_PIXELS = { desktop: 'desktop-week.gif', cli: 'cli-week.gif', plugin: 'plugin-week.gif' };
+const noTrack = () => /^(1|true|yes)$/i.test(String(process.env.DO_NOT_TRACK || '').trim());
+const mondayOf = (d) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - ((d.getUTCDay() + 6) % 7))).toISOString().slice(0, 10);
+function usageWeek(now = new Date()) {
+  const kind = appKind().kind, name = USAGE_PIXELS[kind]; if (!name || noTrack() || (readPrefs() || {}).shareUsage !== true) return { sent: false };   // the answer is read here too, from the settings file: the page asking is not enough
+  const week = mondayOf(now), dir = path.dirname(PREFS), mine = 'sent-' + kind + '-week-' + week;
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    for (const f of fs.readdirSync(dir)) if (f.startsWith('sent-' + kind + '-week-') && f !== mine) try { fs.unlinkSync(path.join(dir, f)); } catch {}
+    fs.closeSync(fs.openSync(path.join(dir, mine), 'wx'));
+  } catch (e) { if (!(e && e.code === 'EEXIST')) logError('usage', e); return { sent: false, week }; }
+  try {
+    const u = new URL(name, process.env.AGENT_STANDUP_PING_BASE || 'https://github.com/Atoll92/agent-standup/releases/download/stats/');
+    const r = require(u.protocol === 'http:' ? 'http' : 'https').get(u, { headers: { 'user-agent': 'agent-standup' }, timeout: 5000 }, (m) => { m.resume(); m.destroy(); });
+    r.on('error', () => {}); r.on('timeout', () => r.destroy());
+  } catch (e) { logError('usage', e); }
+  return { sent: true, week };
+}
+// A newer version, told in the desktop app, the command line and the Claude Code plugin (the editor updates itself from its store). At most once a day, this server asks the npm registry which
+// version is the latest: one request for the package's small manifest, with nothing about you or your sessions in it (the registry sees your IP address, as when npx starts the app). The answer is
+// kept beside the settings (update-check.json), so every server and page share one request a day; after a failure it tries again an hour later. The page shows it once per version, by the menu,
+// with the step that updates this app (index.html, updTip); the command line prints it when it starts. Off until the person says yes: the page asks once (prefs.updateNotice, read here
+// from the settings file, as for usage; ⚙ › All settings turns it on or off). Never with DO_NOT_TRACK or NO_UPDATE_NOTIFIER set. AGENT_STANDUP_UPDATE_URL: where the tests answer.
+const UPDATE_KINDS = ['desktop', 'cli', 'plugin'], UPDATE_FILE = path.join(path.dirname(PREFS), 'update-check.json'), VER_RE = /^\d{1,4}\.\d{1,5}\.\d{1,6}$/;
+const noUpdate = () => noTrack() || /^(1|true|yes)$/i.test(String(process.env.NO_UPDATE_NOTIFIER || '').trim());
+const verParts = (v) => String(v || '').split('-')[0].split('.').map((n) => parseInt(n, 10) || 0);
+const newerThan = (a, b) => { const x = verParts(a), y = verParts(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+function updateHow(kind) {   // the step that updates this app: the desktop app is downloaded again, the plugin is updated by Claude Code, the command line by npx (it runs from npx's cache, a folder named _npx) or npm
+  if (kind === 'desktop') return { how: 'download', url: GITHUB_REPO + '/releases/latest' };
+  if (kind === 'plugin') return { how: 'plugin', cmd: 'claude plugin marketplace update double-geste && claude plugin update agent-standup@double-geste' };
+  return __dirname.split(path.sep).includes('_npx') ? { how: 'npx', cmd: 'npx @double_geste/agent-standup@latest --open' } : { how: 'npm', cmd: 'npm i -g @double_geste/agent-standup@latest' };
+}
+function latestFromNpm() {   // the version npm calls latest, or '' (offline, an error, anything unexpected)
+  return new Promise((done) => {
+    try {
+      const u = new URL(process.env.AGENT_STANDUP_UPDATE_URL || 'https://registry.npmjs.org/@double_geste/agent-standup/latest');
+      const r = require(u.protocol === 'http:' ? 'http' : 'https').get(u, { headers: { 'user-agent': 'agent-standup', accept: 'application/json' }, timeout: 5000 }, (m) => {
+        let b = ''; m.setEncoding('utf8'); m.on('data', (d) => { b += d; if (b.length > 65536) m.destroy(); }); m.on('error', () => done('')); m.on('close', () => done(''));
+        m.on('end', () => { try { const v = m.statusCode === 200 ? String(JSON.parse(b).version || '') : ''; done(VER_RE.test(v) ? v : ''); } catch { done(''); } });
+      });
+      r.on('error', () => done('')); r.on('timeout', () => r.destroy());
+    } catch (e) { logError('update', e); done(''); }
+  });
+}
+let updateAsking = null;
+function updateInfo() {   // what /api/update and the command line tell: { on, current, latest, newer, notes, how, cmd or url }
+  const kind = appKind().kind, off = { on: false, current: VERSION };
+  if (!UPDATE_KINDS.includes(kind) || noUpdate() || (readPrefs() || {}).updateNotice !== true) return Promise.resolve(off);   // the answer is read here, from the settings file: the page asking is not enough
+  const tell = (latest) => (latest ? { on: true, current: VERSION, latest, newer: newerThan(latest, VERSION), notes: `${GITHUB_REPO}/releases/tag/v${latest}`, ...updateHow(kind) } : { ...off, on: true });
+  let c = null; try { c = JSON.parse(fs.readFileSync(UPDATE_FILE, 'utf8')); } catch {}
+  const known = c && typeof c.latest === 'string' && VER_RE.test(c.latest) ? c.latest : '', at = (c && +c.t) || 0, now = Date.now();
+  if (at <= now && now - at < (c && c.failed ? 3600e3 : 864e5)) return Promise.resolve(tell(known));
+  if (!updateAsking) updateAsking = latestFromNpm().then((v) => {
+    try { fs.mkdirSync(path.dirname(UPDATE_FILE), { recursive: true }); fs.writeFileSync(UPDATE_FILE, JSON.stringify(v ? { t: Date.now(), latest: v } : { t: Date.now(), latest: known, failed: true })); } catch (e) { logError('update', e); }
+    return v || known;
+  }).finally(() => { updateAsking = null; });
+  return updateAsking.then(tell);
 }
 function errorReport() {   // what ⚙ › Report a problem shows: the app, the system and the last errors of the log
   let errors = []; try { errors = fs.readFileSync(ERRLOG, 'utf8').split('\n').filter(Boolean).slice(-40).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((x) => x && typeof x === 'object'); } catch {}
@@ -577,16 +904,18 @@ function sessionMtime(proj, id) {
 // A project of Claude Code is named after its folder with every character other than a letter or digit made a dash: -Users-a-app-old may be app/old (inside app) or app-old (beside it).
 // Which one is told by the folder its sessions were started in (the cwd of its first records), read once per project. Not found (an empty project): counted as before, by its name.
 const projCwds = new Map(), dirKey = (d) => String(d || '').replace(/[^a-zA-Z0-9]/g, '-');
+const foldKey = (k) => (process.platform === 'win32' ? String(k).toLowerCase() : k);   // Windows: a folder is the same whatever its case (the editor sends C:, Claude Code may have written c:)
 function projCwd(proj) {
   if (projCwds.has(proj)) return projCwds.get(proj);
   let cwd = ''; for (const { id } of transcripts(proj).slice(0, 3)) { try { const m = /"cwd":"((?:[^"\\]|\\.)*)"/.exec(readHead(path.join(projDir(proj, id), id + '.jsonl'), 64 * 1024)); if (m) { cwd = JSON.parse('"' + m[1] + '"'); break; } } catch {} }
-  if (cwd && dirKey(cwd) === proj) projCwds.set(proj, cwd); return cwd && dirKey(cwd) === proj ? cwd : '';   // kept once it is sure: the folder whose name is the project's
+  const sure = !!cwd && foldKey(dirKey(cwd)) === foldKey(proj); if (sure) projCwds.set(proj, cwd); return sure ? cwd : '';   // kept once it is sure: the folder whose name is the project's
 }
-const inFolder = (proj, key) => { if (proj === key) return true; if (!proj.startsWith(key + '-')) return false; const cwd = projCwd(proj); if (!cwd) return true; for (let d = cwd; d;) { if (dirKey(d) === key) return true; const up = path.dirname(d); if (up === d) return false; d = up; } return false; };
+const inFolder = (proj, key) => { const p = foldKey(proj), k = foldKey(key); if (p === k) return true; if (!p.startsWith(k + '-')) return false; const cwd = projCwd(proj); if (!cwd) return true; for (let d = cwd; d;) { if (foldKey(dirKey(d)) === k) return true; const up = path.dirname(d); if (up === d) return false; d = up; } return false; };
 function currentSession(projFilter, pick, stick, anyTmp) {   // pick: { proj, id, since } the session you went to by hand, and the latest order there was then · stick: the session the call is in · anyTmp: sessions in the temporary folder count too (see tmpKey)
   const safe = (x) => typeof x === 'string' && /^[\w.\-]+$/.test(x) && x !== '..', now = Date.now();
+  const keys = process.platform === 'win32' && /^[a-zA-Z]-/.test(projFilter || '') ? [projFilter, (projFilter[0] === projFilter[0].toLowerCase() ? projFilter[0].toUpperCase() : projFilter[0].toLowerCase()) + projFilter.slice(1)] : [projFilter];   // Windows: a Codex or Vibe session's folder, with its drive letter in either case
   const there = (c) => !!c && safe(c.id) && safe(c.proj) && (sourceOf(c.proj) ? !!guard(() => sourceOf(c.proj).fileOf(c.id), null) : fs.existsSync(path.join(projDir(c.proj, c.id), c.id + '.jsonl')));
-  const inScope = (c) => (!projFilter ? anyTmp || !tmpSession(c.proj, c.id) : inFolder(c.proj, projFilter) || !!(sourceOf(c.proj) && guard(() => sourceOf(c.proj).inProject(c.id, projFilter), false)));   // a Codex or Vibe session counts for a project when it was started in that folder
+  const inScope = (c) => (!projFilter ? anyTmp || !tmpSession(c.proj, c.id) : inFolder(c.proj, projFilter) || !!(sourceOf(c.proj) && guard(() => keys.some((k) => sourceOf(c.proj).inProject(c.id, k)), false)));   // a Codex or Vibe session counts for a project when it was started in that folder
   const same = (a, b) => !!a && !!b && a.proj === b.proj && a.id === b.id; let all = boardRows();
   if (there(pick) && !all.some((r) => same(r, pick)) && now - boardForced > 5000 && sessionMtime(pick.proj, pick.id) > boardMemo.at - 1500) { boardForced = now; boardMemo.at = 0; all = boardRows(); }   // boardForced: at most every 5 s, for a session written to that the list never holds (older than 12 h, past the places of its kind)   // the session you went to was written after the list shared for 1.2 s was made: without it, its order read as none, and the next answer dropped your pick
   const rows = all.filter(inScope), mine = there(pick) ? all.find((r) => same(r, pick)) : null;
@@ -620,7 +949,7 @@ function readNew(file, agent, journal, record = parseRecord) {
   let size, mtime; try { const s = fs.statSync(file); size = s.size; mtime = s.mtimeMs; } catch { fileStates.delete(file); return null; }
   let st = fileStates.get(file);
   if (st && size >= st.offset && mtime !== st.mtime && st.fp.length && !sameBytes(file, st)) st = null;   // rewritten in place and not shorter: checked only when the file was written to, with one small read
-  if (!st || size < st.offset) { st = { agent, file, journal: !!journal, gen: ++fileGen, offset: 0, mtime: 0, fp: Buffer.alloc(0), tail: Buffer.alloc(0), raw: [], toolName: {}, msgUsage: new Map() }; fileStates.set(file, st); }
+  if (!st || st.agent !== agent || size < st.offset) { st = { agent, file, journal: !!journal, gen: ++fileGen, offset: 0, mtime: 0, fp: Buffer.alloc(0), tail: Buffer.alloc(0), raw: [], toolName: {}, msgUsage: new Map() }; fileStates.set(file, st); }
   st.mtime = mtime;
   while (size > st.offset) {   // read in chunks of at most 16 MB so a huge transcript never needs one giant buffer
     const fd = fs.openSync(file, 'r'); let buf;
@@ -644,9 +973,15 @@ function parseRecord(st, r) {
   if (ts > (st.lastTs || 0)) st.lastTs = ts;
   if (st.journal) { if (r.type === 'result' && r.agentId) push({ ts: 0, agent, kind: 'wfdone', child: String(r.agentId).replace(/[^\w.-]/g, '_') }); return; }   // a workflow's journal: one line when an agent starts, one when it hands its result back (no time on them)
   if (r.type === 'system' && r.subtype === 'compact_boundary') { push({ ts, agent, kind: 'compact' }); return; }   // Claude Code compacted the conversation
+  if (r.type === 'cost-state') { const usd = Number(r.totalCostUSD); if (agent === 'main' && Number.isFinite(usd) && usd >= 0) st.cost = { usd, at: st.lastTs || 0 }; return; }   // Claude Code's own count of what the session cost, sub-agents included, written when its process ends or restarts (2.1.300 on): the latest one read
   if (r.type === 'queue-operation' && typeof r.content === 'string' && r.content.includes('<task-notification>')) {   // how Claude Code reports that a background sub-agent has stopped
     const id = (r.content.match(/<tool-use-id>([^<]+)<\/tool-use-id>/) || [])[1], status = (r.content.match(/<status>([^<]+)<\/status>/) || [])[1];
     if (id && status && status !== 'running') push({ ts, agent, kind: 'agentdone', toolId: id });
+    return;
+  }
+  if (r.type === 'attachment' && r.attachment && r.attachment.type === 'task_reminder' && Array.isArray(r.attachment.content)) {   // Claude Code reminds the agent of its task list now and then: the whole list as it stands, which the shared screen takes over from the calls that changed it
+    const c = r.attachment.content; if (!c.length && !st.tasks) return; st.tasks = 1;   // an empty list before any task is no news
+    push({ ts, agent, kind: 'tasks', items: c.slice(0, 50).map((x) => ({ id: clip(x && x.id, 40), c: clip(x && x.subject, 120), s: clip((x && x.status) || 'pending', 20), a: clip(x && x.activeForm, 120) })) });
     return;
   }
   if (r.type === 'attachment' && r.attachment && r.attachment.type === 'queued_command') {   // an order typed while the lead was working: Claude Code hands it over in the middle of the turn, as an attachment and not as a user message
@@ -660,22 +995,25 @@ function parseRecord(st, r) {
     if (st.out) for (const b of blocks(r)) if (b.type === 'tool_result') st.out.delete(b.tool_use_id);
     for (const b of blocks(r)) if (b.type === 'tool_result' && wf) push({ ts, agent, kind: 'wfrun', toolId: b.tool_use_id, run: wf });   // the answer to a Workflow call names the run it started: its agents are in subagents/workflows/<run>/
     for (const b of blocks(r)) if (b.type === 'tool_result' && (st.toolName[b.tool_use_id] === 'Agent' || st.toolName[b.tool_use_id] === 'Task') && !(st.bg && st.bg[b.tool_use_id]) && !/^\s*Async agent launched/i.test(resultText(b.content))) push({ ts, agent, kind: 'agentdone', toolId: b.tool_use_id });   // a synchronous call: the lead got the sub-agent's answer back, so it has finished (async launches answer immediately and are not a completion)
+    const one = blocks(r).filter((b) => b.type === 'tool_result').length === 1;   // what Claude Code noted about the call (toolUseResult) is that call's when the record answers one call
+    if (one && st.plans && r.toolUseResult && typeof r.toolUseResult.plan === 'string' && r.toolUseResult.plan.trim()) for (const b of blocks(r)) if (b.type === 'tool_result' && st.plans.has(b.tool_use_id)) st.plans.get(b.tool_use_id).d.text = clip(r.toolUseResult.plan.trim(), 4000);   // the answer names the plan exactly: the plan file holds only the latest one
     for (const b of blocks(r)) if (b.type === 'tool_result' && st.toolName[b.tool_use_id] && !NO_RESULT.has(st.toolName[b.tool_use_id])) {
-      const n = st.toolName[b.tool_use_id], img = resultImages(b.content).length, files = n === 'Bash' && !b.is_error ? docPaths(resultText(b.content), false).map((f) => absPath(f, r.cwd)) : [], art = !b.is_error && st.pubs && st.pubs.has(b.tool_use_id) ? artOf(st, st.pubs.get(b.tool_use_id), r.toolUseResult, resultText(b.content)) : null;
-      items.push({ id: b.tool_use_id, err: !!b.is_error, out: clip(resultText(b.content).replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trimEnd(), RESULT_MAX[n] || (/^mcp__/.test(n) ? 900 : 600)), ...(img ? { img } : {}), ...(files.length ? { files } : {}), ...(art ? { art } : {}) });   // img: how many pictures came back; the page fetches them from /api/media · files: the documents a command says it made
+      const n = st.toolName[b.tool_use_id], text = resultText(b.content), img = resultImages(b.content).length, files = n === 'Bash' && !b.is_error ? docPaths(text, false).map((f) => absPath(f, r.cwd)) : [], art = !b.is_error && st.pubs && st.pubs.has(b.tool_use_id) ? artOf(st, st.pubs.get(b.tool_use_id), r.toolUseResult, text) : null;
+      items.push({ id: b.tool_use_id, err: !!b.is_error, out: clipOut(text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trimEnd(), RESULT_MAX[n] || (/^mcp__/.test(n) ? 900 : 600)), ...(img ? { img } : {}), ...(files.length ? { files } : {}), ...(art ? { art } : {}), ...(BROWSER_MCP.test(n) && !b.is_error ? browserSeen(text, n) : {}), ...resultMore(n, text, one ? r.toolUseResult : null) });   // img: how many pictures came back; the page fetches them from /api/media · files: the documents a command says it made
     }
     if (items.length) push({ ts, agent, kind: 'results', items });
     const typed = blocks(r).filter((b) => b.type === 'text').map((b) => b.text).join('\n').replace(HARNESS, ''), cut = /^\s*\[Request interrupted[^\]]*\]/i.test(typed);   // what the human typed, without the blocks the harness wraps around it
     if (agent !== 'main') { if (!st.prompt && typed.trim() && !st.raw.length) st.prompt = { ts, text: typed.trim() }; return; }   // a sub-agent's first user message is the order, emitted from the parent's side (kept here for the agents of a workflow, whose order is in no other file)
     if (cut && st.out) st.out.clear(); if (cut && st.act >= 0) st.raw[st.act].end = 1;   // Esc: the turn stops there, without the end_turn mark. The last thing the lead said or did closes it
     const txt = typed.replace(/^\s*\[Request interrupted[^\]]*\]\s*/i, '').trim();
-    if (txt && !/^<(system-reminder|command-|local-command|task-notification)/.test(txt) && !r.isMeta && !r.isCompactSummary) { if (st.out) st.out.clear(); push({ ts, agent: 'user', kind: 'user', text: txt }); }   // a call that never got its answer is not waited for across your next message · not the summary Claude Code writes when it compacts: thousands of characters the human never typed
+    if (txt && !/^<(system-reminder|command-|local-command|task-notification)/.test(txt) && !r.isMeta && !r.isCompactSummary) { if (st.out) st.out.clear(); const pics = blocks(r).filter(isImg).length; push({ ts, agent: 'user', kind: 'user', text: txt, ...(pics && typeof r.uuid === 'string' && /^[\w.\-]{6,200}$/.test(r.uuid) ? { img: pics, iid: r.uuid } : {}) }); }   // img: the pictures pasted with it, served by /api/media (agent=user, tool=iid)   // a call that never got its answer is not waited for across your next message · not the summary Claude Code writes when it compacts: thousands of characters the human never typed
   } else if (r.type === 'assistant') {
     const m = r.message || {}; let said = null;
     if (agent === 'main') { st.lead = 1; if (m.stop_reason) st.stops = 1; }   // this transcript says why each message stopped: its turns end with a mark, and until one comes the lead is at work (see marks, below)
     if (m.id && m.usage) {   // the same message is repeated once per content block with identical numbers: keep one per message id
       const u = m.usage, prev = st.msgUsage.get(m.id);
-      st.msgUsage.set(m.id, { ts: prev ? prev.ts : ts, u: { i: u.input_tokens || 0, o: u.output_tokens || 0, r: u.cache_read_input_tokens || 0, w: u.cache_creation_input_tokens || 0 }, model: m.model });
+      const ef = String(r.perTurnEffort || r.effort || ''), adv = String(r.advisorModel || '');   // the effort it worked at and the model it may ask for advice, when Claude Code wrote them (2.1.275 on)
+      st.msgUsage.set(m.id, { ts: prev ? prev.ts : ts, u: { i: u.input_tokens || 0, o: u.output_tokens || 0, r: u.cache_read_input_tokens || 0, w: u.cache_creation_input_tokens || 0 }, model: m.model, ...(/^[a-z]{2,12}$/.test(ef) ? { ef } : {}), ...(/^[\w.:\-\[\]]{1,80}$/.test(adv) && adv !== m.model ? { adv } : {}) });
     }
     const th = () => { const t = st.th; st.th = ''; return t ? { th: t } : {}; };   // what the agent was thinking before this line or call, when Claude Code kept it (most of the time it only keeps a signature): the call shows it as an inner thought
     for (const b of blocks(r)) {
@@ -683,9 +1021,9 @@ function parseRecord(st, r) {
       else if (b.type === 'text' && typeof b.text === 'string' && b.text.trim()) { said = push({ ts, agent, kind: 'say', text: b.text.trim(), ...th() }); st.act = st.raw.length - 1; st.sayOf = m.id; st.sayAt = st.act; }
       else if (b.type === 'tool_use' && b.name === 'SubagentHandback' && agent !== 'main' && b.input && typeof b.input.message === 'string' && b.input.message.trim()) { said = push({ ts, agent, kind: 'say', text: b.input.message.trim(), ...th() }); st.act = st.raw.length - 1; st.sayOf = m.id; st.sayAt = st.act; }   // since Claude Code 2.1.293 a sub-agent hands its report back through this call, and most write no sentence beside it: the message of the call is what it says last
       else if (b.type === 'tool_use') {
-        st.toolName[b.id] = b.name; (st.out = st.out || new Set()).add(b.id); if (b.input && b.input.run_in_background) (st.bg = st.bg || {})[b.id] = true;   // out: the calls that have no answer yet
+        st.toolName[b.id] = b.name; if (b.name === 'TaskCreate') st.tasks = 1; (st.out = st.out || new Set()).add(b.id); if (b.input && b.input.run_in_background) (st.bg = st.bg || {})[b.id] = true;   // out: the calls that have no answer yet
         if (b.name === 'Agent' || b.name === 'Task') push({ ts, agent, kind: 'agentcall', toolId: b.id, bg: !!(b.input && b.input.run_in_background), text: (b.input && b.input.prompt) || '', title: (b.input && b.input.description) || '', ...(b.input && typeof b.input.name === 'string' && b.input.name.trim() ? { nm: b.input.name.trim() } : {}) });
-        else { const tool = toolLabel(b, ts); if (tool.d && tool.d.outs) tool.d.outs = tool.d.outs.map((f) => absPath(f, r.cwd)); if (tool.d && tool.d.kind === 'artifact') (st.pubs = st.pubs || new Map()).set(b.id, tool.d.open ? 'open' : tool.d.doc ? 'doc' : 'pub'); push({ ts, agent, kind: 'tool', tool, ...th() }); st.act = st.raw.length - 1; }
+        else { const tool = toolLabel(b, ts); if (tool.d && tool.d.outs) tool.d.outs = tool.d.outs.map((f) => absPath(f, r.cwd)); if (/^(Write|Edit|MultiEdit)$/.test(b.name) && b.input && planFile(String(b.input.file_path || ''))) { st.planF = String(b.input.file_path); st.planW = b.name === 'Write' && typeof b.input.content === 'string' ? { mid: m.id, text: clip(b.input.content.trim(), 4000) } : null; } if (tool.d && tool.d.kind === 'plan') { (st.plans = st.plans || new Map()).set(b.id, tool); if (st.planW && st.planW.mid && st.planW.mid === m.id) tool.d.text = st.planW.text; else if (!tool.d.text && st.planF) tool.d.text = (st.planW && st.planW.text) || planDoc(st.planF); }   /* a plan written in the same message as its call: the call carries the one before, or none */   /* Claude Code 2.1.30x sends ExitPlanMode with no plan: the plan is the file the session just wrote in ~/.claude/plans */ if (tool.d && tool.d.kind === 'artifact') (st.pubs = st.pubs || new Map()).set(b.id, tool.d.open ? 'open' : tool.d.doc ? 'doc' : 'pub'); push({ ts, agent, kind: 'tool', tool, ...th() }); st.act = st.raw.length - 1; }
       }
     }
     if (agent === 'main' && (m.stop_reason === 'end_turn' || ((r.isApiErrorMessage || (m.model === '<synthetic>' && m.stop_reason === 'stop_sequence')) && !(st.out && st.out.size)))) {   // also a turn that ends on a message Claude Code writes itself, in the place of the model's: the API is down, the limit is reached, the request was refused, or there was nothing to answer. Nothing follows it, unless a call of the lead is still out: the connection dropped while its agents worked, and it goes on when they answer. (A message of the model that a safety check cuts is not the end either: Claude Code tells the model, which goes on.) The lead's turn is over: Claude Code writes one record per content block, each with the message's stop reason, so the mark goes on the line this record carries (a thinking block carries none)
@@ -694,7 +1032,7 @@ function parseRecord(st, r) {
     }
   }
 }
-const codexRecord = codex.parser({ toolLabel, clip, resultMax: RESULT_MAX }), vibeRecord = vibe.parser({ toolLabel, clip, resultMax: RESULT_MAX });
+const codexRecord = codex.parser({ toolLabel, clip, clipOut, testsOf, diffOf, resultMax: RESULT_MAX }), vibeRecord = vibe.parser({ toolLabel, clip: clipOut, resultMax: RESULT_MAX });   // Vibe clips only thoughts and outputs: without the codes of a terminal
 const recordOf = (sx) => (sx === codex ? codexRecord : sx === vibe ? vibeRecord : parseRecord);
 // A sub-agent the person named keeps that name on screen: the name given when it was launched, or else its type when that type is the person's own (.claude/agents/code-reviewer.md → "Code Reviewer").
 // The types Claude Code ships are not names: those agents get a first name from the page, as before.
@@ -711,47 +1049,59 @@ function readMeta(f) {
 }
 
 function buildTimeline(proj, id, files = []) {
-  const sx = sourceOf(proj), rec = recordOf(sx), base = projDir(proj, id), mainFile = sx ? sx.fileOf(id) || '' : path.join(base, id + '.jsonl');   // a Codex or Vibe session is kept somewhere else, in another format (rec); from here on it is a session like any other (Codex without sub-agents)
+  const sx = sourceOf(proj), rec = recordOf(sx), base = projDir(proj, id), mainFile = sx ? sx.fileOf(id) || '' : path.join(base, id + '.jsonl');   // source readers supply their own session and child files; the timeline and page are shared
   if (!fs.existsSync(mainFile)) throw new Error('session not found');
   const agents = { main: { id: 'main', role: 'Lead', type: 'main' } };   // the lead has the same name whatever tool runs the session: the page gives it
   const states = [(sx && sx.state && guard(() => sx.state(id), null)) || readNew(mainFile, 'main', false, rec)], subs = subFilesOf(proj, id), runs = {}; files.push(mainFile);   // sx.state: a format that is not read line by line hands over the events of the session whole   // runs: workflow run → { agents (file name → agent id), by (who launched it), toolId, done }
   for (const x of subs) {
     const aid = x.aid, m = x.meta || readMeta(x.file.replace(/\.jsonl$/, '.meta.json'));
     agents[aid] = { id: aid, role: m.description || m.workflowPhase || m.agentType || 'Agent', type: m.agentType || 'agent', toolUseId: m.toolUseId };
+    if (m.parent) Object.assign(agents[aid], { parent: m.parent, name: m.name, startedAt: m.startedAt });   // Codex records the parent explicitly, even when its spawn prompt is encrypted
     if (x.run) { agents[aid].wf = x.run; if (m.workflowPhase) agents[aid].phase = m.workflowPhase; (runs[x.run] = runs[x.run] || { agents: {}, done: new Set() }).agents[x.id0] = aid; }   // launched by a workflow: no Agent call of the lead points at it
     agents[aid].mtime = x.mtime || mtimeOf(x.file) || undefined;
-    const st = x.st || readNew(x.file, aid, false, rec); if (st) states.push(st); files.push(x.file);
+    const st = x.st || (x.zst ? sx && sx.state && guard(() => sx.state(aid, aid), null) : readNew(x.file, aid, false, rec)); if (st) states.push(st); files.push(x.file);   // x.zst: a compressed Codex child, read whole here only
   }
   for (const j of subs.journals) { const st = readNew(j.file, 'wf:' + j.run, true), run = runs[j.run]; files.push(j.file); if (st && run) for (const e of st.raw) if (run.agents[e.child]) run.done.add(run.agents[e.child]); }
   const childByTool = {};   // Agent tool_use id → the sub-agent it created, so we know who ordered whom
   for (const a of Object.values(agents)) if (a.toolUseId) childByTool[a.toolUseId] = a.id;
   const called = {}, born = {}; for (const st of states) if (st) { if (st.raw.length) born[st.agent] = st.raw[0].ts; for (const e of st.raw) if (e.kind === 'agentcall' && e.nm && childByTool[e.toolId]) called[childByTool[e.toolId]] = e.nm; }
   const sameName = {}; for (const a of Object.values(agents).filter((x) => x.id !== 'main').sort((x, y) => (born[x.id] || Infinity) - (born[y.id] || Infinity) || (x.id < y.id ? -1 : 1))) {   // in the order they started, so that a second agent of the same name is the one numbered 2 and stays so
-    const n = ownName(called[a.id]) || ownName(a.type, true); if (n) { const k = n.toLowerCase(); sameName[k] = (sameName[k] || 0) + 1; a.own = sameName[k] > 1 ? n + ' ' + sameName[k] : n; }
+    const n = ownName(called[a.id]) || ownName(a.name) || ownName(a.type, true); if (n) { const k = n.toLowerCase(); sameName[k] = (sameName[k] || 0) + 1; a.own = sameName[k] > 1 ? n + ' ' + sameName[k] : n; }
   }
   const runByTool = {}; for (const st of states) if (st) for (const e of st.raw) if (e.kind === 'wfrun' && runs[e.run] && !runs[e.run].by) { runs[e.run].by = e.agent; runs[e.run].toolId = e.toolId; runByTool[e.toolId] = runs[e.run]; }   // Workflow tool_use id → the run it started
 
   const finished = new Set(), now0 = Date.now(); for (const st of states) if (st) for (const e of st.raw) if (e.kind === 'agentdone') { if (childByTool[e.toolId]) finished.add(childByTool[e.toolId]); else if (runByTool[e.toolId]) for (const a of Object.values(runByTool[e.toolId].agents)) finished.add(a); }   // a run that stopped: so did every agent in it
   for (const run of Object.values(runs)) for (const a of run.done) finished.add(a);
+  for (const st of states) if (st && st.agent !== 'main' && st.completed) finished.add(st.agent);
   let recentUntil = 0; for (const a of Object.values(agents)) if (a.id !== 'main' && a.mtime && now0 - a.mtime <= 240000) recentUntil = Math.max(recentUntil, a.mtime + 241000);
   for (const a of Object.values(agents)) if (a.id !== 'main' && now0 - (a.mtime || 0) > 240000) finished.add(a.id);   // old transcripts without a completion record: silent for 4 min counts as finished
   const events = [], parent = {}, doneSeen = new Set(), lastTs = {}; for (const st of states) if (st) lastTs[st.agent] = st.lastTs || 0;
+  for (const a of Object.values(agents)) if (a.parent && a.parent !== a.id && agents[a.parent]) parent[a.id] = a.parent;
+  const usageBy = new Map(); for (const st of states) if (st) for (const [mid, mu] of st.msgUsage) { if (!/^msg_/.test(mid)) continue; const o = usageBy.get(mid); if (!o || mu.ts < o.msgUsage.get(mid).ts || (mu.ts === o.msgUsage.get(mid).ts && st.agent === 'main')) usageBy.set(mid, st); }   // a fork (on by default since Claude Code 2.1.302) starts its file with a copy of the message that launched it: its tokens count once, for the agent that wrote it first. Only the API's own message ids (msg_…) name one message across files: Codex and Vibe number theirs in each agent (t0, v1…), the same name in two agents is two messages
   const finish = (to, ts, by) => { if (!doneSeen.has(to)) { doneSeen.add(to); events.push({ ts, agent: to, kind: 'finish', to: by, k: 'f/' + to }); } };   // one per agent, whichever record says it first: the key is the agent, not the record
   for (const st of states) {
     if (!st) continue;
+    const a = agents[st.agent];
+    if (a && a.parent && parent[st.agent]) {
+      events.push({ ts: a.startedAt || (st.prompt && st.prompt.ts) || born[st.agent] || 0, agent: parent[st.agent], to: st.agent, kind: 'order', bg: true,
+        text: st.prompt ? st.prompt.text : a.role, title: a.role, k: 'o/' + st.agent });
+      for (const [n, q] of (st.prompts || []).entries()) events.push({ ts: q.ts, agent: parent[st.agent], to: st.agent, kind: 'order', bg: true, text: q.text, title: a.role, k: 'o/' + st.agent + '/' + (n + 1) });   // more work for a worker that had finished
+      if (st.completedAt) finish(st.agent, st.completedAt, parent[st.agent]);   // kept while it works again (its time moves to the next end): an event that vanished would make the page load the call again
+    }
     let lastSay = -1;   // the last thing a sub-agent says is its report back to the lead
     if (st.agent !== 'main' && finished.has(st.agent)) for (let i = st.raw.length - 1; i >= 0; i--) if (st.raw[i].kind === 'say') { lastSay = i; break; }
     const run = agents[st.agent] && agents[st.agent].wf ? runs[agents[st.agent].wf] : null;
     if (run && st.prompt) { parent[st.agent] = run.by || 'main'; events.push({ ts: st.prompt.ts, agent: parent[st.agent], to: st.agent, kind: 'order', ...(run.toolId ? { toolId: run.toolId } : {}), bg: true, wf: agents[st.agent].wf, text: st.prompt.text, title: agents[st.agent].role, k: 'o/' + st.agent }); }   // the order a workflow gave is the first message of the agent's own file: shown as an order from whoever launched the workflow (the lead when nothing says who), given in the background, when the agent started
+    // a fork's file starts with a copy of the call that launched it (Claude Code 2.1.302 turns forks on by default): that copy is not the fork launching or finishing itself
     st.raw.forEach((e, i) => {
-      if (e.kind === 'agentdone') { const to = childByTool[e.toolId], wr = runByTool[e.toolId]; if (to) finish(to, e.ts, e.agent); else if (wr) for (const a of Object.values(wr.agents)) if (!wr.done.has(a)) finish(a, Math.max(e.ts, lastTs[a] || 0), e.agent); }   // the agents the journal knows about are finished below, at their own time
-      else if (e.kind === 'agentcall') { const to = childByTool[e.toolId]; if (to) { parent[to] = e.agent; events.push({ ts: e.ts, agent: e.agent, to, kind: 'order', toolId: e.toolId, bg: e.bg, text: e.text, title: e.title, k: e.k }); } }
+      if (e.kind === 'agentdone') { const to = childByTool[e.toolId] === e.agent ? null : childByTool[e.toolId], wr = runByTool[e.toolId]; if (to) finish(to, e.ts, e.agent); else if (wr) for (const a of Object.values(wr.agents)) if (!wr.done.has(a)) finish(a, Math.max(e.ts, lastTs[a] || 0), e.agent); }   // the agents the journal knows about are finished below, at their own time
+      else if (e.kind === 'agentcall') { const to = childByTool[e.toolId]; if (to && to !== e.agent) { parent[to] = e.agent; events.push({ ts: e.ts, agent: e.agent, to, kind: 'order', toolId: e.toolId, bg: e.bg, text: e.text, title: e.title, k: e.k }); } }
       else if (e.kind === 'wfrun' || e.kind === 'wfdone') return;
       else if (i === lastSay) events.push({ ...e, kind: 'report', to: null });   // `to` filled below, once every order is known
       else events.push(e);
     });
     if (run && run.done.has(st.agent) && st.lastTs) finish(st.agent, st.lastTs, parent[st.agent] || 'main');   // the journal has no times: the agent finished when it last wrote
-    for (const [mid, mu] of st.msgUsage) events.push({ ts: mu.ts, agent: st.agent, kind: 'usage', u: mu.u, model: mu.model, ...(mu.cw ? { cw: mu.cw } : {}), k: 'u/' + st.agent + '/' + mid });
+    for (const [mid, mu] of st.msgUsage) if (!usageBy.has(mid) || usageBy.get(mid) === st) events.push({ ts: mu.ts, agent: st.agent, kind: 'usage', u: mu.u, model: mu.model, ...(mu.cw ? { cw: mu.cw } : {}), ...(mu.ef ? { ef: mu.ef } : {}), ...(mu.adv ? { adv: mu.adv } : {}), k: 'u/' + st.agent + '/' + mid });
   }
   for (const e of events) if (e.kind === 'report' && e.to === null) e.to = parent[e.agent] || 'main';
 
@@ -759,13 +1109,14 @@ function buildTimeline(proj, id, files = []) {
   const merged = []; let lastReal = -1;   // consecutive tool calls of one agent become one activity beat; usage events are transparent to that rule
   for (const e of events) {
     const p = lastReal >= 0 ? merged[lastReal] : null;
-    if (e.kind === 'usage' || e.kind === 'finish' || e.kind === 'compact') { merged.push(e); continue; }
+    if (e.kind === 'usage' || e.kind === 'finish' || e.kind === 'compact' || e.kind === 'tasks') { merged.push(e); continue; }   // tasks: the list Claude Code reminds the agent of, which comes between two calls of one beat
     if (e.kind === 'tool' && p && p.kind === 'tools' && p.agent === e.agent && !p.end) { p.tools.push(e.tool); if (e.end) p.end = 1; }   // a beat keeps the key of its first call; one that closed a turn takes no more calls
     else { merged.push(e.kind === 'tool' ? { ts: e.ts, agent: e.agent, kind: 'tools', tools: [e.tool], ...(e.end ? { end: 1 } : {}), ...(e.th ? { th: e.th } : {}), k: e.k } : e); lastReal = merged.length - 1; }
   }
-  const real = merged.find((e) => e.kind !== 'usage' && e.kind !== 'finish' && e.kind !== 'compact'), first = real ? real.ts : 0, last = merged.length ? merged[merged.length - 1].ts : 0;   // time zero = the first thing said or done
+  const real = merged.find((e) => e.kind !== 'usage' && e.kind !== 'finish' && e.kind !== 'compact' && e.kind !== 'tasks'), first = real ? real.ts : 0, last = merged.length ? merged[merged.length - 1].ts : 0;   // time zero = the first thing said or done
   const marks = !sx && states[0] && (states[0].stops || !states[0].lead) ? { marks: 1 } : {};   // a Claude Code session whose turns end with a mark, also before the lead has written anything: a session that has not closed a turn yet is not one without marks, and its lead is not "done" each time it thinks for a while
-  return { id, proj, agents: Object.values(agents), events: merged.map((e) => ({ ...e, t: Math.max(0, e.ts - first) })), durationMs: last - first, recentUntil, ...marks };
+  const ms = states.find((x) => x && x.agent === 'main'), cost = ms && ms.cost ? { usd: Math.round(ms.cost.usd * 1e4) / 1e4, final: !merged.some((e) => e.kind === 'usage' && e.ts > ms.cost.at) } : null;   // final: nothing was spent after Claude Code counted it (else it is a floor)
+  return { id, proj, agents: Object.values(agents), events: merged.map((e) => ({ ...e, t: Math.max(0, e.ts - first) })), durationMs: last - first, recentUntil, ...marks, ...(cost ? { cost } : {}) };
 }
 
 // Ask the local `claude` CLI (uses the user's existing login) to map a JSON array of strings to another array. Cached.
@@ -811,10 +1162,12 @@ const schedule = (fn) => new Promise((res, rej) => { queue.push(() => fn().then(
 // Fast path (~1-2 s instead of ~6 s): if the user has an Anthropic API key in the environment, call the API directly.
 async function apiMap(prompt, need) {
   const key = process.env.ANTHROPIC_API_KEY; if (!key) throw new Error('no key');
-  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 2000, messages: [{ role: 'user', content: prompt }] }) });
-  const j = await r.json(); const out = j.content[0].text, arr = JSON.parse(out.slice(out.indexOf('['), out.lastIndexOf(']') + 1));
-  if (arr.length !== need.length) throw new Error('bad length'); return arr;
+  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, signal: AbortSignal.timeout(30000),
+    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] }) });   // a request that hangs gives way to claude -p after 30 s
+  if (!r.ok) throw new Error('api ' + r.status);
+  const j = await r.json(), tb = j && Array.isArray(j.content) ? j.content.find((b) => b && b.type === 'text' && typeof b.text === 'string') : null; if (!tb) throw new Error('no text');   // the text block, wherever it is: a model that thinks first puts its thinking before it
+  const out = tb.text, arr = JSON.parse(out.slice(out.indexOf('['), out.lastIndexOf(']') + 1));
+  if (!Array.isArray(arr) || arr.length !== need.length) throw new Error('bad length'); return arr;
 }
 function claudeMap(kind, instruction, texts) {
   const need = [...new Set(texts.filter((t) => !cache.has(kind + '|' + t)))];
@@ -1048,7 +1401,7 @@ async function claimPack(name, typed) {   // typed: a code the person pastes (an
 // The same goes for a document one of its commands names (an export, a report made by a script), from the moment that command started: an older file by that name is not one of its files.
 function sessionFile(proj, id, file) {   // { fp: where it is, since: 0 for a file it wrote, else when the first command that names it started }
   const sx = sourceOf(proj); if (!(sx ? guard(() => sx.fileOf(id), null) : fs.existsSync(path.join(projDir(proj, id), id + '.jsonl')))) return null;
-  const ev = timeline(proj, id).events, said = new Set(); let since = ev.some((e) => e.kind === 'tools' && e.tools.some((t) => t.d && t.d.kind === 'write' && t.d.file === file)) ? 0 : null;
+  const ev = timeline(proj, id).events, said = new Set(); let since = ev.some((e) => e.kind === 'tools' && e.tools.some((t) => t.d && ((t.d.kind === 'write' && t.d.file === file) || (t.name === 'mcp__cowork__present_files' && t.d.outs && t.d.outs.includes(file))))) ? 0 : null;   // written by the session, or handed to the person by Cowork
   if (since == null) {
     for (const e of ev) if (e.kind === 'results') for (const it of e.items) if (it.files && it.files.includes(file)) said.add(it.id);   // named in what a command printed: counted from when that command started
     for (const e of ev) if (e.kind === 'tools' && e.tools.some((t) => said.has(t.id) || (t.d && t.d.kind === 'cmd' && t.d.outs && t.d.outs.includes(file)))) since = since == null ? e.ts || 1 : Math.min(since, e.ts || 1);
@@ -1084,7 +1437,7 @@ function start(port = PORT) {
   const sendFile = (fp) => { const s = fs.createReadStream(fp); s.on('error', () => res.destroy()); s.pipe(res); };   // a file that vanished between the check and the read ends this answer, not the server
   // Endpoints with side effects (they spawn programs or claim the sound), and the one that serves pictures from a session, refuse requests that a browser marks as coming from another site, e.g. an <img> on a web page.
   const sfs = req.headers['sec-fetch-site'];
-  if (sfs && sfs !== 'same-origin' && sfs !== 'none' && (req.method !== 'GET' || ['/api/translate', '/api/quips', '/api/warm', '/api/audio', '/api/tts', '/api/prefs', '/api/prefs.js', '/api/voices', '/api/kokoro', '/api/kokoro/install', '/api/media', '/api/artifact', '/api/errors', '/api/packs', '/api/reply'].includes(url.pathname))) { res.writeHead(403); return res.end('forbidden'); }
+  if (sfs && sfs !== 'same-origin' && sfs !== 'none' && (req.method !== 'GET' || ['/api/translate', '/api/quips', '/api/warm', '/api/audio', '/api/tts', '/api/prefs', '/api/prefs.js', '/api/voices', '/api/kokoro', '/api/kokoro/install', '/api/media', '/api/taskout', '/api/artifact', '/api/errors', '/api/packs', '/api/update', '/api/reply'].includes(url.pathname))) { res.writeHead(403); return res.end('forbidden'); }
   const readBody = (cb, max = 262144) => {   // request bodies are small JSON: stop reading beyond 256 KB (or max) and give up after 10 s
     const chunks = []; let size = 0, over = false; req.setTimeout(10000, () => req.destroy());
     if (+req.headers['content-length'] > max) { res.writeHead(413); res.end('too large'); return req.destroy(); }
@@ -1114,7 +1467,8 @@ function start(port = PORT) {
       if (url.searchParams.get('engine') === 'kokoro') { const st = kokoro.status(); if (st.installed && !st.gaveUp) kokoro.warm(); return json({ available: st.installed && !st.gaveUp, ready: st.ready, voices: kokoro.voices(), platform: process.platform, engine: 'kokoro' }); }
       return loadVoices().then((v) => json(v));
     }
-    if (url.pathname === '/api/kokoro/install' && req.method === 'POST') return json(kokoro.install());
+    if (url.pathname === '/api/kokoro/install' && req.method === 'POST') return json(kokoro.install()); if (url.pathname === '/api/usage' && req.method === 'POST') return json(usageWeek());
+    if (url.pathname === '/api/update') return updateInfo().then(json, () => json({ on: false, current: VERSION }));   /* a newer version, at most one request to npm a day (updateInfo) */
     if (url.pathname === '/api/kokoro') return json(kokoro.status());
     if (url.pathname === '/api/tts') {
       return tts(url.searchParams.get('text') || '', url.searchParams.get('voice'), url.searchParams.get('rate'), url.searchParams.get('engine'), url.searchParams.get('fb'))
@@ -1122,13 +1476,15 @@ function start(port = PORT) {
         .catch((e) => json({ error: String(e.message) }, 400));
     }
     if (url.pathname === '/api/prefs.js') { res.writeHead(200, { 'content-type': 'application/javascript', 'cache-control': 'no-store' }); return res.end('window.SAVED_PREFS = ' + JSON.stringify(readPrefs()).replace(/</g, '\\u003c') + '; window.AS_APP = ' + JSON.stringify(appKind()).replace(/</g, '\\u003c') + ';' + (reply.on() ? 'window.REPLY_TOKEN = "' + REPLY_TOKEN + '";' : '')); }
-    if (url.pathname === '/api/prefs' && req.method === 'PUT') return readBody((body) => { try { const v = JSON.parse(body); if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('prefs must be an object'); writePrefs(v); json({ ok: true }); } catch (e) { json({ error: String(e.message || e) }, 400); } });
+    if (url.pathname === '/api/prefs' && req.method === 'PUT') return readBody((body) => { try { let v = JSON.parse(body); if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('prefs must be an object'); const cur = readPrefs() || {}; const pt = v._patch && typeof v._patch === 'object' && !Array.isArray(v._patch) ? v._patch : null, set = pt && pt.set && typeof pt.set === 'object' && !Array.isArray(pt.set) ? pt.set : {}; if (pt && (!('_t' in set) || !('_t' in v) || +set._t === +v._t)) { const del = Array.isArray(pt.del) ? pt.del : []; v = { ...cur, ...set }; for (const k of del) if (typeof k === 'string' && !(k in set)) delete v[k]; } delete v._patch;   /* a patch dated otherwise than the settings it came with is a stale copy (a page before 1.42 that read one from the file): those settings are written whole */   /* a page sends what it changed, merged into the file as it is now: a window opened earlier no longer puts back what another one changed. A whole object (an older page) still replaces the file */ if ((+cur.shareUsageT || 0) > (+v.shareUsageT || 0)) { v.shareUsage = cur.shareUsage; v.shareUsageT = cur.shareUsageT; v.usageAsked = cur.usageAsked; } if ((+cur.updateNoticeT || 0) > (+v.updateNoticeT || 0)) { v.updateNotice = cur.updateNotice; v.updateNoticeT = cur.updateNoticeT; v.updateAsked = cur.updateAsked; } writePrefs(v);   /* the usage answer: a page opened before it was changed elsewhere (another tab, the desktop app) writes back its old settings, not its old answer */ json({ ok: true }); } catch (e) { json({ error: String(e.message || e) }, 400); } });
     if (url.pathname === '/api/prefs') return json(readPrefs() || {});
+    if (url.pathname === '/api/answer' && req.method === 'POST') return readBody((body) => { let v = {}; try { v = JSON.parse(body); } catch {} json(answerIn(String((v && v.id) || ''))); });   /* a click on what needs you: open it where it can be answered (answerIn) */
     if (url.pathname === '/api/done' && req.method === 'POST') return readBody((body) => { try { const v = JSON.parse(body); json({ ok: setDone(String(v.proj || ''), String(v.id || ''), v.on !== false) }); } catch (e) { logError('done', e); json({ error: String(e.message || e) }, 400); } });
     if (url.pathname === '/api/errors' && req.method === 'POST') return readBody((body) => { try { const b = JSON.parse(body) || {}; logError('page' + (typeof b.where === 'string' && b.where ? ' ' + b.where.slice(0, 40) : ''), { message: String(b.msg || ''), stack: String(b.stack || '') }); json({ ok: true }); } catch (e) { json({ error: String(e.message || e) }, 400); } });   // an error of the page, written to the local log
     if (url.pathname === '/api/errors') return json(errorReport());
     if (url.pathname === '/api/current') { const q = (k) => url.searchParams.get(k) || ''; return json(currentSession(q('proj'), q('pid') ? { proj: q('pproj'), id: q('pid'), since: q('since') ? +q('since') : NaN, pin: q('pin') === '1' } : null, { proj: q('sproj'), id: q('sid') })); }
     if (url.pathname === '/api/board') return json(boardRows());
+    if (url.pathname === '/api/missing') return json(missingTranscripts());   // live Claude Code sessions whose transcript is not where the call reads (missingTranscripts)
     if (url.pathname === '/api/characters') return json(listCharacters(url.searchParams.get('pack') || ''));
     if (url.pathname === '/api/characters/add' && req.method === 'POST') return readBody((body) => { try { const b = JSON.parse(body || '{}') || {}; json(addCharacter(String(b.role || ''), b.name, b.data)); } catch (e) { if (!e.word) logError('add character', e); json({ error: e.word || 'write' }, e.word ? 400 : 500); } }, 512 * 1024);   // a picture of 300 KB is 400 KB once written as text
     if (url.pathname === '/api/characters/remove' && req.method === 'POST') return readBody((body) => { let b = {}; try { b = JSON.parse(body || '{}') || {}; } catch {} try { json(removeCharacter(b.file) ? { ok: true } : { error: 'file' }, 200); } catch (e) { logError('remove character', e); json({ error: 'write' }, 500); } });
@@ -1137,21 +1493,29 @@ function start(port = PORT) {
       let b = {}; try { b = JSON.parse(body || '{}') || {}; } catch {} const name = String(b.pack || ''); if (!hasOwn(SHOP_PACKS, name)) return json({ error: 'pack' }, 404);
       (url.pathname.endsWith('/buy') ? buyPack(name) : claimPack(name, typeof b.code === 'string' ? b.code.trim().slice(0, 260) : '')).then((r) => json(r, r.status), (e) => { logError('shop', e); json({ error: 'shop' }, 500); });
     });
-    if (url.pathname === '/api/reveal' && req.method === 'POST') return readBody((body) => {   // 404: not a file this session created · 410: created, and no longer there
+    if (url.pathname === '/api/reveal' && req.method === 'POST') return readBody((body) => {   // 404: not a file this session created · 410: created, and no longer there. A check (check: true) is answered 200 { exists: false, reason: 'unknown' | 'gone' } instead: the page asks it of every document it may show, and an error status there is a console error each time
       try {
         let b = null; try { b = JSON.parse(body); } catch {} const SAFE = /^[\w.\-]+$/, ok = (v) => typeof v === 'string' && SAFE.test(v) && v !== '..' && v.length <= 200;
         if (!b || !ok(b.proj) || !ok(b.id) || typeof b.file !== 'string' || !b.file || b.file.length > 4096) return json({ error: 'bad request' }, 400);
-        const f = sessionFile(b.proj, b.id, b.file); if (!f) return json({ error: 'not a file of this session' }, 404);
-        let st = null; try { st = reveal.stat(f.fp); } catch {} if (!st || !st.isFile()) return json({ error: 'gone' }, 410);
-        if (f.since && st.mtimeMs < f.since - 2000) return json({ error: 'not a file of this session' }, 404);   // a command names it, and it was there before: read, listed or removed, not made
-        if (b.check !== true) reveal.run(f.fp); json({ ok: true });   // check: the page asks whether a document a command names is there, before it shows it
+        const no = (reason, error, code) => (b.check === true ? json({ exists: false, reason }) : json({ error }, code));
+        const f = sessionFile(b.proj, b.id, b.file); if (!f) return no('unknown', 'not a file of this session', 404);
+        let st = null; try { st = reveal.stat(f.fp); } catch {} if (!st || !st.isFile()) return no('gone', 'gone', 410);
+        if (f.since && st.mtimeMs < f.since - 2000) return no('unknown', 'not a file of this session', 404);   // a command names it, and it was there before: read, listed or removed, not made
+        if (b.check !== true) reveal.run(f.fp); json(b.check === true ? { ok: true, exists: true } : { ok: true });   // check: the page asks whether a document a command names is there, before it shows it
       } catch (e) { json({ error: String(e.message || e) }, 500); }
     });
     if (url.pathname === '/api/media') {
       const q = (k) => url.searchParams.get(k) || '', SAFE = /^[\w.\-]+$/, n = +q('n') || 0, bad = [q('proj'), q('id'), q('agent'), q('tool')].some((v) => !SAFE.test(v) || v === '..' || v.length > 200) || q('tool').length < 6;   // no tool call has an id that short, and looking for one meant reading the whole transcript
-      const file = bad || !Number.isInteger(n) || n < 0 || n > 9 ? null : mediaFile(q('proj'), q('id'), q('agent')), im = file && toolImage(file, q('tool'), n);
+      const sx = sourceOf(q('proj')), user = q('agent') === 'user', ok = !bad && Number.isInteger(n) && n >= 0 && n <= 9, file = ok && !sx ? mediaFile(q('proj'), q('id'), q('agent')) : null;
+      const im = !ok ? null : q('proj') === '_demo' ? require('./demo.js').picture(q('tool'), n) : sx ? (sx.image ? guard(() => sx.image(q('id'), q('tool'), n, user, q('agent') || 'main'), null) : null) : file && toolImage(file, q('tool'), n, user);   // a Codex session: from the lead or the specified child rollout, plain or compressed
       if (!im) { res.writeHead(bad ? 400 : 404); return res.end(bad ? 'bad request' : 'not found'); }
       res.writeHead(200, { 'content-type': im.type, 'content-length': im.buf.length, 'cache-control': 'private, max-age=3600', 'x-content-type-options': 'nosniff' }); return res.end(im.buf);
+    }
+    if (url.pathname === '/api/taskout') {   // the end of what a command left running in the background has printed so far (taskOutput)
+      const q = (k) => url.searchParams.get(k) || '', SAFE = /^[\w.\-]+$/, bad = [q('proj'), q('id')].some((v) => !SAFE.test(v) || /^\.+$/.test(v) || v.length > 200) || !/^[\w-]{1,40}$/.test(q('task'));
+      if (bad) return json({ error: 'bad request' }, 400);
+      const out = !sourceOf(q('proj')) && fs.existsSync(path.join(projDir(q('proj'), q('id')), q('id') + '.jsonl')) ? taskOutput(q('proj'), q('id'), q('task')) : null;   // a session the call knows, of Claude Code: the other tools keep no such file
+      return out ? json(out) : json({ error: 'not found' }, 404);
     }
     if (url.pathname === '/api/artifact') {   // the page a publish of this session sent, for the frame of the shared screen · check=1: is there one, and does it name libraries (asked before the frame is drawn) · whole=1: the whole document
       const q = (k) => url.searchParams.get(k) || '', SAFE = /^[\w.\-]+$/, bad = [q('proj'), q('id'), q('agent'), q('tool')].some((v) => !SAFE.test(v) || v === '..' || v.length > 200) || q('tool').length < 6;
@@ -1184,8 +1548,8 @@ function start(port = PORT) {
       }
       if (ep == null) return json({ id: tl.id, agents: tl.agents, total: tl.events.length, events: tl.events.slice(+after) });   // a page loaded before 1.25.7 still asks by position
       const a = +after; if (ep !== tl.ep || !(a >= 0 && a <= tl.seq)) return json({ resync: true });   // not the feed this page was following (restart, session dropped from memory, transcript rewritten): it loads the session again
-      if (a === tl.seq) { if (!entry.idle) entry.idle = JSON.stringify({ id: tl.id, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, events: [] }); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(entry.idle); }   // nothing new, which is the answer to nearly every poll: written once
-      return json({ id: tl.id, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, events: feedSince(entry, a) });   // new events and changed ones alike, whole, under the key they always had
+      if (a === tl.seq) { if (!entry.idle) entry.idle = JSON.stringify({ id: tl.id, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, ...(tl.cost ? { cost: tl.cost } : {}), events: [] }); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(entry.idle); }   // nothing new, which is the answer to nearly every poll: written once
+      return json({ id: tl.id, agents: tl.agents, ep: tl.ep, seq: tl.seq, marks: tl.marks, ...(tl.cost ? { cost: tl.cost } : {}), events: feedSince(entry, a) });   // new events and changed ones alike, whole, under the key they always had
     }
     const pk = url.pathname.match(/^\/packs\/([a-z]+)\/(.*)$/);
     if (url.pathname.startsWith('/characters/') || (pk && packDir(pk[1]))) {   // only plain image files of the characters folder (or of a built-in pack), by exact name
@@ -1203,7 +1567,7 @@ function start(port = PORT) {
   } catch (e) { logError(req.method + ' ' + url.pathname, e); if (res.headersSent) return res.destroy(); json({ error: String(e.message || e) }, 500); }
   }).listen(port, '127.0.0.1', function () { console.log(`Agent Standup → http://localhost:${this.address().port}`); });
 }
-module.exports = { _winArg: winArg, start, currentSession, shutdown, findClaude, bundledClaude, boardRows, sessionRows: listSessions, charactersDir, listCharacters, packsDir, installPack, logError, _reveal: reveal, _scrub: { tidy, homeRe }, _artifact: { page: artifactPage, csp: artifactCsp } };
+module.exports = { answerIn, missingTranscripts, noteEditor, forgetEditor, _winArg: winArg, start, currentSession, shutdown, findClaude, bundledClaude, boardRows, sessionRows: listSessions, charactersDir, listCharacters, packsDir, installPack, logError, updateInfo, _reveal: reveal, _scrub: { tidy, homeRe }, _artifact: { page: artifactPage, csp: artifactCsp } };
 if (require.main === module && process.env.AGENT_STANDUP_CHILD === '1' && typeof process.send === 'function') {   // started by the VS Code extension in a process of its own (see extension.js): reading a large session no longer stops the editor's extensions. Asked for by name: pm2 and others give any app a channel too
   const srv = start(+process.env.PORT || 0), tell = (m) => { try { process.send(m); } catch {} };
   srv.on('listening', () => tell({ port: srv.address().port })).on('error', (e) => { tell({ error: e.code || String(e) }); process.exit(1); });

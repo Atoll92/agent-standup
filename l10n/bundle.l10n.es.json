@@ -13,8 +13,13 @@
   "Privacy policy": "Política de privacidad",
   "{0} is waiting for you: {1}": "{0} te espera: {1}",
   "{0} is waiting for you": "{0} te espera",
-  "Still waiting: {0}": "Sigue esperando: {0}",
   "a plan to approve": "un plan por aprobar",
   "Go to session": "Ir a la sesión",
-  "Open call": "Abrir la videollamada"
+  "Open call": "Abrir la videollamada",
+  "usage limit · resets {0}": "límite de uso · se restablece {0}",
+  "usage limit": "límite de uso",
+  "logged out": "sesión cerrada",
+  "for less than a minute": "desde hace menos de un minuto",
+  "for {0} min": "desde hace {0} min",
+  "for {0} h {1} min": "desde hace {0} h {1} min"
 }
