@@ -756,3 +756,16 @@ test('pictures added from the page: under the name of their role, the one replac
     assert.ok(!fs.existsSync(path.join(dir, 'you-talk.png'))); assert.equal(JSON.parse((await get(port, '/api/characters')).body).chars.find((c) => c.role === 'you').talk, null);
   } finally { stop(); delete process.env.AGENT_STANDUP_CHARACTERS; }
 });
+test('every session filed under a project shares its lead name key: one that started in a scratch folder, an old one without cwd, and a folder written with a trailing slash', async () => {
+  const real = path.join(tmp, 'work', 'app'), scratch = path.join(tmp, 'scratch', 'x'), key = (d) => d.replace(/[^a-zA-Z0-9]/g, '-');
+  const rec = (cwd, i) => [{ type: 'user', timestamp: `2026-01-01T00:0${i}:00Z`, ...(cwd ? { cwd } : {}), message: { role: 'user', content: 'hello' } }, { type: 'assistant', timestamp: `2026-01-01T00:0${i}:01Z`, ...(cwd ? { cwd: real } : {}), message: { content: [{ type: 'text', text: 'hi' }] } }];
+  const write = (proj, id, lines) => { const dir = path.join(tmp, 'projects', proj); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, id + '.jsonl'), lines.map((r) => JSON.stringify(r)).join('\n') + '\n'); };
+  write(key(real), 'scratch', rec(scratch, 3)); write(key(real), 'old', rec('', 2)); write(key(real), 'plain', rec(real, 1));
+  const slash = path.join(tmp, 'work', 'other'); write(key(slash), 's', [{ type: 'user', timestamp: '2026-01-01T00:00:00Z', cwd: slash + path.sep, message: { role: 'user', content: 'hello' } }]);
+  const srv = require('../server.js').start(0); await new Promise((r) => srv.once('listening', r)); const port = srv.address().port, project = async (proj, id) => JSON.parse((await get(port, `/api/session?proj=${proj}&id=${id}`)).body).project;
+  try {
+    for (const id of ['scratch', 'old', 'plain']) assert.equal((await project(key(real), id)).key, 'cwd:' + real, id);
+    assert.equal((await project(key(real), 'scratch')).label, real, 'the folder shown under the name is the project, not the scratch folder');
+    assert.equal((await project(key(slash), 's')).key, 'cwd:' + slash);
+  } finally { srv.close(); require('../server.js').shutdown(); }
+});

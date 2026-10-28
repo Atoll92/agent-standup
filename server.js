@@ -905,7 +905,7 @@ const projCwds = new Map(), dirKey = (d) => String(d || '').replace(/[^a-zA-Z0-9
 const foldKey = (k) => (process.platform === 'win32' ? String(k).toLowerCase() : k);   // Windows: a folder is the same whatever its case (the editor sends C:, Claude Code may have written c:)
 function projCwd(proj) {
   if (projCwds.has(proj)) return projCwds.get(proj);
-  let cwd = ''; for (const { id } of transcripts(proj).slice(0, 3)) { try { const m = /"cwd":"((?:[^"\\]|\\.)*)"/.exec(readHead(path.join(projDir(proj, id), id + '.jsonl'), 64 * 1024)); if (m) { cwd = JSON.parse('"' + m[1] + '"'); break; } } catch {} }
+  let cwd = ''; for (const { id } of transcripts(proj).slice(0, 3)) { try { const m = /"cwd":"((?:[^"\\]|\\.)*)"/.exec(readHead(path.join(projDir(proj, id), id + '.jsonl'), 64 * 1024)); if (m) { const c = JSON.parse('"' + m[1] + '"'); if (foldKey(dirKey(c)) === foldKey(proj)) { cwd = c; break; } } } catch {} }   /* a session that started elsewhere (a scratch folder) does not hide the others */
   const sure = !!cwd && foldKey(dirKey(cwd)) === foldKey(proj); if (sure) projCwds.set(proj, cwd); return sure ? cwd : '';   // kept once it is sure: the folder whose name is the project's
 }
 const inFolder = (proj, key) => { const p = foldKey(proj), k = foldKey(key); if (p === k) return true; if (!p.startsWith(k + '-')) return false; const cwd = projCwd(proj); if (!cwd) return true; for (let d = cwd; d;) { if (foldKey(dirKey(d)) === k) return true; const up = path.dirname(d); if (up === d) return false; d = up; } return false; };
@@ -1049,11 +1049,14 @@ function readMeta(f) {
 
 // The actual project behind a session, not the provider bucket (_codex, _vibe).
 // Keep the full folder: dashed project keys cannot distinguish app/old from app-old.
+// A Claude Code session is filed under its project's folder: the folder whose name that is comes first (projCwd), so a session that started in a scratch folder, an old transcript without cwd and a live one whose first cwd is not written yet all share their project's name.
+const leadProjects = new Map(), bareDir = (d) => { const n = path.normalize(d), root = path.parse(n).root; return n.length > root.length ? n.replace(/[\\/]+$/, '') : n; };   // /work/app/ and /work/app are one folder
 function leadProject(proj, id, recordedCwd) {
-  const sx = sourceOf(proj), cwd = sx ? guard(() => sx.cwd(id), '') : recordedCwd;
+  const memo = proj + '/' + id; if (leadProjects.has(memo)) return leadProjects.get(memo);
+  const sx = sourceOf(proj), cwd = sx ? guard(() => sx.cwd(id), '') : projCwd(proj) || recordedCwd;
   // Cowork's folders live in separate VMs: identical cwd strings there need not be one project.
   if (proj === COWORK) return { key: 'cowork:' + projDir(proj, id), label: cwd || coworkTitle(proj, id) || id };
-  if (cwd) return { key: 'cwd:' + foldKey(path.normalize(cwd)), label: cwd };
+  if (cwd) { const v = { key: 'cwd:' + foldKey(bareDir(cwd)), label: cwd }; if (leadProjects.size > 3000) leadProjects.clear(); leadProjects.set(memo, v); return v; }   // kept once a folder is known: it no longer changes
   return sx ? null : { key: 'claude:' + proj, label: proj };   // older Claude transcripts without cwd still have a project folder; an unknown provider folder has no override
 }
 
