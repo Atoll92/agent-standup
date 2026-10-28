@@ -1,17 +1,13 @@
 // reply.js: the human's line, typed into the tmux pane of a running Claude Code session. Off unless AGENT_STANDUP_REPLY=on.
-// Claude Code writes <config>/sessions/<pid>.json for each running session (pid, sessionId, status, name); the pane is the tmux pane whose shell is an ancestor of that pid.
-const fs = require('fs'), path = require('path'), os = require('os'), net = require('net'), { execFile } = require('child_process');
+// Claude Code writes <config>/sessions/<pid>.json for each running session (pid, sessionId, status, name); server.js reads them (liveStatus) and hands its reader over with use(). The pane is the tmux pane whose shell is an ancestor of that pid.
+const fs = require('fs'), net = require('net'), { execFile } = require('child_process');
 const on = () => /^(1|on|yes|true)$/i.test(process.env.AGENT_STANDUP_REPLY || '');
-const dir = () => process.env.AGENT_STANDUP_CC_SESSIONS || path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'sessions');
+let sessions = () => new Map();   // session id → its status file as server.js reads it; nothing until use() is called
+const use = (reader) => { sessions = reader; };
 const tmux = (args) => new Promise((resolve) => execFile(process.env.AGENT_STANDUP_TMUX || 'tmux', args, { timeout: 3000, windowsHide: true }, (err, out) => resolve(err ? null : String(out))));
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function session(id) {   // the running session with this id, or null
-  let names = []; try { names = fs.readdirSync(dir()); } catch {}
-  for (const n of names) {
-    if (!/^\d+\.json$/.test(n)) continue;
-    try { const s = JSON.parse(fs.readFileSync(path.join(dir(), n), 'utf8')); if (s && s.sessionId === id && Number.isInteger(s.pid)) return s; } catch {}
-  }
-  return null;
+function session(id) {   // the running session with this id, or null; raw: the status as written (a dialog you opened also says waiting, and must not get the line either)
+  const w = sessions().get(id); return w ? { pid: w.pid, procStart: w.procStart, status: w.raw, name: w.name } : null;
 }
 const stat = (pid) => { try { const st = fs.readFileSync(`/proc/${pid}/stat`, 'utf8'); return st.slice(st.lastIndexOf(')') + 2).split(' '); } catch { return []; } };   // fields from 3 on; the name in field 2 may hold spaces and brackets
 const ppid = (pid) => +stat(pid)[1] || 0;   // field 4
@@ -46,4 +42,4 @@ function peerUid(sock) {   // ponytail: IPv4 only, the server listens on 127.0.0
   for (const v6 of [false, true]) { let t = ''; try { t = fs.readFileSync(v6 ? '/proc/net/tcp6' : '/proc/net/tcp', 'utf8'); } catch {} const u = uidIn(t, tcpKey(ra, sock.remotePort, v6), tcpKey(la, sock.localPort, v6)); if (u != null) return u; }
   return null;
 }
-module.exports = { on, lookup, send, clean, tcpKey, uidIn, peerUid };
+module.exports = { on, use, lookup, send, clean, tcpKey, uidIn, peerUid };

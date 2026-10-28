@@ -8,8 +8,8 @@ if (process.env.FAKE_TMUX_FAIL) process.exit(1);
 if (a[0] === 'list-panes') console.log('%7 ' + process.env.FAKE_PANE_PID);
 const flip = process.env.FAKE_FLIP_FILE; if (flip && a[0] === 'send-keys' && a.includes('-l')) { const fs = require('fs'); fs.writeFileSync(flip, JSON.stringify({ ...JSON.parse(fs.readFileSync(flip, 'utf8')), status: 'busy' })); }   // the session starts working between the text and Enter
 `, { mode: 0o755 });
-Object.assign(process.env, { AGENT_STANDUP_TMUX: TMUX, AGENT_STANDUP_CC_SESSIONS: SESS, FAKE_TMUX_LOG: LOG, FAKE_PANE_PID: String(process.pid) });
-const reply = require('../reply.js');
+Object.assign(process.env, { AGENT_STANDUP_TMUX: TMUX, AGENT_STANDUP_CC_SESSIONS: SESS, FAKE_TMUX_LOG: LOG, FAKE_PANE_PID: String(process.pid), AGENT_STANDUP_PREFS: path.join(tmp, 'prefs.json'), AGENT_STANDUP_PROJECTS: path.join(tmp, 'projects'), AGENT_STANDUP_KOKORO_DIR: path.join(tmp, 'kokoro') });
+const server = require('../server.js'), reply = require('../reply.js');   // server.js hands reply.js its reader of the sessions folder
 const ID = '11111111-2222-3333-4444-555555555555';
 const calls = () => { try { return fs.readFileSync(LOG, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } };
 const linux = { skip: process.platform !== 'linux' && 'needs /proc (Linux)' };
@@ -19,9 +19,11 @@ const SF = claude && path.join(SESS, claude.pid + '.json'), withStatus = async (
 if (claude) { const st = fs.readFileSync(`/proc/${claude.pid}/stat`, 'utf8'); fs.writeFileSync(SF, JSON.stringify({ pid: claude.pid, procStart: st.slice(st.lastIndexOf(')') + 2).split(' ')[19], sessionId: ID, status: 'idle', name: 'agents-19' })); }   // field 22: the start time
 
 test('send refuses unless the session is idle, with no keys typed', linux, async () => {
-  for (const [status, error] of [['waiting', 'waiting'], ['busy', 'busy'], ['shell', 'busy'], ['', 'busy']]) await withStatus(status, async () => {
+  for (const [status, error] of [['waiting', 'waiting'], ['busy', 'busy'], ['shell', 'none'], ['', 'none']]) await withStatus(status, async () => {
     fs.rmSync(LOG, { force: true }); assert.deepEqual(await reply.send(ID, 'hi'), { error }); assert.equal(calls().filter((a) => a[0] === 'send-keys').length, 0);
   });
+  const orig = fs.readFileSync(SF, 'utf8'); fs.writeFileSync(SF, JSON.stringify({ ...JSON.parse(orig), status: 'waiting', waitingFor: 'dialog open' }));   // the call shows a dialog you opened (/model) as idle; the line must still not go into it
+  try { fs.rmSync(LOG, { force: true }); assert.deepEqual(await reply.send(ID, 'hi'), { error: 'waiting' }); assert.equal(calls().filter((a) => a[0] === 'send-keys').length, 0); } finally { fs.writeFileSync(SF, orig); }
 });
 
 test('send types the text but not Enter when the session starts working meanwhile', linux, async () => {
@@ -52,7 +54,7 @@ test('lookup finds the pane through the parent chain', linux, async () => {
   assert.deepEqual(await reply.lookup('not-an-id'), { ok: false, why: 'none' });
   assert.deepEqual(await reply.lookup('99999999-2222-3333-4444-555555555555'), { ok: false, why: 'none' });
   const OLD = '22222222-2222-3333-4444-555555555555';   // a pid reused by another process: procStart differs
-  fs.writeFileSync(path.join(SESS, process.pid + '.json'), JSON.stringify({ pid: process.pid, procStart: '1', sessionId: OLD }));
+  fs.writeFileSync(path.join(SESS, process.pid + '.json'), JSON.stringify({ pid: process.pid, procStart: '1', sessionId: OLD, status: 'idle' }));
   try { assert.deepEqual(await reply.lookup(OLD), { ok: false, why: 'none' }); } finally { fs.rmSync(path.join(SESS, process.pid + '.json')); }
   process.env.FAKE_PANE_PID = '999999999';
   try { assert.equal((await reply.lookup(ID)).why, 'notmux'); } finally { process.env.FAKE_PANE_PID = String(process.pid); }
@@ -81,8 +83,7 @@ test('on reads AGENT_STANDUP_REPLY', () => {
 const http = require('http');
 const get = (port, p, headers = {}, method = 'GET', body) => new Promise((res, rej) => { const r = http.request({ port, path: p, method, headers }, (x) => { let b = ''; x.on('data', (d) => (b += d)); x.on('end', () => res({ status: x.statusCode, body: b })); }); r.on('error', rej); if (body) r.write(body); r.end(); });
 test('/api/reply: off by default, token, cross-site and peer guards, answers', linux, async () => {
-  process.env.AGENT_STANDUP_PREFS = path.join(tmp, 'prefs.json'); process.env.AGENT_STANDUP_PROJECTS = path.join(tmp, 'projects');
-  const server = require('../server.js'), srv = server.start(0); await new Promise((r) => srv.once('listening', r)); const port = srv.address().port;
+  const srv = server.start(0); await new Promise((r) => srv.once('listening', r)); const port = srv.address().port;
   const post = (o, h = {}) => get(port, '/api/reply', { 'content-type': 'application/json', ...h }, 'POST', JSON.stringify(o));
   try {
     delete process.env.AGENT_STANDUP_REPLY;
