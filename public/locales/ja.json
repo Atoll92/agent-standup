@@ -433,5 +433,10 @@
  "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "あなたのヴァンパイアは、Fabien Coupas が手描きしたハロウィンパックのキャラクターです。ほかのメンバーもパックに入っています。",
  "Name for this project": "このプロジェクトでの名前",
  "Empty: use the default name.": "空欄の場合はデフォルトの名前を使用します。",
- "Open a project to choose its name.": "プロジェクトを開いて名前を設定してください。"
+ "Open a project to choose its name.": "プロジェクトを開いて名前を設定してください。",
+ "Rename": "名前を変更",
+ "Rename every sub-agent: names separated by commas, given in this order. Empty: the built-in names.": "すべてのサブエージェントの名前を変更：名前をカンマで区切って入力すると、この順に割り当てられます。空欄：組み込みの名前。",
+ "Rename the agents": "エージェントの名前を変更",
+ "Start from the names in the call": "通話中の名前から始める",
+ "Sub-agent names": "サブエージェントの名前"
 }

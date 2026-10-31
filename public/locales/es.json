@@ -433,5 +433,10 @@
  "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Tu vampiro viene del pack de Halloween, dibujado a mano por Fabien Coupas. El resto del reparto también está en él.",
  "Name for this project": "Nombre para este proyecto",
  "Empty: use the default name.": "Vacío: usar el nombre predeterminado.",
- "Open a project to choose its name.": "Abre un proyecto para elegir su nombre."
+ "Open a project to choose its name.": "Abre un proyecto para elegir su nombre.",
+ "Rename": "Renombrar",
+ "Rename every sub-agent: names separated by commas, given in this order. Empty: the built-in names.": "Renombra a todos los subagentes: nombres separados por comas, asignados en este orden. Vacío: los nombres integrados.",
+ "Rename the agents": "Renombrar a los agentes",
+ "Start from the names in the call": "Partir de los nombres de la llamada",
+ "Sub-agent names": "Nombres de los subagentes"
 }

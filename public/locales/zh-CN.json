@@ -433,5 +433,10 @@
  "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "你的吸血鬼来自万圣节礼包，由 Fabien Coupas 手绘。其余角色也在礼包里。",
  "Name for this project": "此项目的名称",
  "Empty: use the default name.": "留空则使用默认名称。",
- "Open a project to choose its name.": "打开项目以设置名称。"
+ "Open a project to choose its name.": "打开项目以设置名称。",
+ "Rename": "重命名",
+ "Rename every sub-agent: names separated by commas, given in this order. Empty: the built-in names.": "重命名所有子代理：用逗号分隔名字，按此顺序分配。留空：使用内置名字。",
+ "Rename the agents": "重命名代理",
+ "Start from the names in the call": "从通话中的名字开始",
+ "Sub-agent names": "子代理名字"
 }
