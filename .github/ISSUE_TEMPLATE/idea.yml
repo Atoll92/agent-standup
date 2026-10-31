@@ -1,0 +1,22 @@
+name: An idea
+description: Something the call could show or do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you'd like
+      description: What you're trying to do, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How it could work
+      description: Optional. A sketch, a screenshot or another tool that does it well.
+  - type: checkboxes
+    id: pr
+    attributes:
+      label: Help
+      options:
+        - label: I'd like to make the pull request myself

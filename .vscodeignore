@@ -27,6 +27,7 @@ dist-cli/**
 dist-desktop/**
 dist-release/**
 ROADMAP.md
+CONTRIBUTING.md
 PRIVACY.md
 TRADEMARKS.md
 TERMS.md

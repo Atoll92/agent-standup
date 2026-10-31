@@ -1,0 +1,64 @@
+name: Something doesn't work
+description: A session that doesn't show, a wrong status, an error, a crash
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting it. Please don't paste whole transcripts or anything secret; the repository is public.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you saw, and what you expected instead. A screenshot helps.
+    validations:
+      required: true
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which Agent Standup
+      multiple: true
+      options:
+        - VS Code extension (or Cursor, Windsurf…)
+        - Command line (npx @double_geste/agent-standup)
+        - macOS app
+        - Claude Code plugin
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Agent Standup version
+      description: The extension's version in the Extensions view, or `npx @double_geste/agent-standup --version`.
+    validations:
+      required: true
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Which sessions
+      multiple: true
+      options:
+        - Claude Code (terminal)
+        - Claude Code (VS Code)
+        - Claude desktop app / Cowork
+        - Codex
+        - Mistral Vibe
+    validations:
+      required: true
+  - type: input
+    id: toolversion
+    attributes:
+      label: Their version
+      description: For example the output of `claude --version` or `codex --version`.
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: macOS 15, Windows 11, Ubuntu 24.04…
+    validations:
+      required: true
+  - type: textarea
+    id: errors
+    attributes:
+      label: Errors
+      description: Anything in the terminal, or in the page's console (VS Code → Help → Toggle Developer Tools).
+      render: text
