@@ -435,8 +435,10 @@
  "Empty: use the default name.": "留空則使用預設名稱。",
  "Open a project to choose its name.": "開啟專案以設定名稱。",
  "Rename": "重新命名",
- "Rename every sub-agent: names separated by commas, given in this order. Empty: the built-in names.": "重新命名所有子代理：以逗號分隔名字，依此順序分配。留空：使用內建名字。",
  "Rename the agents": "重新命名代理",
  "Start from the names in the call": "從通話中的名字開始",
- "Sub-agent names": "子代理名字"
+ "Sub-agent names": "子代理名字",
+ "Rename every sub-agent: names separated by commas, given in the order the agents start. Empty: the built-in names.": "重新命名所有子代理：以逗號分隔名字，依代理啟動的順序分配。留空：使用內建名字。",
+ "Agents you named yourself keep their names (switch below).": "你自己命名的代理保留其名字（見下方開關）。",
+ "Agents you named yourself take these names too (switch below).": "你自己命名的代理也會使用這些名字（見下方開關）。"
 }

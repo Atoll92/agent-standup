@@ -434,8 +434,10 @@
  "Empty: use the default name.": "Tomt: brug standardnavnet.",
  "Open a project to choose its name.": "Åbn et projekt for at vælge dets navn.",
  "Rename": "Omdøb",
- "Rename every sub-agent: names separated by commas, given in this order. Empty: the built-in names.": "Omdøb alle underagenter: navne adskilt af kommaer, givet i denne rækkefølge. Tom: de indbyggede navne.",
  "Rename the agents": "Omdøb agenterne",
  "Start from the names in the call": "Start med navnene i opkaldet",
- "Sub-agent names": "Navne på underagenter"
+ "Sub-agent names": "Navne på underagenter",
+ "Rename every sub-agent: names separated by commas, given in the order the agents start. Empty: the built-in names.": "Omdøb alle underagenter: navne adskilt af kommaer, givet i den rækkefølge agenterne starter. Tom: de indbyggede navne.",
+ "Agents you named yourself keep their names (switch below).": "Agenter, du selv har navngivet, beholder deres navne (kontakten nedenfor).",
+ "Agents you named yourself take these names too (switch below).": "Agenter, du selv har navngivet, får også disse navne (kontakten nedenfor)."
 }

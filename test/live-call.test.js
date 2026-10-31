@@ -77,6 +77,29 @@ test('live call: joining, orders and lines', { skip: missing || false, timeout: 
     await c.page.evaluate(() => togglePlay()); await wait(800); await c.page.evaluate(() => togglePlay()); await c.quiet(); assert.equal(count(await c.lines(), 'LAST line'), 1); await c.close();
   });
 
+  await t.test('your names for the sub-agents go in the order they started, stay the same after a reload, and keep clear of the names agents have of their own', async () => {
+    const s = session(); s.user('hello', Date.now() - 600000); s.say('Ready.', { at: Date.now() - 590000, end: true }); const c = await open(s);
+    const subDir = path.join(tmp, 'projects', s.proj, 's', 'subagents');
+    const typed = (k, type) => { const id = s.tool('Agent', { description: 'check ' + k, prompt: 'Check it', subagent_type: type }); fs.writeFileSync(path.join(subDir, `agent-a${k}.meta.json`), JSON.stringify({ agentType: type, description: 'check ' + k, toolUseId: id })); fs.appendFileSync(path.join(subDir, `agent-a${k}.jsonl`), JSON.stringify({ timestamp: new Date().toISOString(), type: 'user', message: { role: 'user', content: 'Check it' } }) + '\n'); };   // an agent type of the person's own: it has a name of its own
+    await c.page.evaluate(() => { const el = document.querySelector('#subNames'); el.value = 'Rex, Tom, Lulu'; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); });
+    s.user('Check it all'); await wait(300);
+    for (const [k, type] of [[3], [1], [2, 'rex'], [5]]) { if (type) typed(k, type); else s.launch(k, 'check ' + k, 'Check it', true); await c.until((id) => S.agents[id], 'a' + k); await wait(150); }   // started a3, a1, a2, a5: their files are listed a1, a2, a3, a5
+    const named = (c) => c.page.evaluate(() => ['a3', 'a1', 'a2', 'a5'].map((id) => S.agents[id].name));
+    assert.deepEqual(await named(c), ['Rex', 'Tom', 'Rex 2', 'Lulu'], 'your names in the order the agents started; a name of its own already given gets a number');
+    assert.ok(await c.page.evaluate(() => ['a3', 'a1', 'a2', 'a5'].every((id, i, a) => S.agents[id].born > 0 && (!i || S.agents[a[i - 1]].born <= S.agents[id].born))), 'the server says when each started');
+    await c.page.evaluate(async () => { clearTimeout(prefsTimer); await putPrefs(); });
+    const c2 = await open(s); await c2.until(() => S.agents.a5);
+    assert.deepEqual(await named(c2), ['Rex', 'Tom', 'Rex 2', 'Lulu'], 'the same names after a reload'); assert.equal(await c2.page.evaluate(() => prefs.subNames), 'Rex, Tom, Lulu', 'the list is kept');
+    const own = (on) => c2.page.evaluate((on) => { openPrefs(); const b = document.querySelector('#prefs .mi[data-t="ownNames"]'); if (!!prefs.ownNames !== on) b.click(); const r = [document.querySelector('#subNamesHint').textContent, document.querySelector('#subNames').closest('.box').nextElementSibling === b]; closePrefs(); return r; }, on);
+    const [offHint, below] = await own(false); assert.deepEqual(await named(c2), ['Rex', 'Tom', 'Lulu', 'Rex 2'], 'own names off: that agent takes a name of the list too'); assert.match(offHint, /take these names too/); assert.ok(below, 'the switch sits just below the list');
+    const [onHint] = await own(true); assert.deepEqual(await named(c2), ['Rex', 'Tom', 'Rex 2', 'Lulu'], 'and back'); assert.match(onHint, /keep their names/);
+    assert.deepEqual(await c2.page.evaluate(() => listNamed()), ['Rex', 'Tom', 'Lulu'], 'the names to start from: in the order they are given, without the name of its own');
+    assert.deepEqual(await c2.page.evaluate(() => { const el = document.querySelector('#subNames'); el.value = 'Rex, Max, Lulu'; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); return ['a3', 'a1', 'a2', 'a5'].map((id) => S.agents[id].name); }), ['Rex', 'Max', 'Rex 2', 'Lulu'], 'changing one name in the list renames that agent alone');
+    await c2.page.evaluate(() => { const el = document.querySelector('#subNames'); el.value = ''; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); });
+    const built = await named(c2); assert.equal(built[2], 'Rex', 'empty list: the name of its own again'); assert.ok(!built.some((n, i) => built.indexOf(n) !== i), 'and every name once');
+    await c2.page.evaluate(async () => { clearTimeout(prefsTimer); await putPrefs(); }); await c.close(); await c2.close();
+  });
+
   await t.test("a fork joins as the lead's twin and follows the lead's name; the effort, the advisor and the cost Claude Code writes are shown", async () => {   // Claude Code 2.1.302: forks on by default; cost-state since 2.1.300; effort and advisorModel since 2.1.275
     const s = session(); s.user('hello', Date.now() - 600000); s.say('Ready.', { at: Date.now() - 590000, end: true }); const c = await open(s);
     const dir = path.join(tmp, 'projects', s.proj), raw = (f, r) => fs.appendFileSync(f, JSON.stringify({ timestamp: new Date().toISOString(), ...r }) + '\n');

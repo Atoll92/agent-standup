@@ -435,8 +435,10 @@
  "Empty: use the default name.": "Vazio: usar o nome padrão.",
  "Open a project to choose its name.": "Abra um projeto para escolher seu nome.",
  "Rename": "Renomear",
- "Rename every sub-agent: names separated by commas, given in this order. Empty: the built-in names.": "Renomeie todos os subagentes: nomes separados por vírgulas, dados nesta ordem. Vazio: os nomes embutidos.",
  "Rename the agents": "Renomear os agentes",
  "Start from the names in the call": "Começar pelos nomes da chamada",
- "Sub-agent names": "Nomes dos subagentes"
+ "Sub-agent names": "Nomes dos subagentes",
+ "Rename every sub-agent: names separated by commas, given in the order the agents start. Empty: the built-in names.": "Renomeie todos os subagentes: nomes separados por vírgulas, dados na ordem em que os agentes começam. Vazio: os nomes embutidos.",
+ "Agents you named yourself keep their names (switch below).": "Os agentes que você mesmo nomeou mantêm seus nomes (chave abaixo).",
+ "Agents you named yourself take these names too (switch below).": "Os agentes que você mesmo nomeou também recebem esses nomes (chave abaixo)."
 }

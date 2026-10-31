@@ -435,8 +435,10 @@
  "Empty: use the default name.": "비워 두면 기본 이름을 사용합니다.",
  "Open a project to choose its name.": "프로젝트를 열어 이름을 설정하세요.",
  "Rename": "이름 바꾸기",
- "Rename every sub-agent: names separated by commas, given in this order. Empty: the built-in names.": "모든 하위 에이전트 이름 바꾸기: 이름을 쉼표로 구분해 입력하면 이 순서대로 붙습니다. 비우면 기본 이름을 씁니다.",
  "Rename the agents": "에이전트 이름 바꾸기",
  "Start from the names in the call": "통화 중인 이름에서 시작",
- "Sub-agent names": "하위 에이전트 이름"
+ "Sub-agent names": "하위 에이전트 이름",
+ "Rename every sub-agent: names separated by commas, given in the order the agents start. Empty: the built-in names.": "모든 하위 에이전트 이름 바꾸기: 이름을 쉼표로 구분해 입력하면 에이전트가 시작한 순서대로 붙습니다. 비우면 기본 이름을 씁니다.",
+ "Agents you named yourself keep their names (switch below).": "직접 이름을 붙인 에이전트는 그 이름을 유지합니다(아래 스위치).",
+ "Agents you named yourself take these names too (switch below).": "직접 이름을 붙인 에이전트도 이 이름을 받습니다(아래 스위치)."
 }

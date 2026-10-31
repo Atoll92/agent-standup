@@ -435,8 +435,10 @@
  "Empty: use the default name.": "空欄の場合はデフォルトの名前を使用します。",
  "Open a project to choose its name.": "プロジェクトを開いて名前を設定してください。",
  "Rename": "名前を変更",
- "Rename every sub-agent: names separated by commas, given in this order. Empty: the built-in names.": "すべてのサブエージェントの名前を変更：名前をカンマで区切って入力すると、この順に割り当てられます。空欄：組み込みの名前。",
  "Rename the agents": "エージェントの名前を変更",
  "Start from the names in the call": "通話中の名前から始める",
- "Sub-agent names": "サブエージェントの名前"
+ "Sub-agent names": "サブエージェントの名前",
+ "Rename every sub-agent: names separated by commas, given in the order the agents start. Empty: the built-in names.": "すべてのサブエージェントの名前を変更：名前をカンマで区切って入力すると、エージェントが開始した順に割り当てられます。空欄：組み込みの名前。",
+ "Agents you named yourself keep their names (switch below).": "自分で名前を付けたエージェントはその名前のままです（下のスイッチ）。",
+ "Agents you named yourself take these names too (switch below).": "自分で名前を付けたエージェントにもこれらの名前が付きます（下のスイッチ）。"
 }
