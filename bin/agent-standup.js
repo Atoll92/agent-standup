@@ -24,9 +24,11 @@ Usage
 Options
   --port N          port of the local server (default 4747)
   --open            open the page in your browser
-  --projects DIR    where the session files are (default ~/.claude/projects, or $CLAUDE_CONFIG_DIR/projects); when it is
-                    named projects, the sessions folder beside it is read too (what waits for you)
-  --config DIR      Claude Code's config folder, as CLAUDE_CONFIG_DIR (its projects and sessions folders are read)
+  --projects DIR    where the session files are (default ~/.claude/projects, or $CLAUDE_CONFIG_DIR/projects, and those of
+                    each ~/.claude-<name> folder of another account); when it is named projects, the sessions folder
+                    beside it is read too (what waits for you)
+  --config DIR      Claude Code's config folder, as CLAUDE_CONFIG_DIR (its projects and sessions folders are read, and
+                    no other account's)
   --codex DIR       where Codex keeps its files (default ~/.codex, or $CODEX_HOME); "off" to leave Codex sessions out
   --vibe DIR        where Mistral Vibe keeps its files (default ~/.vibe, or $VIBE_HOME); "off" to leave Vibe sessions out
   --cowork DIR      where the Claude desktop app keeps its Cowork sessions (default: its local-agent-mode-sessions folder); "off" to leave them out
@@ -44,7 +46,7 @@ if (flags.projects && path.basename(path.resolve(flags.projects)) === 'projects'
 if (flags.codex !== undefined) process.env.AGENT_STANDUP_CODEX = /^(0|off|no|false)?$/i.test(String(flags.codex)) ? 'off' : path.resolve(String(flags.codex));
 if (flags.vibe !== undefined) process.env.AGENT_STANDUP_VIBE = /^(0|off|no|false)?$/i.test(String(flags.vibe)) ? 'off' : path.resolve(String(flags.vibe));
 if (flags.cowork !== undefined) process.env.AGENT_STANDUP_COWORK = /^(0|off|no|false)?$/i.test(String(flags.cowork)) ? 'off' : path.resolve(String(flags.cowork));
-if (flags.config) process.env.CLAUDE_CONFIG_DIR = path.resolve(flags.config);
+if (flags.config) { process.env.CLAUDE_CONFIG_DIR = path.resolve(flags.config); process.env.AGENT_STANDUP_CLAUDE_DIRS = 'off'; }   // the one account asked for, not the other Claude Code folders
 if (flags.characters) process.env.AGENT_STANDUP_CHARACTERS = path.resolve(flags.characters);
 if (flags.port !== undefined) {   // a real port number or nothing: no silent fallback to another port
   if (!/^\d+$/.test(String(flags.port)) || +flags.port < 1 || +flags.port > 65535) { console.error(`Invalid --port "${flags.port}": use a number between 1 and 65535.`); process.exit(2); }
