@@ -19,13 +19,23 @@ const CLAUDE_HOME = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.c
 const ROOT = process.env.AGENT_STANDUP_PROJECTS || path.join(CLAUDE_HOME, 'projects');
 // Some people keep one Claude Code folder per account, each started with its own CLAUDE_CONFIG_DIR (alias claude-pro="CLAUDE_CONFIG_DIR=~/.claude-pro claude", issue #9): the app is started without it and would read neither.
 // So every such folder is read too: ~/.claude, each ~/.claude-<name> (or .claude_<name>, .claude.<name>) that holds a projects folder, and the ones AGENT_STANDUP_CLAUDE_DIRS names ("off": none of them). The one of this process comes first.
-// A session id is unique, so a session found in two folders (a copy) is taken from the first. With AGENT_STANDUP_PROJECTS (--projects, the tests) that one folder alone is read, as before.
+// A ~/.claude-<name> is an account only if Claude Code was started with it: it then keeps its own .claude.json there (.config.json for one an old Claude Code made, .claude-custom-oauth.json…; the default one is in the home folder, so a copy of ~/.claude has none), and its name does not end like a backup's (.bak, -old, " copy 2", -20251001…).
+// A session id is unique, so a session found in two folders (a copy) is taken from the one whose last record is the latest (resumed there), then the larger, then the first: a copy made with cp -r has fresh file dates, which say nothing. With AGENT_STANDUP_PROJECTS (--projects, the tests) that one folder alone is read, as before.
+const sizeOf = (f) => { try { return fs.statSync(f).size; } catch { return -1; } };   // -1 for a file that is gone: an empty one still counts
+const isFile = (f) => { try { return fs.statSync(f).isFile(); } catch { return false; } };
+const stampMemo = new Map();
+function lastStamp(f) {   // the time of a transcript's last record, read from its end (-1: no file); a copy keeps it, where its file date is the copy's. None in the last 64 KB (a huge last record): the file's date
+  let st; try { st = fs.statSync(f); } catch { return -1; } const m = stampMemo.get(f); if (m && m.size === st.size && m.mt === st.mtimeMs) return m.t;
+  let t = st.mtimeMs; try { const fd = fs.openSync(f, 'r'); try { const n = Math.min(st.size, 65536), buf = Buffer.alloc(n); fs.readSync(fd, buf, 0, n, st.size - n); const all = buf.toString('utf8').match(/"timestamp":\s*"[^"]{10,40}"/g); if (all) t = Date.parse(all[all.length - 1].split('"')[3]) || t; } finally { fs.closeSync(fd); } } catch {}
+  stampMemo.delete(f); if (stampMemo.size >= 20000) stampMemo.delete(stampMemo.keys().next().value); stampMemo.set(f, { size: st.size, mt: st.mtimeMs, t }); return t;   /* the oldest out, one at a time */
+}
+const fuller = (a, b) => { const sa = sizeOf(a), sb = sizeOf(b); if (sa === sb) return false; const ta = lastStamp(a), tb = lastStamp(b); return ta !== tb ? ta > tb : sa > sb; };   // of two copies of one session, a the one to read: written later, or holding more. The same size: a copy left as it was, b (the first) without reading either
 let homesMemo = { at: 0, list: [] };
 function claudeHomes() {   // [CLAUDE_HOME, the other folders that hold sessions]; looked for again every 30 s, for an account added while the app runs
   if (ONE_FOLDER || /^(0|off|no|false)$/i.test(EXTRA_HOMES.trim())) return [CLAUDE_HOME];   // AGENT_STANDUP_CLAUDE_DIRS=off: that one folder (the command line's --config)
   const now = Date.now(); if (now - homesMemo.at < 30e3) return homesMemo.list;
   const home = os.homedir(), real = (d) => { try { return fs.statSync(d).isDirectory() ? fs.realpathSync(d) : ''; } catch { return ''; } };
-  let names = []; try { names = fs.readdirSync(home).filter((n) => /^\.claude[-_.][^\\/]+$/.test(n)).sort(); } catch {}
+  let names = []; try { names = fs.readdirSync(home).filter((n) => /^\.claude[-_.][^\\/]+$/.test(n) && !/([-_.~ ](bak|bkp|backup|old|orig|copy|save|saved|prev|archive|snapshot)[\dT_.-]*| \(copy( \d+)?\)| \d+|[-_.]\d{6,}[\dT_.-]*|~)$/i.test(n) && ['.claude.json', '.config.json', '.claude-custom-oauth.json'].some((j) => isFile(path.join(home, n, j)))).sort(); } catch {}
   const extra = EXTRA_HOMES.split(path.delimiter).map((d) => d.trim()).filter(Boolean).map((d) => path.resolve(d.replace(/^~(?=$|[\\/])/, home)));
   const list = [CLAUDE_HOME], seen = new Set([real(path.join(CLAUDE_HOME, 'projects')) || path.join(CLAUDE_HOME, 'projects')]);
   for (const d of [path.join(home, '.claude'), ...names.map((n) => path.join(home, n)), ...extra]) { const r = real(path.join(d, 'projects')); if (r && !seen.has(r)) { seen.add(r); list.push(d); } }
@@ -78,7 +88,7 @@ function projDir(proj, id) {   // the folder that holds <id>.jsonl and the sub-a
   const cw = proj === COWORK && coworkMap().get(id); if (cw) return cw;
   const roots = projRoots(); if (roots.length < 2) return path.join(roots[0], proj);
   const k = proj + '/' + id, known = dirOf.get(k); if (known) return known;
-  let best = '', at = 0; for (const r of roots) { const d = path.join(r, proj), m = mtimeOf(path.join(d, id + '.jsonl')); if (m > at) { best = d; at = m; } }   // in two folders (one copied from the other, the session resumed in it): the one written last
+  let best = ''; for (const r of roots) { const d = path.join(r, proj); if (sizeOf(path.join(d, id + '.jsonl')) >= 0 && (!best || fuller(path.join(d, id + '.jsonl'), path.join(best, id + '.jsonl')))) best = d; }   // in two folders (one copied from the other, the session resumed in it): the one written later (fuller)
   if (best) { if (dirOf.size > 5000) dirOf.clear(); dirOf.set(k, best); return best; }
   return path.join(roots[0], proj);
 }
@@ -90,8 +100,8 @@ function transcripts(proj) {   // the sessions of a project: { id, file }
     const dir = path.join(r, proj); let files; try { files = fs.readdirSync(dir); } catch { continue; }
     for (const f of files) {
       if (!f.endsWith('.jsonl')) continue; const id = f.slice(0, -6), row = { id, file: path.join(dir, f) };
-      if (roots.length > 1) {   // a session in two folders is listed once, from the one written last (see projDir), which dirOf keeps up to date at each look
-        const was = seen.get(id); if (was && !(mtimeOf(row.file) > mtimeOf(was.file))) continue;
+      if (roots.length > 1) {   // a session in two folders is listed once, from the one written later (fuller, see projDir), which dirOf keeps up to date at each look
+        const was = seen.get(id); if (was && !fuller(row.file, was.file)) continue;
         if (dirOf.size > 5000) dirOf.clear(); dirOf.set(proj + '/' + id, dir); if (was) { was.file = row.file; continue; } seen.set(id, row);
       }
       out.push(row);

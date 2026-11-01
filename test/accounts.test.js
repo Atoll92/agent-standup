@@ -28,6 +28,15 @@ put(at('.claude', '-work-app', 9), [user('Remove the cache', 70e3), bash('rm -rf
 fs.writeFileSync(path.join(HOME, '.claude-pro', 'sessions', '501.json'), JSON.stringify({ pid: live[2].pid, sessionId: id(9), status: 'waiting', waitingFor: 'permission prompt', statusUpdatedAt: now - 60e3, updatedAt: now - 60e3 }));
 fs.writeFileSync(path.join(HOME, '.claude', 'sessions', '501.json'), JSON.stringify({ pid: live[2].pid, sessionId: id(5), status: 'idle', statusUpdatedAt: now - 10e3, updatedAt: now - 10e3 }));
 put(path.join(WORK, 'projects', '-work-api', id(4) + '.jsonl'), [user('Add the endpoint', 200e3), say('Added.', 190e3)], 190e3);
+for (const d of ['.claude-pro', '.claude-perso', '.claude-tool', '.claude-pro.bak']) { fs.mkdirSync(path.join(HOME, d), { recursive: true }); fs.writeFileSync(path.join(HOME, d, '.claude.json'), '{}'); }   // Claude Code started with CLAUDE_CONFIG_DIR keeps its .claude.json there
+put(at('.claude-backup', '-work-app', 1), [user('Fix the login', 120e3), say('Fixed in the default account.', 100e3)], 60e3); put(at('.claude-backup', '-work-old', 'a'), [user('Gone from ~/.claude', 9 * 86400e3), say('Done.', 9 * 86400e3)], 60e3);   // cp -r ~/.claude ~/.claude-backup: fresh dates, no .claude.json
+put(at('.claude-pro.bak', '-work-old', 'b'), [user('A backup of an account', 9 * 86400e3), say('Done.', 9 * 86400e3)], 60e3);   // named like a backup
+put(at('.claude-tool', '-work-site', 3), [user('Write the about page', 300e3), say('Written.', 280e3)], 10e3);   // the same bytes as ~/.claude-perso's, copied later: the first folder still
+fs.mkdirSync(path.join(HOME, '.claude-max'), { recursive: true }); fs.writeFileSync(path.join(HOME, '.claude-max', '.config.json'), '{}');   // an account an old Claude Code made: .config.json, never .claude.json
+put(at('.claude', '-work-lim', 'c'), [user('Long job', 30 * 3600e3), ...Array.from({ length: 40 }, (_, i) => say('Step ' + i + ' done.', (24 - i * 0.1) * 3600e3))], 20 * 3600e3);   // copied into ~/.claude-max, went on growing here, then hit the limit
+put(at('.claude-max', '-work-lim', 'c'), [user('Long job', 30 * 3600e3), say('Step 0 done.', 24 * 3600e3), user('Go on', 14 * 3600e3), say('Resumed on the other account.', 14 * 3600e3)], 14 * 3600e3);   // resumed in the other account: smaller, and later
+put(at('.claude', '-work-big', 'd'), [user('Read the dump', 50 * 3600e3), say('Reading it.', 49 * 3600e3)], 49 * 3600e3);   // left behind in ~/.claude two days ago
+put(at('.claude-max', '-work-big', 'd'), [user('Read the dump', 50 * 3600e3), say('Reading it.', 49 * 3600e3), user('Go on', 21 * 3600e3), { type: 'user', timestamp: iso(20 * 3600e3), message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't', content: 'x' }] }, toolUseResult: { stdout: 'y'.repeat(100e3) } }], 20 * 3600e3);   // resumed here: its last record is 100 KB long, its time at the start
 fs.mkdirSync(path.join(HOME, '.claude-empty'), { recursive: true }); fs.writeFileSync(path.join(HOME, '.claude.json'), '{}');   // neither holds sessions
 const JUNK = path.join(HOME, '.claude-tool', 'projects', '-junk'); fs.mkdirSync(path.join(JUNK, 'sub.jsonl'), { recursive: true });   // another tool's folder of the same shape: what it holds costs nothing to the others
 fs.writeFileSync(path.join(JUNK, id(6) + '.jsonl'), ['null', '[1,2]', '"text"', '{"type":"user","message":5}', '{"type":"assistant","message":{"content":"x","stop_reason":7}}', '{"type":"user","timestamp":"never","message":{"content":[null,{"type":"tool_result"}]}}', '{not json', ''].join('\n'));
@@ -38,7 +47,11 @@ test('the sessions of every Claude Code folder are in one call, each read from w
   try {
     const rows = core.sessionRows(), ids = rows.map((r) => r.id);
     for (const n of [1, 2, 3, 4]) assert.equal(ids.filter((x) => x === id(n)).length, 1, 'session ' + n + ' listed once');
-    assert.equal(core.transcriptFile('-work-app', id(1)), at('.claude', '-work-app', 1), 'a session found twice is read from the copy written last');
+    assert.equal(core.transcriptFile('-work-app', id(1)), at('.claude', '-work-app', 1), 'a session found twice is read from the copy that holds more of it');
+    assert.ok(!ids.includes(id('a')) && !ids.includes(id('b')), 'a backup copy is not an account: no .claude.json, or a name that ends like a backup');
+    assert.equal(core.transcriptFile('-work-site', id(3)), at('.claude-perso', '-work-site', 3), 'the same bytes in two folders: the first, whatever the dates say');
+    assert.equal(core.transcriptFile('-work-big', id('d')), at('.claude-max', '-work-big', 'd'), 'a last record too long to find its time: the file date says which copy is newer');
+    assert.equal(core.transcriptFile('-work-lim', id('c')), at('.claude-max', '-work-lim', 'c'), 'resumed in an account an old Claude Code made: read from there, though the copy left behind is larger');
     assert.equal(core.transcriptFile('-work-app', id(8)), at('.claude-pro', '-work-app', 8), 'resumed in the other account: read from there');
     assert.equal(ids.filter((x) => x === id(8)).length, 1); assert.ok(core.boardRows().some((r) => r.id === id(8)), 'its recent work is on the board');
     assert.equal(core.boardRows().find((r) => r.id === id(7)).state, 'blocked', "a copied folder's frozen status never hides a menu that waits");
