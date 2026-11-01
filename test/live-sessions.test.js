@@ -146,10 +146,14 @@ test('live call: sessions, tabs and replays', { skip: missing || false, timeout:
       assert.deepEqual(await c.page.evaluate(() => [document.querySelector('#sline').className.split(' ')[0], document.querySelector('#attn').hidden]), ['blocked', true], 'the status line says it in red, once: no second red line under it for the same agent');
       const posts = []; c.page.on('request', (q) => { if (q.url().endsWith('/api/answer')) posts.push(q.postData()); }); await c.page.evaluate(() => pillGo()); await c.until(() => true); await wait(800);
       assert.deepEqual(posts.map((b) => JSON.parse(b).id), ['s'], 'a click on it also asks to open the session where it can be answered');
-      assert.deepEqual(await c.page.evaluate(() => { answerAt.at = 0; const n = S.detailOpen || 0; document.querySelector('#t-main .bubble').click(); const r = [S.detailOpen || 0, n]; document.querySelector('#t-main .tag').click(); return [r[0] === r[1], (S.detailOpen || 0) === n + 1]; }), [true, true], "a click on the asking agent's bubble goes to its tab instead of its panel; elsewhere on the tile, the panel");
-      await wait(800); assert.deepEqual(posts.map((b) => JSON.parse(b).id), ['s', 's'], "the bubble asks to open the session where it can be answered");
+      await c.page.evaluate(() => document.querySelector('#prefs .mi[data-t=askCard]').click());   // the card off again: it covers the foot of the tile
+      const realClick = async (q) => { const r = await c.page.evaluate((sel) => { answerAt.at = 0; const b = document.querySelector(sel).getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2, h: b.height }; }, q); assert.ok(r.h > 0, q + ' is on screen while the lead waits'); await c.page.mouse.click(r.x, r.y); await wait(300); };   // the mouse, not el.click(): it finds what is really under the pointer (a hidden bubble, pointer-events)
+      const d0 = await c.page.evaluate(() => S.detailOpen || 0); for (const q of ['#t-main .status', '#t-main .prop']) await realClick(q);
+      assert.equal(await c.page.evaluate(() => S.detailOpen || 0), d0, "a click on the waiting lead's badge or hand does not open its panel"); await wait(500);
+      assert.deepEqual(posts.map((b) => JSON.parse(b).id), ['s', 's', 's'], 'it asks to open the session where it can be answered');
+      assert.equal(await c.page.evaluate(() => document.querySelector('#t-main .status').title), 'Click to go and answer');
+      await realClick('#t-main .tag'); assert.equal(await c.page.evaluate(() => S.detailOpen || 0), d0 + 1, 'elsewhere on the tile: its panel');
       await c.page.evaluate(() => document.querySelector('#dclose').click());
-      await c.page.evaluate(() => document.querySelector('#prefs .mi[data-t=askCard]').click());
     } finally { fs.rmSync(path.join(CC, '1.json'), { force: true }); }   // every session of this file is called s
     await c.close();
   });
