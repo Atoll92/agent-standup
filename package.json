@@ -2,7 +2,7 @@
   "name": "agent-standup",
   "displayName": "Agent Standup: Claude Code & Codex Agent Monitor",
   "description": "%extension.description%",
-  "version": "1.43.0",
+  "version": "1.43.1",
   "publisher": "DoubleGeste",
   "license": "MIT",
   "engines": {
