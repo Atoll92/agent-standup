@@ -1336,7 +1336,7 @@ async function speakLine(text, p, primary, token, lo = voiceLang(text), always =
 //  rendering
 // =====================================================================
 function addTile(p) {
-  const d = document.createElement('div'); d.className = 'tile' + (p.lead ? ' lead' : ''); d.id = 't-' + p.id; d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', p.name + ' — ' + p.role); d.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(p.id); } }; d.style.display = 'none'; d.onclick = () => openDetail(p.id);
+  const d = document.createElement('div'); d.className = 'tile' + (p.lead ? ' lead' : ''); d.id = 't-' + p.id; d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', p.name + ' — ' + p.role); d.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(p.id); } }; d.style.display = 'none'; d.onclick = (e) => { const st = e.target.closest('.bubble') && !String(getSelection() || '') && agentState(p.id, Date.now()); if (st && st.k === 'blocked' && st.sure) answerAt(S.cur); else openDetail(p.id); };   /* its bubble while it asks you: the tab or terminal where the question or permission waits (answerAt), as the card does */
   d.innerHTML = `${avatarSVG(p, undefined, 't' + p.gid + '_')}<div class="bubble"></div><div class="status"></div><div class="prop"></div><div class="thought"></div><div class="ticker"></div><div class="tbadge"></div><div class="tag"><b>${esc(p.name)}</b><span>${esc(p.role)}</span><span class="tk"></span><span class="cx"></span></div>`;
   $('#stage').appendChild(d);
 }
