@@ -142,7 +142,7 @@ p a, .fine a, li a { color:var(--accent) } p a:hover, .fine a:hover, li a:hover 
 
     <p class="lead" data-en="It reads the session files Claude Code, Codex and Mistral Vibe already write, so it works <b>wherever you run them</b>: VS Code, Cursor, a plain terminal, the desktop app. Nothing to configure, nothing sent anywhere." data-fr="Il lit les fichiers de session que Claude Code, Codex et Mistral Vibe écrivent déjà : il marche donc <b>partout où vous les lancez</b> : VS Code, Cursor, un simple terminal, l’application de bureau. Rien à configurer, rien n’est envoyé.">It works wherever you run Claude Code, Codex or Mistral Vibe.</p>
     <div class="cta-row">
-      <a class="cta" id="ctaVsc" href="https://marketplace.visualstudio.com/items?itemName=DoubleGeste.agent-standup" target="_blank" rel="noopener"><span data-en="Install in VS Code" data-fr="Installer dans VS Code">Install in VS Code</span><small id="dlS">v1.42.0</small></a>
+      <a class="cta" id="ctaVsc" href="https://marketplace.visualstudio.com/items?itemName=DoubleGeste.agent-standup" target="_blank" rel="noopener"><span data-en="Install in VS Code" data-fr="Installer dans VS Code">Install in VS Code</span><small id="dlS">v1.43.0</small></a>
       <a class="cta ghost" href="#ways" data-en="No VS Code? Pick your way ↓" data-fr="Pas de VS Code ? Choisissez ↓">No VS Code? Pick your way ↓</a>
     </div>
     <p class="fine" data-en="Free · open source · Mac, Windows, Linux<br>Or in 30 seconds, no editor: <code style='white-space:nowrap'>npx @double_geste/agent-standup@latest --open</code>" data-fr="Gratuit · open source · Mac, Windows, Linux<br>Ou en 30 secondes, sans éditeur : <code style='white-space:nowrap'>npx @double_geste/agent-standup@latest --open</code>">Free · open source</p>
@@ -220,16 +220,21 @@ const FR = () => LANG === 'fr';   // the art block shared with the app expects t
 // =====================================================================
 const NAMES = ['Ada','Linus','Grace','Alan','Margaret','Dennis','Barbara','Ken','Radia','Tim','Hedy','Guido','Frances','Bjarne','Katherine','Brian','Sophie','Niklaus','Annie','Donald','Joan','Edsger','Lynn','Vint','Mae','Rob','Zoe','Ivan','Nina','Otto','Lena','Hugo','Ines','Théo','Maya','Jules','Alma','Remy','Cleo','Noah','Iris','Leo','Mira','Axel','Nora','Eli','Lou','Gaby'];
 const nameBook = {};   // agent id → unique first name within the session
-// The lead's name: Margot, or the one chosen in ⚙ → All settings (prefs.leadName) or in the editor (agentStandup.leadName, which wins: AS_APP.lead, see appKind in server.js). Plain text of 24 characters at most: it is written into the page in many places.
+// The lead's name: Margot, the global default, the current project override, or the name in the editor (agentStandup.leadName, which wins: AS_APP.lead, see appKind in server.js). Plain text of 24 characters at most: it is written into the page in many places.
 // typeof: the landing page reuses this section and has neither prefs nor APP
 const LEAD_NAME = 'Margot', cleanLead = (v) => Array.from(String(v == null ? '' : v).replace(/'/g, '’').replace(/[\u0000-\u001f\u007f-\u009f<>&"`\\]/g, '').replace(/\s+/g, ' ').trim()).slice(0, 24).join('').trim();
-const leadName = () => (typeof APP === 'object' && APP && cleanLead(APP.lead)) || (typeof prefs === 'object' && prefs && cleanLead(prefs.leadName)) || LEAD_NAME;
+// One top-level preference per project: the existing prefsPatch merges independent window edits without replacing a shared map.
+const projectLeadKey = () => typeof leadProject === 'object' && leadProject ? 'leadName:' + leadProject.key : '';
+const leadName = () => (typeof APP === 'object' && APP && cleanLead(APP.lead)) || (typeof prefs === 'object' && prefs && (cleanLead(prefs[projectLeadKey()]) || cleanLead(prefs.leadName))) || LEAD_NAME;
 const isLeadName = (n) => { const l = leadName().toLocaleLowerCase(), s = String(n || '').toLocaleLowerCase(); return !!n && (s === l || (s.startsWith(l + ' ') && /^\d+$/.test(s.slice(l.length + 1)))); };   // whatever the capitals: Ivan and ivan would read as one agent, and Ivan 2 as a fork of the lead
+// Your own names for the sub-agents (⚙ → All settings → Sub-agent names, prefs.subNames: names separated by commas), given in your order instead of the built-in list. Parsed again only when the text changes
+let subListMemo = { text: null, list: [] };
+const subNameList = () => { const t = typeof prefs === 'object' && prefs && typeof prefs.subNames === 'string' ? prefs.subNames : ''; if (t !== subListMemo.text) { const seen = new Set(), list = []; for (const v of t.split(/[,;\n]+/)) { const n = cleanLead(v), k = n.toLocaleLowerCase(); if (n && !seen.has(k) && list.length < 200) { seen.add(k); list.push(n); } } subListMemo = { text: t, list }; } return subListMemo.list; };
 function uniqueName(id, h) {
-  if (nameBook[id]) return nameBook[id]; const taken = new Set(Object.values(nameBook).map((n) => n.toLocaleLowerCase())), n0 = taken.size; taken.add(leadName().toLocaleLowerCase());   // never the lead's own name: one may be chosen from this list
-  for (let k = 0; k < NAMES.length; k++) { const n = NAMES[(h + k) % NAMES.length]; if (!taken.has(n.toLocaleLowerCase())) return (nameBook[id] = n); }
-  let b = h % NAMES.length; if (isLeadName(NAMES[b])) b = (b + 1) % NAMES.length;   // every name taken: a number after it, but never after the lead's name ("Ivan 48" would read as a fork of a lead called Ivan)
-  return (nameBook[id] = NAMES[b] + ' ' + (n0 + 1));
+  if (nameBook[id]) return nameBook[id]; const taken = new Set(Object.values(nameBook).map((n) => n.toLocaleLowerCase())); taken.add(leadName().toLocaleLowerCase());   // never the lead's own name: one may be chosen from this list
+  const own = subNameList().filter((n) => !isLeadName(n)), pool = own.length ? own : NAMES, at = own.length ? 0 : h;   // your list: its names in your order; the built-in one: a name drawn from the agent's id
+  for (let k = 0; k < pool.length; k++) { const n = pool[(at + k) % pool.length]; if (!taken.has(n.toLocaleLowerCase())) return (nameBook[id] = n); }
+  for (let r = 2; ; r++) for (let k = 0; k < pool.length; k++) { const b = pool[(at + k) % pool.length]; if (isLeadName(b)) continue; const n = b + ' ' + r; if (!taken.has(n.toLocaleLowerCase())) return (nameBook[id] = n); }   // every name taken: Ada 2, Linus 2… then Ada 3, never after the lead's name ("Ivan 2" would read as a fork of a lead called Ivan); the pool always holds a name that is not the lead's
 }
 const PAL = ['#ff7a6b','#ffb347','#ffd84a','#4fd1a5','#4cc3ff','#7c8cff','#b583ff','#ff7eb6'];
 const hexRGB = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -366,11 +371,15 @@ function packNote() {   // the Halloween pack, to someone without it, twice a se
   $('#packNoteB').textContent = L('Voir le pack', 'See the pack') + ' · ' + price;
 }
 function persona(a) { const p = persona0(a); p.custom = customFor(p.twin ? 'main' : a.id); return p; }   // a fork wears the lead's own picture too
-const subName = (a, h) => (a.own && prefs.ownNames && !isLeadName(a.own) ? (nameBook[a.id] = a.own) : ((a.twinN || !isLeadName(a.given)) && a.given) || uniqueName(a.id, h));   /* a fork is the one agent named after the lead */   // own: the name the person gave this agent (see ownName in server.js); otherwise a first name from the list. a.own is tested first: the landing page reuses this section and has no settings
+// The order agents are named in: the order they started (born, from the server), not the order their files are listed in (by their ids: effectively random). A reload, a replay and the live call then give each agent
+// the same name, a first name of your list the same agent, and a fork the same number. Without born (the demo, a session just started), the order they came in
+const byBorn = (list) => list.map((a, j) => ({ a, j })).sort((x, y) => (x.a.born || Infinity) - (y.a.born || Infinity) || x.j - y.j).map((x) => x.a);
+const ownFree = (a) => { const taken = new Set(Object.keys(nameBook).filter((k) => k !== a.id).map((k) => nameBook[k].toLocaleLowerCase())); let n = a.own; for (let r = 2; taken.has(n.toLocaleLowerCase()); r++) n = a.own + ' ' + r; return n; };   // a name of its own that another agent has already (a first name of your list, or the same name from another tool): a number after it
+const subName = (a, h) => (/^visit:/.test(a.id || '') ? (isLeadName(a.given) ? NAMES[(h + 1) % NAMES.length] : a.given) : a.own && prefs.ownNames && !isLeadName(a.own) ? (nameBook[a.id] = ownFree(a)) : ((a.twinN || (!isLeadName(a.given) && !subNameList().length)) && a.given) || uniqueName(a.id, h));   /* a visitor from another session keeps its built-in name and takes none of the call's names; a fork is the one agent named after the lead; with your own list, the names a tool gave (Codex's nicknames, the demo's) give way to it */   // own: the name the person gave this agent (see ownName in server.js); otherwise a first name from the list. a.own is tested first: the landing page reuses this section and has no settings
 function renameAll(lead) {   // ⚙ → own names on or off, or a new name for the lead: every sub-agent is named again, in the order it arrived, as a reload would name them
   const names = () => Object.values(S.agents).map((p) => p.name).join('\n'), was = names();
   if (lead) for (const p of Object.values(S.agents)) if (p.id === 'main' || p.twinN) { const q = persona(p); p.name = q.name; p.given = q.given; }   // the lead and its forks first: the others then keep clear of the lead's name
-  for (const k in nameBook) delete nameBook[k]; for (const p of Object.values(S.agents)) if (p.id !== 'main' && p.id !== 'user') p.name = p.twinN && !(p.own && prefs.ownNames && !isLeadName(p.own)) ? p.given : subName(p, hash(p.id));   // a fork is the lead's twin unless it has a name of its own to keep
+  for (const k in nameBook) delete nameBook[k]; for (const p of byBorn(Object.values(S.agents))) if (p.id !== 'main' && p.id !== 'user') p.name = p.twinN && !(p.own && prefs.ownNames && !isLeadName(p.own)) ? p.given : subName(p, hash(p.id));   // a fork is the lead's twin unless it has a name of its own to keep
   if (!lead || names() !== was) { buildStage(); renderTokens(); renderCtx(); paintStatus(); renderLog(true); syncUI(); }   // the new tiles get their tokens and context at once, not at the next usage
 }
 function persona0(a) {
