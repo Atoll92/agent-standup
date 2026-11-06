@@ -1,6 +1,6 @@
 // Project names in real windows, with only synthetic transcripts and isolated preferences.
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), path = require('path');
-const { tmp, missing, start, session, open } = require('./live-helpers.js');
+const { tmp, missing, start, session, open, wait } = require('./live-helpers.js');
 process.env.AGENT_STANDUP_CODEX = path.join(tmp, 'codex');
 process.env.AGENT_STANDUP_VIBE = path.join(tmp, 'vibe');
 const A = path.join(tmp, 'work', 'app-old'), B = path.join(tmp, 'work', 'app', 'old');
@@ -161,6 +161,9 @@ test('own characters: a sub-agent wears the picture named after it', { skip: mis
     const panel = await c.page.evaluate(async () => { CHPICK.more = 'folder'; await openChars(); const chip = [...document.querySelectorAll('.mine .chip')].find((x) => /^qa ·/.test(x.textContent)); return { chip: chip && chip.textContent, want: [...document.querySelectorAll('#recap p.dim')].map((x) => x.textContent).find((x) => x.startsWith('In this call')) || '', names: [S.agents.a1.name, S.agents.a4.name] }; });
     assert.ok(panel.names.some((n) => panel.chip.includes('→ ' + n)), 'the qa picture says which QA wears it: ' + panel.chip);
     assert.equal(panel.want, 'In this call, without a picture of their own: designer.png', 'only the type with no picture yet (dba is a launch name, security has Security.png)');
+    const look = (id) => c.page.evaluate((id) => { const t = document.getElementById('t-' + id); return t.style.getPropertyValue('--lx') + ',' + t.style.getPropertyValue('--ly'); }, id);
+    await c.page.evaluate(() => { document.getElementById('recap').classList.remove('on'); const g = document.getElementById('gB'); if (g) g.click(); }); await wait(500); await c.page.evaluate(() => { if (S.playing) togglePlay(); clearSpeaking(); for (const id of ['main', 'user']) document.getElementById('t-' + id).style.display = ''; startTalk('main', 'Hello team'); }); await c.until(() => (document.getElementById('t-user').style.getPropertyValue('--lx') || '0.00') !== '0.00', null, 5000);
+    assert.equal(await look('main'), '0.00,0.00', 'the one speaking looks at the camera'); await c.page.evaluate(() => stopTalk('main')); await c.until(() => document.getElementById('t-user').style.getPropertyValue('--lx') === '0.00', null, 5000);   // the others glanced at it, and look back once it is done
     assert.deepEqual(await c.page.evaluate(() => [agentKeys({ type: 'main' }), agentKeys({ type: 'agent' }), agentKeys({ type: 'Explore' }), agentKeys({ type: 'qa', own: 'Login Tests 2' })]), [[], [], [], ['qa', 'login-tests']]);
   } finally { await c.close(); }
 });

@@ -278,6 +278,7 @@
   .arm.l { transform-origin:27px 48px } .arm.r { transform-origin:73px 48px } .tile.speaking .arm.r { animation:wave .7s ease-in-out infinite } @keyframes wave { 50% { transform:rotate(-34deg) } }
   .tile.working .arm { display:none } .tile .laptop, .tile .hands, .tile .sparks, .tile .grin, .tile .eyes-happy, .tile .mouth { display:none }
   .tile.working .laptop, .tile.working .hands, .tile.done .sparks, .tile.done .eyes-happy { display:inline } .tile.done .eyes-open { display:none }
+  .tile .eyes-open { transition:transform .45s ease; transform:translate(calc(var(--lx,0) * 1.4px), calc(var(--ly,0) * .9px)) } .tile.working .eyes-open { transform:none }   /* the others glance at whoever speaks (gaze()); one move per line, not an endless animation; at work, eyes on the laptop */
   .tile.speaking .mouth { display:inline } .tile.speaking .smile, .tile.speaking .grin { display:none } .tile.done:not(.speaking) .smile { display:none } .tile.done:not(.speaking) .grin { display:inline }
   .hand { animation:type .34s ease-in-out infinite } .hand.r { animation-delay:-.17s } .tile.working .chand { animation:type .34s ease-in-out infinite } .tile.working .chand.r { animation-delay:-.17s }
   .claptop { display:none } .claptop.on, .tile.lap .claptop { display:inline } .tile.lap .claptop { animation:lapin .5s cubic-bezier(.2,.8,.3,1) } .tile.lapout .claptop { animation:lapout .45s ease-in forwards }   /* a laptop pulled out from under the desk, and put away */
@@ -2171,6 +2172,7 @@ function startTalk(id, text, label) {
     else { open = !open; m.setAttribute('ry', open ? 4.2 : 1.1); m.setAttribute('rx', open ? 4 : 4.7); if (pm) { pm.setAttribute('ry', open ? 4.2 : 1.1); pm.setAttribute('rx', open ? 4 : 4.7); } }
   }, 70));
   if (document.body.classList.contains('tree')) renderTree();
+  gaze();
 }
 
 function thought(id, em) { const t = $('#t-' + id); if (!t || t.style.display === 'none') return; const el = t.querySelector('.thought'); el.textContent = em; el.classList.remove('go'); void el.offsetWidth; el.classList.add('go'); }
@@ -2188,11 +2190,17 @@ function stopTalk(id) {
   clearInterval(mouths.get(id)); mouths.delete(id); S.speakers.delete(id); if (!S.speakers.size) AUD.duck(false); if (S.focus === id && S.speakers.size) setFocus([...S.speakers][0]);
   if (S.present === id) { $('#pcap').textContent = ''; $('#pcam').classList.remove('speaking'); const pm = $('#pcam .mouthE'); if (pm) { pm.setAttribute('ry', .9); pm.setAttribute('rx', 4.6); } }
   const t = $('#t-' + id); if (!t) return;
-  t.classList.remove('speaking'); const m = t.querySelector('.mouthE'); if (m) { m.setAttribute('ry', .9); m.setAttribute('rx', 4.6); }
+  gaze(); t.classList.remove('speaking'); const m = t.querySelector('.mouthE'); if (m) { m.setAttribute('ry', .9); m.setAttribute('rx', 4.6); }
   const ct = t.querySelector('.cimg-talk'); if (ct) { ct.style.display = 'none'; t.querySelector('.cimg').style.display = ''; }
   const pc = $('#pcam .cimg-talk'), pi = $('#pcam .cimg'); if (pc && pi && S.present === id) { pc.style.display = 'none'; pi.style.display = ''; }
 }
 const clearSpeaking = () => [...S.speakers].forEach(stopTalk);
+function gaze() {   // the others turn their eyes to the one speaking, and back to the camera when the floor is free; after the spotlight has moved the tiles
+  clearTimeout(gaze.t); gaze.t = setTimeout(() => {
+    const sp = [...S.speakers][0], st = sp && $('#t-' + sp), r = st && st.getBoundingClientRect();
+    for (const t of document.querySelectorAll('#stage .tile')) { let x = 0, y = 0; if (r && r.width && t !== st) { const q = t.getBoundingClientRect(), dx = r.left + r.width / 2 - (q.left + q.width / 2), dy = r.top + r.height / 2 - (q.top + q.height / 2), d = Math.hypot(dx, dy) || 1; x = dx / d; y = dy / d; } const lx = x.toFixed(2), ly = y.toFixed(2); if (t.style.getPropertyValue('--lx') !== lx) t.style.setProperty('--lx', lx); if (t.style.getPropertyValue('--ly') !== ly) t.style.setProperty('--ly', ly); }
+  }, 250);
+}
 // =====================================================================
 //  inner thoughts: an agent that has been at work for a while thinks to itself, in a bubble it does not say. What it thinks is real: its own reasoning when the session kept it
 //  (rarely: Claude Code mostly stores a signature), otherwise what it is on right now (the command it waits for, the files it goes between, its to-do item, a failure, its task).
