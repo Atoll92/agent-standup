@@ -623,14 +623,15 @@ async function loadChars() {
   CHARS = next;
 }
 const charKey = (s) => String(s || '').split(':').pop().toLowerCase().replace(/[\s_\-]+/g, '-').replace(/^-+|-+$/g, '');   // "QA Agent", qa_agent, plugin:qa-agent → qa-agent
-const agentKeys = (a) => (a ? [a.type, a.own && a.own.replace(/ \d+$/, '')] : []).map(charKey).filter(Boolean);   // its type (.claude/agents/qa.md) and the name it was launched with; "Qa 2", the second of its name, is still qa
-const wears = (c, keys) => { const s = charKey(c.name); return keys.some((k) => s === k || (s.startsWith(k + '-') && /^(\d+|[a-z])$/.test(s.slice(k.length + 1)))); };   // qa.png, and qa-2.png or qa-f.png for other looks of the same agent; qa-lead.png is a character of its own
+const STOCK_TYPE = /^(main|general-purpose|explore|plan|claude|agent|task|fork|default|worker|explorer|subagent|workflow-subagent|statusline-setup|output-style-setup|claude-code-guide|verification|magic-docs)$/i;   // the types the tools ship (as STOCK_AGENT in server.js, with the lead's main and Codex's roles): not names, so agent.png or explore.png stays a picture for anyone
+const agentKeys = (a) => (a ? [!STOCK_TYPE.test(String(a.type || '').split(':').pop()) && a.type, a.own && a.own.replace(/ \d+$/, '')] : []).map(charKey).filter(Boolean);   // its type (.claude/agents/qa.md) and the name it was launched with; "Qa 2", the second of its name, is still qa
+const wears = (c, keys) => { const s = c.key || (c.key = charKey(c.name)), m = s.match(/^(.+)-(\d+|[a-z])$/); return keys.has(s) || !!(m && keys.has(m[1])); };   // qa.png, and qa-2.png or qa-f.png for other looks of the same agent; qa-lead.png is a character of its own
 const customFor = (id, a = S.agents[id]) => {   // sub-agents: an image named after the agent; otherwise the best-hashed image no other agent holds; the whole pool again only once every image is taken
   if (id === 'main') return CHARS.lead; if (id === 'user') return CHARS.you; if (!CHARS.pool.length) return null;
   const others = Object.keys(S.agents).filter((k) => k !== id), used = new Set(others.filter((k) => S.agents[k].custom).map((k) => S.agents[k].custom.name)), pick = (l) => l.reduce((b, c) => (hash(id + '|' + c.name) > hash(id + '|' + b.name) ? c : b));   // by the character's name, not its picture: a pack drawn again gives each agent the same character
-  const keys = agentKeys(a), mine = keys.length ? CHARS.pool.filter((c) => wears(c, keys)) : [];
+  const keys = new Set(agentKeys(a)), mine = keys.size ? CHARS.pool.filter((c) => wears(c, keys)) : [];
   if (mine.length) { const f = mine.filter((c) => !used.has(c.name)); return pick(f.length ? f : mine); }   // its own picture even when another agent of the same name wears it: two QAs both look like the QA
-  const theirs = others.flatMap((k) => agentKeys(S.agents[k])), left = CHARS.pool.filter((c) => !wears(c, theirs)), pool = left.length ? left : CHARS.pool;   // nor does an agent without one take the picture of another agent in the call
+  const theirs = new Set([...others.map((k) => S.agents[k]), ...(S.soon || []).filter((x) => x.id !== id)].flatMap(agentKeys)), left = CHARS.pool.filter((c) => !wears(c, theirs)), pool = left.length ? left : CHARS.pool;   // nor does an agent without one take the picture of another agent in the call, or of one arriving with it (S.soon: a call opened late knows its QA before the agents born earlier get their pictures)
   const free = pool.filter((c) => !used.has(c.name)), varied = pool.filter((c) => c.extras && Object.keys(c.extras).some((k) => !/^sticker/.test(k))), from = free.length ? free : varied.length ? varied : pool;   // varied: what the character itself wears (a hat, glasses), not the stickers of its laptop   // every image taken: one that has extras (a hat, glasses…) is given again, since it does not look the same twice
   return pick(from);
 };
@@ -2909,7 +2910,7 @@ async function loadSession(proj, id) {
   const data = await (await fetch(`/api/session?proj=${encodeURIComponent(proj)}&id=${id}`)).json();
   if (mine !== S.loadN || data.error) return false;
   leadProject = data.project || null; clearTimeout(leadTimer); leadField(true);
-  S.term = {}; S.camFor = null; S.focus = null; S.agents = {}; S.cost = data.cost || null; for (const k in nameBook) delete nameBook[k]; const all = [{ id: 'user' }, ...data.agents]; for (const a of byBorn(all)) S.agents[a.id] = persona(twinOf(a)); S.agents = Object.fromEntries(all.map((a) => [a.id, S.agents[a.id]]));   // named in the order they started, kept in the server's order
+  S.term = {}; S.camFor = null; S.focus = null; S.agents = {}; S.cost = data.cost || null; for (const k in nameBook) delete nameBook[k]; const all = [{ id: 'user' }, ...data.agents]; S.soon = all; for (const a of byBorn(all)) S.agents[a.id] = persona(twinOf(a)); S.soon = null; S.agents = Object.fromEntries(all.map((a) => [a.id, S.agents[a.id]]));   // named in the order they started, kept in the server's order
   clearThoughts(); Object.assign(TH, { since: {}, next: {}, said: {}, last: 0 }); S.events = data.events; stampT(0); S.byK = new Map(data.events.map((e) => [e.k, e])); S.seq = data.seq || 0; S.ep = data.ep || ''; S.sawEnd = !!data.marks || data.events.some((e) => e.end); S.late = []; S.pos = 0; S.joinAt = Date.now(); S.idx = 0; S.status = {}; S.tc = {}; S.cur = { proj, id }; S.logTo = 0; S.detail = null; $('#detail').classList.remove('on'); S.fgone = new Set(); S.fmade = new Map(); S.artOk = new Map(); S.artPin = null; S.artWhole = null; S.wholeSeen = new Set();
   const opt = $('#sessions').selectedOptions[0]; S.title = (S.live ? niceProj(proj) : opt && opt.dataset.title) || '';
   if (proj === '_demo') S.events.forEach((e) => { if (e.fr) trMem.set(baseText(e), e.fr, 'fr'); });   // the demo ships its own French
@@ -2967,7 +2968,7 @@ setInterval(async () => {
     if ('project' in d && (d.project || {}).key !== (leadProject || {}).key) { leadProject = d.project || null; clearTimeout(leadTimer); leadField(true); renameLead(); }   // the first cwd can arrive after the call opens, even without a new event
     S.seq = d.seq; if (d.marks) S.sawEnd = true; if (d.cost && (!S.cost || d.cost.usd !== S.cost.usd || d.cost.final !== S.cost.final)) { S.cost = d.cost; later('tok', renderTokens, 300); } if (!d.events || !d.events.length) return;
     for (const a of d.agents) if (a.born && S.agents[a.id] && !S.agents[a.id].born) S.agents[a.id].born = a.born;   /* seen before its first line was read: its start time now, for the next renaming */
-    for (const a of byBorn(d.agents.filter((x) => !S.agents[x.id]))) { S.agents[a.id] = persona(twinOf(a)); addTile(S.agents[a.id]); }   // several new at once: named in the order they started, as a reload names them
+    S.soon = d.agents.filter((x) => !S.agents[x.id]); for (const a of byBorn(S.soon)) { S.agents[a.id] = persona(twinOf(a)); addTile(S.agents[a.id]); } S.soon = null;   // several new at once: named in the order they started, as a reload names them
     const from = S.events.length, fresh = [], changed = [];   // the session is not written in order: what is new goes at the end (the order the call got it in), what the server corrected is corrected in place
     for (const e of d.events) { const old = S.byK.get(e.k); if (old && old.tools && e.tools) e.tools = e.tools.map((t, j) => (old.tools[j] && old.tools[j].id === t.id ? Object.assign(old.tools[j], t) : t));   /* a call sent again (its plan named by the answer): the same object, which the shared screen holds */
       if (old) { changed.push([old, { kind: old.kind, n: old.tools ? old.tools.length : 0, end: old.end }]); Object.assign(old, e); } else { S.byK.set(e.k, e); fresh.push(e); } }
@@ -3311,7 +3312,7 @@ setInterval(() => {
   const busy = ids.filter((id) => agentState(id, Date.now()).k === 'working'), from = busy.length ? busy : ids, id = from[Math.floor(Math.random() * from.length)], t = $('#t-' + id);
   LAP.id = id; t.classList.add('lap'); setTimeout(() => { t.classList.add('lapout'); setTimeout(() => { t.classList.remove('lap', 'lapout'); LAP.id = ''; }, 450); }, 7000 + Math.random() * 7000);
 }, 5000);
-async function reloadChars() { await loadChars(); for (const k in imgCache) delete imgCache[k]; for (const id in S.agents) S.agents[id].custom = null; for (const id in S.agents) S.agents[id].custom = customFor(id); buildStage(); paintStatus(); packNote(); await renderCharInfo(); }
+async function reloadChars() { await loadChars(); for (const k in imgCache) delete imgCache[k]; for (const id in S.agents) S.agents[id].custom = null; for (const id in S.agents) S.agents[id].custom = customFor(S.agents[id].twin ? 'main' : id); buildStage(); paintStatus(); packNote(); await renderCharInfo(); }
 $('#charPick').onclick = () => { $('#menu').classList.remove('on'); CHPICK.more = ''; openChars(); };
 const packShut = () => { prefs.packOpen = false; savePrefs(); packNote(); voiceOffer(); };
 $('#packNoteB').onclick = $('#packNoteI').onclick = () => { packShut(); CHPICK.more = 'halloween'; openChars(); };

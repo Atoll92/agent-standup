@@ -140,18 +140,24 @@ test('project lead names: folders, windows, switching and fallback', { skip: mis
 test('own characters: a sub-agent wears the picture named after it', { skip: missing || false, timeout: 60000 }, async (t) => {
   await start(t);
   const chars = process.env.AGENT_STANDUP_CHARACTERS, png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'); fs.mkdirSync(chars, { recursive: true });
-  for (const f of ['qa.png', 'qa-2.png', 'qa-lead.png', 'dba.png', 'Security.png', 'rex.png']) fs.writeFileSync(path.join(chars, f), png);
+  for (const f of ['lead.png', 'qa.png', 'qa-2.png', 'qa-lead.png', 'dba.png', 'Security.png', 'rex.png', 'agent-1.png', 'main.png']) fs.writeFileSync(path.join(chars, f), png);
   const s = session(), sub = path.join(tmp, 'projects', s.proj, 's', 'subagents');
-  const agent = (k, type, name) => { const id = s.tool('Agent', { description: 'Task ' + k, prompt: 'Do task ' + k, subagent_type: type, ...(name ? { name } : {}) }); fs.writeFileSync(path.join(sub, `agent-a${k}.meta.json`), JSON.stringify({ agentType: type, description: 'Task ' + k, toolUseId: id })); s.say('Working on ' + k, { sub: k }); };
-  s.user('Check the release'); agent(1, 'qa'); agent(2, 'general-purpose', 'dba'); agent(3, 'my-plugin:security'); agent(4, 'qa'); agent(5, 'general-purpose');
-  const c = await open(s, false);
+  const agent = (k, type, name, meta = {}) => { const id = s.tool('Agent', { description: 'Task ' + k, prompt: 'Do task ' + k, subagent_type: type, ...(name ? { name } : {}) }); fs.writeFileSync(path.join(sub, `agent-a${k}.meta.json`), JSON.stringify({ agentType: type, description: 'Task ' + k, toolUseId: id, ...meta })); s.say('Working on ' + k, { sub: k }); };
+  s.user('Check the release'); agent(5, 'general-purpose'); s.say('An old sub-agent, without a meta file', { sub: 6 });   // born before the QAs: they must still find their pictures free
+  agent(1, 'qa'); agent(2, 'general-purpose', 'dba'); agent(3, 'my-plugin:security'); agent(4, 'qa'); agent(7, 'fork', null, { isFork: true });
+  const ids = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7'], worn = () => c.page.evaluate((ids) => Object.fromEntries(ids.map((k) => [k, S.agents[k].custom && S.agents[k].custom.name])), ids);
+  let c = await open(s, false);
   try {
-    await c.until(() => ['a1', 'a2', 'a3', 'a4', 'a5'].every((k) => S.agents[k]));
-    const worn = () => c.page.evaluate(async () => { prefs.charPack = 'folder'; await reloadChars(); return Object.fromEntries(['a1', 'a2', 'a3', 'a4', 'a5'].map((k) => [k, S.agents[k].custom && S.agents[k].custom.name])); });
-    const w = await worn();
-    assert.deepEqual([w.a1, w.a4].sort(), ['qa', 'qa-2'], 'the two QAs wear the two looks of qa');
-    assert.equal(w.a2, 'dba', 'the name it was launched with'); assert.equal(w.a3, 'Security', 'a plugin agent, whatever the case of the file');
-    assert.ok(['qa-lead', 'rex'].includes(w.a5), 'an agent without a picture of its own takes none of the others: ' + w.a5);
-    assert.deepEqual(await worn(), w, 'the same pictures again');
+    await c.page.evaluate(async () => { prefs.charPack = 'folder'; clearTimeout(prefsTimer); await putPrefs(); });
+    await c.page.reload(); await c.until((ids) => typeof S !== 'undefined' && S.cur && ids.every((k) => S.agents[k]) && CHARS.pack === 'folder', ids);
+    const check = (w, when) => {
+      assert.deepEqual([w.a1, w.a4].sort(), ['qa', 'qa-2'], when + ': the two QAs wear the two looks of qa');
+      assert.equal(w.a2, 'dba', when + ': the name it was launched with'); assert.equal(w.a3, 'Security', when + ': a plugin agent, whatever the case of the file');
+      assert.ok(['qa-lead', 'rex', 'agent-1', 'main'].includes(w.a5) && ['qa-lead', 'rex', 'agent-1', 'main'].includes(w.a6), when + ': agents without a picture of their own take none of the others: ' + [w.a5, w.a6]);
+      assert.notEqual(w.a5, w.a6, when + ': a stock type (agent, main) holds no picture back, so nobody shares one'); assert.equal(w.a7, 'lead', when + ': a fork wears the lead');
+    };
+    const load = await worn(); check(load, 'page load');
+    await c.page.evaluate(() => reloadChars()); check(await worn(), 'after Reload');
+    assert.deepEqual(await c.page.evaluate(() => [agentKeys({ type: 'main' }), agentKeys({ type: 'agent' }), agentKeys({ type: 'Explore' }), agentKeys({ type: 'qa', own: 'Login Tests 2' })]), [[], [], [], ['qa', 'login-tests']]);
   } finally { await c.close(); }
 });
