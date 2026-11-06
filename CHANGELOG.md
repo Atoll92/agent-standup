@@ -5,6 +5,7 @@
 - **“Needs you” sounds different from “done”.** With notifications on, a question, a permission or a plan that waits for you plays a sharper double ding; the soft chime is kept for “your agents are done”.
 - **The others look at whoever speaks.** In the call, the characters who are not at work turn their eyes to the one talking, and back to the camera when the line ends.
 - **Talk to the session from the call** (Linux, off by default): with `--reply`, the `agentStandup.reply` setting or `AGENT_STANDUP_REPLY=on`, a field under the live call types your line into the Claude Code session the call follows, when it runs in tmux and waits at its prompt. By mohamedaziz (#10).
+- **After Halloween, you are yourself again.** With the drawn characters, the free vampire is your character by default only in October; the rest of the year you look like the cast. If you picked the vampire in ⚙ → Characters → You, you keep it. The Halloween pack stays in ⚙ → Characters.
 - **Fix:** after ⚙ → Characters → Reload, a fork keeps the lead's picture.
 
 ## 1.43.1
