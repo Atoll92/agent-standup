@@ -16,7 +16,9 @@ const linux = { skip: process.platform !== 'linux' && 'needs /proc (Linux)' };
 // A stand-in for claude: a child of this test process, so its parent chain reaches the fake pane pid. Only on Linux: its start time is read from /proc
 const claude = linux.skip ? null : spawn('sleep', ['60']); test.after(() => claude && claude.kill());
 const SF = claude && path.join(SESS, claude.pid + '.json'), withStatus = async (status, fn) => { const orig = fs.readFileSync(SF, 'utf8'); fs.writeFileSync(SF, JSON.stringify({ ...JSON.parse(orig), status })); try { await fn(); } finally { fs.writeFileSync(SF, orig); } };
-if (claude) { const st = fs.readFileSync(`/proc/${claude.pid}/stat`, 'utf8'); fs.writeFileSync(SF, JSON.stringify({ pid: claude.pid, procStart: st.slice(st.lastIndexOf(')') + 2).split(' ')[19], sessionId: ID, status: 'idle', name: 'agents-19' })); }   // field 22: the start time
+const tick = (pid) => { const st = fs.readFileSync(`/proc/${pid}/stat`, 'utf8'); return st.slice(st.lastIndexOf(')') + 2).split(' ')[19]; };   // field 22: the start time, in clock ticks
+const lstartOf = (pid) => require('child_process').execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], { env: { ...process.env, LC_ALL: 'C', TZ: 'UTC' } }).toString().trim();   // what Claude Code writes as procStart (2.1.314: ps -o lstart=, LC_ALL=C, TZ=UTC)
+if (claude) fs.writeFileSync(SF, JSON.stringify({ pid: claude.pid, procStart: lstartOf(claude.pid), sessionId: ID, status: 'idle', name: 'agents-19' }));
 
 test('send refuses unless the session is idle, with no keys typed', linux, async () => {
   for (const [status, error] of [['waiting', 'waiting'], ['busy', 'busy'], ['shell', 'none'], ['', 'none']]) await withStatus(status, async () => {
@@ -56,6 +58,12 @@ test('lookup finds the pane through the parent chain', linux, async () => {
   const OLD = '22222222-2222-3333-4444-555555555555';   // a pid reused by another process: procStart differs
   fs.writeFileSync(path.join(SESS, process.pid + '.json'), JSON.stringify({ pid: process.pid, procStart: '1', sessionId: OLD, status: 'idle' }));
   try { assert.deepEqual(await reply.lookup(OLD), { ok: false, why: 'none' }); } finally { fs.rmSync(path.join(SESS, process.pid + '.json')); }
+  const orig = fs.readFileSync(SF, 'utf8'), as = (procStart) => fs.writeFileSync(SF, JSON.stringify({ ...JSON.parse(orig), procStart }));
+  try {
+    as(tick(claude.pid)); assert.equal((await reply.lookup(ID)).ok, true, 'a start time in clock ticks, from /proc, is read too');
+    as('Thu Jan  1 00:00:00 1970'); assert.equal((await reply.lookup(ID)).why, 'none', 'another start date: the pid was reused');
+    as(undefined); assert.equal((await reply.lookup(ID)).why, 'none', 'no start time written: refused');
+  } finally { fs.writeFileSync(SF, orig); }
   process.env.FAKE_PANE_PID = '999999999';
   try { assert.equal((await reply.lookup(ID)).why, 'notmux'); } finally { process.env.FAKE_PANE_PID = String(process.pid); }
   process.env.FAKE_TMUX_FAIL = '1';

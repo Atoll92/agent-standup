@@ -11,10 +11,16 @@ function session(id) {   // the running session with this id, or null; raw: the 
 }
 const stat = (pid) => { try { const st = fs.readFileSync(`/proc/${pid}/stat`, 'utf8'); return st.slice(st.lastIndexOf(')') + 2).split(' '); } catch { return []; } };   // fields from 3 on; the name in field 2 may hold spaces and brackets
 const ppid = (pid) => +stat(pid)[1] || 0;   // field 4
+const lstart = (pid) => new Promise((resolve) => execFile('ps', ['-o', 'lstart=', '-p', String(pid)], { timeout: 3000, windowsHide: true, env: { ...process.env, LC_ALL: 'C', TZ: 'UTC' } }, (err, out) => resolve(err ? '' : String(out).trim().replace(/\s+/g, ' '))));
+async function sameStart(pid, procStart) {   // is this pid still the process that wrote the status file: Claude Code writes what `ps -o lstart=` says (LC_ALL=C, TZ=UTC); a plain number is /proc's start time (field 22)
+  const v = String(procStart == null ? '' : procStart).trim(); if (!v) return false;   // no start time written (older Claude Code): it cannot be told from a reused pid
+  if (/^\d+$/.test(v)) return stat(pid)[19] === v;
+  const now = await lstart(pid); return !!now && now === v.replace(/\s+/g, ' ');
+}
 async function lookup(id) {
   if (process.platform !== 'linux') return { ok: false, why: 'platform' };   // the pane is found through /proc: Linux only for now
   const s = ID.test(String(id || '')) ? session(id) : null; if (!s) return { ok: false, why: 'none' };
-  if (stat(s.pid)[19] !== String(s.procStart)) return { ok: false, why: 'none' };   // field 22 is the start time: a different one means the pid now belongs to another process
+  if (!(await sameStart(s.pid, s.procStart))) return { ok: false, why: 'none' };   // a different start time means the pid now belongs to another process
   const who = { status: String(s.status || ''), name: String(s.name || '') }, out = await tmux(['list-panes', '-a', '-F', '#{pane_id} #{pane_pid}']);
   if (out == null) return { ok: false, why: 'tmux', ...who };
   const panes = new Map(out.trim().split('\n').map((l) => l.split(' ')).filter((p) => /^%\d+$/.test(p[0])).map(([p, pid]) => [+pid, p]));

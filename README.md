@@ -118,7 +118,7 @@ Sessions of Cowork (a tab of the Claude desktop app) appear next to your Claude 
 Off by default. Turned on, a field under the live call lets you write to the Claude Code session the call follows: Agent Standup types your line into that session's terminal, through tmux, and presses Enter, as if you had typed it there. The field names the session it goes to, and asks again if the call moved to another session after you started typing.
 
 - **Needs:** a Claude Code session running inside tmux, on Linux (sending works only on Linux for now). The app finds the session's tmux pane from the status Claude Code keeps for each open session in `~/.claude/sessions`. Codex, Mistral Vibe and Cowork sessions, replays and the demo have no field.
-- **Turn it on:** in VS Code, the setting `agentStandup.reply`; anywhere else `AGENT_STANDUP_REPLY=on` (command line: `--reply`, or `--reply off`).
+- **Turn it on:** in VS Code, the setting `agentStandup.reply`; anywhere else `AGENT_STANDUP_REPLY=on` (command line: `--reply`, or `--reply off`). Reload an open call after changing it.
 - **What it refuses:** a session that is not at its prompt (still working, or a menu open in Claude Code, such as a permission question: answer that one in the terminal), a session started outside tmux, and a request from another user of the computer. A line is one message: new lines become spaces, 4000 characters at most. If the session starts working while the line is typed, Enter is not pressed and the text stays in the terminal prompt.
 - **The risk:** anyone who can run commands as you can then type into your sessions (an agent in a sandbox that can reach `localhost` included). Leave it off on a computer you share with code or people you do not trust.
 
