@@ -6,11 +6,11 @@ const root = path.join(__dirname, '..'), out = path.join(root, 'dist-cli'), pkg 
 const NAME = process.env.CLI_PACKAGE_NAME || '@double_geste/agent-standup';
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive: true });
 const cp = (rel) => fs.cpSync(path.join(root, rel), path.join(out, rel), { recursive: true });
-['server.js', 'codex.js', 'vibe.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'LICENSE', 'public', 'bin', 'examples/cats', 'examples/vampire'].forEach(cp);   // the cat pack and the free vampire ship with the command too
+['server.js', 'codex.js', 'vibe.js', 'reply.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'LICENSE', 'public', 'bin', 'examples/cats', 'examples/vampire'].forEach(cp);   // the cat pack and the free vampire ship with the command too
 fs.mkdirSync(path.join(out, 'media'), { recursive: true }); fs.copyFileSync(path.join(root, 'media/icon.png'), path.join(out, 'media/icon.png'));
 const cli = {
   name: NAME, version: pkg.version, description: 'Your Claude Code, Codex and Mistral Vibe agents as a live video call, from the terminal: a local page in your browser, plus one-line status for status bars. Free, open source, zero token cost.',
-  bin: { 'agent-standup': 'bin/agent-standup.js' }, main: 'server.js', files: ['bin', 'server.js', 'codex.js', 'vibe.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'public', 'examples', 'media', 'LICENSE', 'README.md'], license: 'MIT',
+  bin: { 'agent-standup': 'bin/agent-standup.js' }, main: 'server.js', files: ['bin', 'server.js', 'codex.js', 'vibe.js', 'reply.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'public', 'examples', 'media', 'LICENSE', 'README.md'], license: 'MIT',
   engines: { node: '>=18' }, repository: { type: 'git', url: String(pkg.repository.url).replace(/^(git\+)?/, 'git+') }, homepage: pkg.homepage, bugs: pkg.bugs, keywords: ['claude-code', 'claude', 'codex', 'agents', 'sub-agents', 'monitoring', 'viewer', 'statusline', 'standup'],
   author: 'Double Geste', publishConfig: { access: 'public' },
 };

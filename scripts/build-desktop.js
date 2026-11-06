@@ -6,7 +6,7 @@ const root = path.join(__dirname, '..'), d = path.join(root, 'desktop'), core = 
 const arch = process.argv.includes('--arch') ? process.argv[process.argv.indexOf('--arch') + 1] : process.arch;
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')); const dp = JSON.parse(fs.readFileSync(path.join(d, 'package.json'), 'utf8')); dp.version = pkg.version; fs.writeFileSync(path.join(d, 'package.json'), JSON.stringify(dp, null, 2) + '\n');
 fs.rmSync(core, { recursive: true, force: true }); fs.mkdirSync(path.join(core, 'media'), { recursive: true });
-for (const f of ['server.js', 'codex.js', 'vibe.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'LICENSE']) fs.copyFileSync(path.join(root, f), path.join(core, f));
+for (const f of ['server.js', 'codex.js', 'vibe.js', 'reply.js', 'kokoro.js', 'kokoro-worker.js', 'demo.js', 'LICENSE']) fs.copyFileSync(path.join(root, f), path.join(core, f));
 fs.cpSync(path.join(root, 'public'), path.join(core, 'public'), { recursive: true }); for (const e of ['cats', 'vampire']) fs.cpSync(path.join(root, 'examples', e), path.join(core, 'examples', e), { recursive: true }); for (const f of ['icon.png', 'tray.png', 'tray@2x.png']) fs.copyFileSync(path.join(root, 'media', f), path.join(core, 'media', f));
 if (!fs.existsSync(path.join(d, 'node_modules/electron'))) execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install', '--no-audit', '--no-fund'], { cwd: d, stdio: 'inherit', shell: process.platform === 'win32' });
 const appName = process.platform === 'win32' ? '"Agent Standup"' : 'Agent Standup';   // quoted on Windows, where the command goes through a shell and would split the name
