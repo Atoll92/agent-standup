@@ -177,6 +177,7 @@
  "Open folder": "Ordner öffnen",
  "Demo": "Demo",
  "lead.png = the lead · you.png = you · others = the sub-agents · name-talk.png = open mouth": "lead.png = Hauptagent · you.png = du · andere = Subagenten · name-talk.png = offener Mund",
+ "qa.png = the sub-agent named qa (.claude/agents/qa.md) · qa-2.png = another look of it": "qa.png = der Subagent namens qa (.claude/agents/qa.md) · qa-2.png = ein anderes Aussehen von ihm",
  "Downloading, you can carry on: the agents babble meanwhile.": "Wird heruntergeladen, du kannst weitermachen: bis dahin brabbeln die Agenten.",
  "Good-quality local voices, in English. Free, nothing leaves your machine.": "Lokale Stimmen in guter Qualität, auf Englisch. Kostenlos, nichts verlässt deinen Rechner.",
  "Add the voices of this language": "Stimmen für diese Sprache hinzufügen",

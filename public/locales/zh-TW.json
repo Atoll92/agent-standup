@@ -67,6 +67,7 @@
  "Open folder": "開啟資料夾",
  "Demo": "示範",
  "lead.png = the lead · you.png = you · others = the sub-agents · name-talk.png = open mouth": "lead.png = 主代理 · you.png = 你 · 其他 = 子代理 · name-talk.png = 張嘴畫面",
+ "qa.png = the sub-agent named qa (.claude/agents/qa.md) · qa-2.png = another look of it": "qa.png = 名為 qa 的子代理 (.claude/agents/qa.md) · qa-2.png = 它的另一種造型",
  "failing in a loop?": "卡在失敗迴圈？",
  "Fetching ": "擷取 ",
  "files": "檔案",

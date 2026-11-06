@@ -622,11 +622,17 @@ async function loadChars() {
   if (youMode() === 'vampire') { try { VAMP = VAMP || (await vampEntry()); if (VAMP) { next.you = VAMP; next.youFrom = 'vampire'; } } catch {} }
   CHARS = next;
 }
-const customFor = (id) => {   // sub-agents: the best-hashed image no other agent holds; the whole pool again only once every image is taken
+const charKey = (s) => String(s || '').split(':').pop().toLowerCase().replace(/[\s_\-]+/g, '-').replace(/^-+|-+$/g, '');   // "QA Agent", qa_agent, plugin:qa-agent → qa-agent
+const agentKeys = (a) => (a ? [a.type, a.own && a.own.replace(/ \d+$/, '')] : []).map(charKey).filter(Boolean);   // its type (.claude/agents/qa.md) and the name it was launched with; "Qa 2", the second of its name, is still qa
+const wears = (c, keys) => { const s = charKey(c.name); return keys.some((k) => s === k || (s.startsWith(k + '-') && /^(\d+|[a-z])$/.test(s.slice(k.length + 1)))); };   // qa.png, and qa-2.png or qa-f.png for other looks of the same agent; qa-lead.png is a character of its own
+const customFor = (id, a = S.agents[id]) => {   // sub-agents: an image named after the agent; otherwise the best-hashed image no other agent holds; the whole pool again only once every image is taken
   if (id === 'main') return CHARS.lead; if (id === 'user') return CHARS.you; if (!CHARS.pool.length) return null;
-  const used = new Set(Object.keys(S.agents).filter((k) => k !== id && S.agents[k].custom).map((k) => S.agents[k].custom.name));
-  const free = CHARS.pool.filter((c) => !used.has(c.name)), varied = CHARS.pool.filter((c) => c.extras && Object.keys(c.extras).some((k) => !/^sticker/.test(k))), from = free.length ? free : varied.length ? varied : CHARS.pool;   // varied: what the character itself wears (a hat, glasses), not the stickers of its laptop   // every image taken: one that has extras (a hat, glasses…) is given again, since it does not look the same twice
-  return from.reduce((b, c) => (hash(id + '|' + c.name) > hash(id + '|' + b.name) ? c : b));   // by the character's name, not its picture: a pack drawn again gives each agent the same character
+  const others = Object.keys(S.agents).filter((k) => k !== id), used = new Set(others.filter((k) => S.agents[k].custom).map((k) => S.agents[k].custom.name)), pick = (l) => l.reduce((b, c) => (hash(id + '|' + c.name) > hash(id + '|' + b.name) ? c : b));   // by the character's name, not its picture: a pack drawn again gives each agent the same character
+  const keys = agentKeys(a), mine = keys.length ? CHARS.pool.filter((c) => wears(c, keys)) : [];
+  if (mine.length) { const f = mine.filter((c) => !used.has(c.name)); return pick(f.length ? f : mine); }   // its own picture even when another agent of the same name wears it: two QAs both look like the QA
+  const theirs = others.flatMap((k) => agentKeys(S.agents[k])), left = CHARS.pool.filter((c) => !wears(c, theirs)), pool = left.length ? left : CHARS.pool;   // nor does an agent without one take the picture of another agent in the call
+  const free = pool.filter((c) => !used.has(c.name)), varied = pool.filter((c) => c.extras && Object.keys(c.extras).some((k) => !/^sticker/.test(k))), from = free.length ? free : varied.length ? varied : pool;   // varied: what the character itself wears (a hat, glasses), not the stickers of its laptop   // every image taken: one that has extras (a hat, glasses…) is given again, since it does not look the same twice
+  return pick(from);
 };
 // ---- the shop: a pack that is sold. The page never sees a card: the button asks the app's server for a payment page (Stripe's, through the website), opens it, and then asks for the pack until it is paid
 const shopSay = (t) => { const m = $('#shopMsg'); if (m) m.textContent = t; };
@@ -701,7 +707,7 @@ function renderFolder(el, mine) {   // one's own pictures: where they are, a but
   el.innerHTML = `${esc(L('Vos images sont dans ce dossier :', 'Your pictures are in this folder:'))} <code style="word-break:break-all">${esc(mine.dir || CHARS.dir || '')}</code>
     <div class="slots">${[['you', L('Vous', 'You')], ['lead', L('Chef', 'Lead')], ['agent', L('Sous-agents', 'Sub-agents')]].map(([r, t]) => `<div class="slot"><b>${esc(t)}</b><button class="btn" data-add="${r}">${esc(r === 'agent' ? L('Ajouter des images', 'Add pictures') : L('Choisir une image', 'Choose a picture'))}</button>${r !== 'agent' ? `<button class="btn" data-add="${r}-talk">${esc(L('Bouche ouverte (facultatif)', 'Open mouth (optional)'))}</button>` : ''}</div>`).join('')}</div>
     <div class="mine">${mine.chars.length ? mine.chars.map((c) => `<span class="chip"><img src="/characters/${encodeURIComponent(c.file)}" alt="">${esc(c.stem)} · ${esc(role(c))}<button class="ic" data-rm="${esc(c.file)}" aria-label="${esc(L('Retirer', 'Remove'))}" title="${esc(L('Retirer', 'Remove'))}">✕</button></span>`).join('') : esc(L('Aucune image pour l’instant.', 'No picture yet.'))}</div>
-    <p class="dim" style="margin:8px 0 0;font-size:11.5px">${esc(L('lead.png = le chef · you.png = vous · les autres = les sous-agents · nom-talk.png = bouche ouverte', 'lead.png = the lead · you.png = you · others = the sub-agents · name-talk.png = open mouth'))}</p>
+    <p class="dim" style="margin:8px 0 0;font-size:11.5px">${esc(L('lead.png = le chef · you.png = vous · les autres = les sous-agents · nom-talk.png = bouche ouverte', 'lead.png = the lead · you.png = you · others = the sub-agents · name-talk.png = open mouth'))}<br>${esc(L('qa.png = le sous-agent nommé qa (.claude/agents/qa.md) · qa-2.png = un autre de ses visages', 'qa.png = the sub-agent named qa (.claude/agents/qa.md) · qa-2.png = another look of it'))}</p>
     <div style="display:flex;gap:6px;margin-top:8px"><button class="btn" id="charReload">${esc(L('Recharger', 'Reload'))}</button>${EMBED ? `<button class="btn" id="charOpen">${esc(L('Ouvrir le dossier', 'Open folder'))}</button>` : ''}</div>
     <div id="shopMsg" role="status" style="margin-top:6px"></div><input type="file" id="charFile" accept="image/png,image/gif,image/webp,image/jpeg" hidden>`;
   const inp = $('#charFile'), post = (p, b) => fetch(p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }).then((r) => r.json()).catch(() => ({ error: 'write' }));
@@ -724,7 +730,7 @@ function packNote() {   // the Halloween pack, to someone without it, twice a se
     : dd >= 19 ? L('Halloween approche : déguisez vos agents en citrouille, fantôme, sorcière ou squelette, dessinés à la main par Fabien Coupas.', 'Halloween is coming: dress your agents up as a pumpkin, a ghost, a witch or a skeleton, drawn by hand by Fabien Coupas.') : L('Pour Halloween, vous êtes le vampire. Le reste de l’équipe est dans le pack Halloween.', 'This Halloween, you are the vampire. The rest of the cast is in the Halloween pack.');
   $('#packNoteB').textContent = L('Voir le pack', 'See the pack') + ' · ' + price;
 }
-function persona(a) { const p = persona0(a); p.custom = customFor(p.twin ? 'main' : a.id); return p; }   // a fork wears the lead's own picture too
+function persona(a) { const p = persona0(a); p.custom = customFor(p.twin ? 'main' : a.id, p); return p; }   // a fork wears the lead's own picture too
 // The order agents are named in: the order they started (born, from the server), not the order their files are listed in (by their ids: effectively random). A reload, a replay and the live call then give each agent
 // the same name, a first name of your list the same agent, and a fork the same number. Without born (the demo, a session just started), the order they came in
 const byBorn = (list) => list.map((a, j) => ({ a, j })).sort((x, y) => (x.a.born || Infinity) - (y.a.born || Infinity) || x.j - y.j).map((x) => x.a);

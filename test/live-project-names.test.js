@@ -136,3 +136,22 @@ test('project lead names: folders, windows, switching and fallback', { skip: mis
     }
   });
 });
+
+test('own characters: a sub-agent wears the picture named after it', { skip: missing || false, timeout: 60000 }, async (t) => {
+  await start(t);
+  const chars = process.env.AGENT_STANDUP_CHARACTERS, png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'); fs.mkdirSync(chars, { recursive: true });
+  for (const f of ['qa.png', 'qa-2.png', 'qa-lead.png', 'dba.png', 'Security.png', 'rex.png']) fs.writeFileSync(path.join(chars, f), png);
+  const s = session(), sub = path.join(tmp, 'projects', s.proj, 's', 'subagents');
+  const agent = (k, type, name) => { const id = s.tool('Agent', { description: 'Task ' + k, prompt: 'Do task ' + k, subagent_type: type, ...(name ? { name } : {}) }); fs.writeFileSync(path.join(sub, `agent-a${k}.meta.json`), JSON.stringify({ agentType: type, description: 'Task ' + k, toolUseId: id })); s.say('Working on ' + k, { sub: k }); };
+  s.user('Check the release'); agent(1, 'qa'); agent(2, 'general-purpose', 'dba'); agent(3, 'my-plugin:security'); agent(4, 'qa'); agent(5, 'general-purpose');
+  const c = await open(s, false);
+  try {
+    await c.until(() => ['a1', 'a2', 'a3', 'a4', 'a5'].every((k) => S.agents[k]));
+    const worn = () => c.page.evaluate(async () => { prefs.charPack = 'folder'; await reloadChars(); return Object.fromEntries(['a1', 'a2', 'a3', 'a4', 'a5'].map((k) => [k, S.agents[k].custom && S.agents[k].custom.name])); });
+    const w = await worn();
+    assert.deepEqual([w.a1, w.a4].sort(), ['qa', 'qa-2'], 'the two QAs wear the two looks of qa');
+    assert.equal(w.a2, 'dba', 'the name it was launched with'); assert.equal(w.a3, 'Security', 'a plugin agent, whatever the case of the file');
+    assert.ok(['qa-lead', 'rex'].includes(w.a5), 'an agent without a picture of its own takes none of the others: ' + w.a5);
+    assert.deepEqual(await worn(), w, 'the same pictures again');
+  } finally { await c.close(); }
+});
