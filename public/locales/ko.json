@@ -178,6 +178,7 @@
  "Demo": "데모",
  "lead.png = the lead · you.png = you · others = the sub-agents · name-talk.png = open mouth": "lead.png = 메인 에이전트 · you.png = 나 · 나머지 = 서브에이전트 · name-talk.png = 입을 벌린 모습",
  "qa.png = the sub-agent named qa (.claude/agents/qa.md) · qa-2.png = another look of it": "qa.png = 이름이 qa인 하위 에이전트 (.claude/agents/qa.md) · qa-2.png = 그 에이전트의 다른 모습",
+ "In this call, without a picture of their own: ": "이 통화에서 자기 이미지가 없는 에이전트: ",
  "Downloading, you can carry on: the agents babble meanwhile.": "다운로드 중입니다. 계속 진행하셔도 됩니다. 그동안 에이전트는 옹알이로 말합니다.",
  "Good-quality local voices, in English. Free, nothing leaves your machine.": "품질 좋은 로컬 음성으로, 영어입니다. 무료이며 아무것도 컴퓨터 밖으로 전송되지 않습니다.",
  "Add the voices of this language": "이 언어의 음성 추가",

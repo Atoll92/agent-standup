@@ -234,7 +234,7 @@ Long lines are subtitled one sentence at a time, in step with the voice.
 
 ## Handy extras
 - **Copy as Markdown** in the recap: a ready-to-paste standup report (who did what, files, tokens, final report of each agent).
-- **Notify me when agents finish** (⚙ → All settings): a soft chime, the tab title and, in VS Code, a notification once the team has worked for a while and gone quiet.
+- **Notify me when agents finish** (⚙ → All settings): a soft chime, the tab title and, in VS Code, a notification once the team has worked for a while and gone quiet. When an agent asks you something (a question, a permission, a plan), a sharper double ding plays instead, so you can tell "needs you" from "done" by ear.
 - **Search** the transcript, **ambience volume**, and a compact layout when the panel is narrow (side bar): under 480 px wide (when the agents list is not shown), one row per agent instead of tiles. In replay, speed presets (1×, 2×, 4×, 8×) and each session remembers where you stopped.
 
 ## Install

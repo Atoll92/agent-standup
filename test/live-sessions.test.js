@@ -140,6 +140,8 @@ test('live call: sessions, tabs and replays', { skip: missing || false, timeout:
     const c = await open(s);
     try {
       await c.until(() => agentState('main', Date.now()).k === 'blocked', null, 20000); await wait(1500); assert.ok(!(await c.page.evaluate(() => document.querySelector('#askc').classList.contains('on'))), 'no card unless asked for in the settings');
+      await c.page.evaluate(() => { window.__cues = []; for (const k of ['need', 'alert']) { const o = AUD[k]; AUD[k] = function () { window.__cues.push(k); return o.apply(this, arguments); }; } prefs.notify = true; S.wasBlocked = false; });   // notifications on, as if the menu had just opened
+      await c.until(() => window.__cues.length > 0, null, 10000); assert.deepEqual(await c.page.evaluate(() => { prefs.notify = false; return window.__cues; }), ['need'], 'a menu open: the "needs you" ding, not the chime of "done"');
       await c.page.evaluate(() => document.querySelector('#prefs .mi[data-t=askCard]').click());
       await c.until(() => document.querySelector('#askc').classList.contains('on'), null, 20000);   // the page used to say "✓ your turn · 5 min" past 3 minutes of quiet, with no card
       assert.match(await c.page.evaluate(() => agentState('main', Date.now()).txt), /needs you 5 min/, 'Claude Code says a menu is open: certain, no question mark'); assert.match(await c.page.evaluate(() => document.querySelector('#askc').innerText), /npm run build/);

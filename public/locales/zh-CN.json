@@ -178,6 +178,7 @@
  "Demo": "演示",
  "lead.png = the lead · you.png = you · others = the sub-agents · name-talk.png = open mouth": "lead.png = 主代理 · you.png = 你 · 其他 = 子代理 · name-talk.png = 张嘴",
  "qa.png = the sub-agent named qa (.claude/agents/qa.md) · qa-2.png = another look of it": "qa.png = 名为 qa 的子代理 (.claude/agents/qa.md) · qa-2.png = 它的另一种形象",
+ "In this call, without a picture of their own: ": "本次通话中还没有专属图片的: ",
  "Downloading, you can carry on: the agents babble meanwhile.": "正在下载，你可以继续：在此期间代理会用咿呀语说话。",
  "Good-quality local voices, in English. Free, nothing leaves your machine.": "高质量的本地语音，仅英语。免费，数据不会离开你的电脑。",
  "Add the voices of this language": "添加此语言的语音",

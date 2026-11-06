@@ -144,7 +144,7 @@ test('own characters: a sub-agent wears the picture named after it', { skip: mis
   const s = session(), sub = path.join(tmp, 'projects', s.proj, 's', 'subagents');
   const agent = (k, type, name, meta = {}) => { const id = s.tool('Agent', { description: 'Task ' + k, prompt: 'Do task ' + k, subagent_type: type, ...(name ? { name } : {}) }); fs.writeFileSync(path.join(sub, `agent-a${k}.meta.json`), JSON.stringify({ agentType: type, description: 'Task ' + k, toolUseId: id, ...meta })); s.say('Working on ' + k, { sub: k }); };
   s.user('Check the release'); agent(5, 'general-purpose'); s.say('An old sub-agent, without a meta file', { sub: 6 });   // born before the QAs: they must still find their pictures free
-  agent(1, 'qa'); agent(2, 'general-purpose', 'dba'); agent(3, 'my-plugin:security'); agent(4, 'qa'); agent(7, 'fork', null, { isFork: true });
+  agent(1, 'qa'); agent(2, 'general-purpose', 'dba'); agent(3, 'my-plugin:security'); agent(4, 'qa'); agent(7, 'fork', null, { isFork: true }); agent(8, 'designer');
   const ids = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7'], worn = () => c.page.evaluate((ids) => Object.fromEntries(ids.map((k) => [k, S.agents[k].custom && S.agents[k].custom.name])), ids);
   let c = await open(s, false);
   try {
@@ -158,6 +158,9 @@ test('own characters: a sub-agent wears the picture named after it', { skip: mis
     };
     const load = await worn(); check(load, 'page load');
     await c.page.evaluate(() => reloadChars()); check(await worn(), 'after Reload');
+    const panel = await c.page.evaluate(async () => { CHPICK.more = 'folder'; await openChars(); const chip = [...document.querySelectorAll('.mine .chip')].find((x) => /^qa ·/.test(x.textContent)); return { chip: chip && chip.textContent, want: [...document.querySelectorAll('#recap p.dim')].map((x) => x.textContent).find((x) => x.startsWith('In this call')) || '', names: [S.agents.a1.name, S.agents.a4.name] }; });
+    assert.ok(panel.names.some((n) => panel.chip.includes('→ ' + n)), 'the qa picture says which QA wears it: ' + panel.chip);
+    assert.equal(panel.want, 'In this call, without a picture of their own: designer.png', 'only the type with no picture yet (dba is a launch name, security has Security.png)');
     assert.deepEqual(await c.page.evaluate(() => [agentKeys({ type: 'main' }), agentKeys({ type: 'agent' }), agentKeys({ type: 'Explore' }), agentKeys({ type: 'qa', own: 'Login Tests 2' })]), [[], [], [], ['qa', 'login-tests']]);
   } finally { await c.close(); }
 });

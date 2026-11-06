@@ -92,6 +92,7 @@
  "Lead context": "Lederens kontekst",
  "lead.png = the lead · you.png = you · others = the sub-agents · name-talk.png = open mouth": "lead.png = lederen · you.png = dig · øvrige = underagenterne · navn-talk.png = åben mund",
  "qa.png = the sub-agent named qa (.claude/agents/qa.md) · qa-2.png = another look of it": "qa.png = underagenten ved navn qa (.claude/agents/qa.md) · qa-2.png = et andet udseende af den",
+ "In this call, without a picture of their own: ": "I dette opkald, uden eget billede: ",
  "left the call": "forlod opkaldet",
  "lines": "linjer",
  "Listing ": "Viser ",

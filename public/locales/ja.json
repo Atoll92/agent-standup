@@ -178,6 +178,7 @@
  "Demo": "デモ",
  "lead.png = the lead · you.png = you · others = the sub-agents · name-talk.png = open mouth": "lead.png = メインエージェント · you.png = あなた · それ以外 = サブエージェント · name-talk.png = 口を開けた状態",
  "qa.png = the sub-agent named qa (.claude/agents/qa.md) · qa-2.png = another look of it": "qa.png = qa という名前のサブエージェント (.claude/agents/qa.md) · qa-2.png = その別の見た目",
+ "In this call, without a picture of their own: ": "この通話で、自分の画像がないもの: ",
  "Downloading, you can carry on: the agents babble meanwhile.": "ダウンロード中です。そのまま続けられます。その間、エージェントはおしゃべり音で話します。",
  "Good-quality local voices, in English. Free, nothing leaves your machine.": "品質の良いローカル音声（英語）。無料で、データがPCの外に出ることはありません。",
  "Add the voices of this language": "この言語の音声を追加",
