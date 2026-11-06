@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.44.0
+- **Your own characters, matched by name.** In your characters folder, a picture named after a sub-agent is always that agent's: `qa.png` for the agent of `.claude/agents/qa.md` (or one launched with the name qa), and `qa-2.png`, `qa-f.png`… are other looks of it when two are in the call. ⚙ → Characters → My folder shows who wears each picture and which agent types of the call have none yet. A folder with no such names works as before. Asked by arnielserrano (#16).
+- **“Needs you” sounds different from “done”.** With notifications on, a question, a permission or a plan that waits for you plays a sharper double ding; the soft chime is kept for “your agents are done”.
+- **The others look at whoever speaks.** In the call, the characters who are not at work turn their eyes to the one talking, and back to the camera when the line ends.
+- **Talk to the session from the call** (Linux, off by default): with `--reply`, the `agentStandup.reply` setting or `AGENT_STANDUP_REPLY=on`, a field under the live call types your line into the Claude Code session the call follows, when it runs in tmux and waits at its prompt. By mohamedaziz (#10).
+- **Fix:** after ⚙ → Characters → Reload, a fork keeps the lead's picture.
+
 ## 1.43.1
 - **Click the lead's red “needs you” badge, or its raised hand, to go and answer.** While the lead waits on a question, a permission or a plan, a click on either opens its Claude Code tab in VS Code, or the terminal or app it runs in. The bubble click in 1.43.0 rarely worked, because the speech bubble has usually gone by then; it still works when one is on screen. A click elsewhere on the tile still opens its panel.
 
