@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.45.0
+- **Zen mode: the alerts without the voices.** The sound button and the M key now go from everything, to zen, to fully muted. In zen you still hear the done, needs-you and knock chimes, but not the voices, the office ambience or the music. Zen also has its own switch in ⚙ → Sound.
+- **The drawn characters come alive.** At work they type with their hands behind the laptop, and they open and close its lid when they start and stop. They cheer when their work is done, nod when they are named or hear good news, raise their eyebrows at a failure, stretch now and then, and talk with a smoother mouth. Each one breathes and blinks at its own pace, so a full call no longer moves in step.
+- **The tiles slide to their places** when the spotlight moves or someone joins or leaves the call, instead of jumping there (not with reduced motion).
+
 ## 1.44.0
 - **Your own characters, matched by name.** In your characters folder, a picture named after a sub-agent is always that agent's: `qa.png` for the agent of `.claude/agents/qa.md` (or one launched with the name qa), and `qa-2.png`, `qa-f.png`… are other looks of it when two are in the call. ⚙ → Characters → My folder shows who wears each picture and which agent types of the call have none yet. A folder with no such names works as before. Asked by arnielserrano (#16).
 - **“Needs you” sounds different from “done”.** With notifications on, a question, a permission or a plan that waits for you plays a sharper double ding; the soft chime is kept for “your agents are done”.
