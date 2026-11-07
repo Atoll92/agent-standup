@@ -33,13 +33,47 @@
 .tile.you { outline: 2px dashed rgba(255,255,255,.18); outline-offset: -2px }
 .tile.sweat::after { content: '💧'; position: absolute; right: 18%; top: 22%; font-size: 18px; animation: drip 1.6s ease-in infinite }
 @keyframes drip { from { transform: translateY(0); opacity: 1 } to { transform: translateY(16px); opacity: 0 } }
-.caption { margin: 18px 0 0; min-height: 118px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 22px; display: grid; grid-template-columns: 1fr auto; gap: 6px 20px; align-items: center }
-.caption .who { font: 700 14px Figtree, sans-serif; color: var(--gold); letter-spacing: .02em }
-.caption .say { grid-column: 1; font: 600 clamp(18px, 2.3vw, 24px)/1.35 Figtree, sans-serif; color: var(--ink) }
-.caption .stat { grid-column: 2; grid-row: 1 / span 2; font: 800 clamp(26px, 4vw, 46px)/1 Gabarito, sans-serif; color: var(--peach); text-align: right; max-width: 9em; overflow-wrap: anywhere }
-@media (max-width: 640px) { .caption { grid-template-columns: 1fr } .caption .stat { grid-column: 1; grid-row: auto; text-align: left } }
-.controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 0 }
-.btn.small { padding: 9px 16px; font-size: 15px }
+/* the film: full screen, the speaker in the spotlight, the number on the right, subtitles, everyone in a strip */
+#film { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto; gap: 14px; padding: 16px clamp(16px, 3vw, 40px) 0; color: var(--ink);
+  background: radial-gradient(120% 90% at 25% 15%, #18393f 0%, #0d2226 55%, #081518 100%); opacity: 0; transition: opacity .5s }
+#film.on { opacity: 1 }
+.fTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; font: 800 13px Figtree, sans-serif; letter-spacing: .14em; color: var(--dim); text-transform: uppercase }
+.fTop .rec { color: #ff6b5e; margin-left: 14px } .fTop .rec i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #ff4d40; margin-right: 7px; animation: blink 1.2s steps(2, start) infinite }
+@keyframes blink { to { visibility: hidden } }
+.fTop .ctl { display: flex; gap: 8px; letter-spacing: 0; text-transform: none }
+.fTop .ctl button { background: rgba(255,255,255,.07); border: 1px solid var(--line); color: var(--ink); border-radius: 99px; padding: 6px 13px; font: 700 14px Figtree, sans-serif; cursor: pointer } .fTop .ctl button:hover { background: rgba(255,255,255,.14) }
+.fMain { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: clamp(20px, 4vw, 64px); align-items: center; min-height: 0 }
+.fBig { position: relative; width: 100%; max-width: calc(58vh * 4 / 3); aspect-ratio: 4 / 3; justify-self: end }
+.fBig .tile { position: absolute; inset: 0; opacity: 0; transform: scale(.94) translateY(10px); transition: opacity .45s, transform .55s cubic-bezier(.2, .8, .2, 1); border-radius: 22px; box-shadow: 0 24px 60px rgba(0,0,0,.5) }
+.fBig .tile.on { opacity: 1; transform: none }
+.fBig .tile .tag { font-size: 15px; padding: 3px 12px; left: 12px; bottom: 12px }
+.fStat { min-width: 0 }
+.fKick { font: 800 clamp(13px, 1.3vw, 16px) Figtree, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); min-height: 1.4em }
+.fNum { font: 800 clamp(64px, 10vw, 168px)/.95 Gabarito, sans-serif; letter-spacing: -.03em; color: var(--peach); margin: 10px 0 8px; overflow-wrap: anywhere; min-height: .95em; font-variant-numeric: tabular-nums }
+.fNum.long { font-size: clamp(38px, 4.6vw, 80px); line-height: 1.02 } .fNum.xlong { font-size: clamp(32px, 3.7vw, 64px) }
+.fNum { transform-origin: left center }
+.fNum.land { animation: land .55s cubic-bezier(.2, .9, .25, 1.2) }
+@keyframes land { 0% { transform: scale(1.18); filter: blur(2px) } 55% { transform: scale(.97); filter: none } 100% { transform: none } }
+.fUnit { font: 700 clamp(19px, 2.1vw, 30px)/1.25 Figtree, sans-serif; color: var(--ink); max-width: 22ch }
+.fDetail { font: 600 clamp(15px, 1.5vw, 20px)/1.35 Figtree, sans-serif; color: var(--dim); margin-top: 12px; opacity: 0; transform: translateY(6px); transition: .4s; max-width: 32ch }
+.fDetail.on { opacity: 1; transform: none }
+.fSub { text-align: center; min-height: 2.9em; display: flex; align-items: center; justify-content: center }
+.fSub span { background: rgba(0,0,0,.55); border-radius: 12px; padding: 8px 18px; font: 600 clamp(16px, 1.9vw, 23px)/1.35 Figtree, sans-serif; max-width: 46ch; transition: opacity .2s }
+.fSub span:empty { opacity: 0 }
+.fStrip { display: flex; justify-content: center; gap: 10px }
+.fStrip .tile { width: clamp(76px, 10vw, 140px); flex: none; border-radius: 12px }
+.fStrip .tile .tag { font-size: 11px; left: 5px; bottom: 5px; padding: 0 7px } .fStrip .tile .tag small { display: none }
+.fBar { height: 3px; margin: 0 calc(-1 * clamp(16px, 3vw, 40px)); background: rgba(255,255,255,.06) } .fBar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .4s }
+.fGo { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 20px; padding: 16px 30px; box-shadow: 0 14px 40px rgba(0,0,0,.5) }
+.stamp { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%) rotate(-9deg) scale(1); border: 6px solid #ff5a4c; color: #ff5a4c; border-radius: 14px; padding: 10px 26px; font: 800 clamp(30px, 5vw, 64px) Gabarito, sans-serif; letter-spacing: .04em; text-transform: uppercase; opacity: 0; pointer-events: none; background: rgba(8,21,24,.35) }
+.stamp.on { animation: stamp .5s cubic-bezier(.3, 1.6, .5, 1) forwards }
+@keyframes stamp { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(-9deg) scale(2.4) } 100% { opacity: 1; transform: translate(-50%, -50%) rotate(-9deg) scale(1) } }
+@media (max-width: 760px), (max-aspect-ratio: 1/1) {
+  .fMain { grid-template-columns: 1fr; align-content: center; gap: 14px }
+  .fBig { max-width: calc(34vh * 4 / 3); justify-self: center }
+  .fStat { text-align: center } .fNum { transform-origin: center } .fNum.xlong { font-size: clamp(28px, 7vw, 46px) } .fUnit, .fDetail { margin-left: auto; margin-right: auto } .fNum { font-size: clamp(54px, 15vw, 110px) } .fNum.long { font-size: clamp(30px, 8vw, 56px) }
+  .fStrip .tile { width: 17vw } .fTop .lbl { display: none }
+}
 .pick { margin: 28px 0 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center }
 .where { margin: 22px 0 0; background: var(--bg2); border: 1px dashed var(--line); border-radius: 18px; padding: 18px 20px; color: var(--soft); font-size: 15.5px; max-width: 760px }
 .where.drag { border-color: var(--gold); background: var(--card) }
@@ -80,17 +114,10 @@ footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--d
     </section>
 
     <div class="stage" id="stage" aria-hidden="true"></div>
-    <div class="caption" id="caption" hidden><div class="who" id="cWho"></div><div class="say" id="cSay"></div><div class="stat" id="cStat"></div></div>
-    <div class="controls" id="controls" hidden>
-      <button class="btn ghost small" id="bPause" type="button">⏸ Pause</button>
-      <button class="btn ghost small" id="bMute" type="button">🔊 Voices on</button>
-      <button class="btn gold small" id="bSkip" type="button">Skip to my review →</button>
-    </div>
-
     <section id="start">
       <div class="pick">
         <button class="btn primary" id="bPick" type="button">Get my review</button>
-        <button class="btn ghost" id="bSample" type="button">See a sample review</button>
+        <button class="btn ghost" id="bSample" type="button">▶ Watch a sample review</button>
         <input type="file" id="fPick" webkitdirectory multiple hidden>
       </div>
       <div class="where" id="drop">
@@ -101,7 +128,7 @@ footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--d
           <li><b>Linux:</b> press <code>Ctrl L</code> and type <code>~/.claude/projects</code>.</li>
         </ul>
       </div>
-      <p class="fine">🔒 <b>Your sessions never leave your computer.</b> This page reads them in your browser; there is no server to send them to. Your browser may say “upload”: nothing is uploaded, and you can check the Network tab. Big histories take a minute. On a phone? Look at the sample, then open this page on the computer you code on.</p>
+      <p class="fine">🔊 Sound on: your agents speak. 🔒 <b>Your sessions never leave your computer.</b> This page reads them in your browser; there is no server to send them to. Your browser may say “upload”: nothing is uploaded, and you can check the Network tab. Big histories take a minute. On a phone? Look at the sample, then open this page on the computer you code on.</p>
     </section>
 
     <section id="reading" hidden>
@@ -136,6 +163,16 @@ footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--d
     </section>
   </main>
 </div>
+<div id="film" hidden aria-live="polite">
+  <div class="fTop"><span><span class="lbl">Annual performance review · <b id="fYear"></b></span><span class="rec"><i></i>REC <b id="fClock">00:00</b></span></span>
+    <span class="ctl"><button id="bPause" type="button" title="Pause">⏸</button><button id="bMute" type="button" title="Sound">🔊</button><button id="bSkip" type="button">Skip to my card →</button></span></div>
+  <div class="fMain"><div class="fBig" id="fBig"></div><div class="fStat"><div class="fKick" id="fKick"></div><div class="fNum" id="fNum"></div><div class="fUnit" id="fUnit"></div><div class="fDetail" id="fDetail"></div></div></div>
+  <div class="fSub"><span id="fSub"></span></div>
+  <div class="fStrip" id="fStrip"></div>
+  <div class="fBar"><i id="fProg"></i></div>
+  <div class="stamp" id="fStamp"></div>
+  <button class="btn primary fGo" id="bGo" type="button" hidden>▶ Start the review</button>
+</div>
 <footer><div class="wrap"><nav><a href="../">Agent Standup</a><a href="../privacy/">Privacy</a><a href="https://github.com/Atoll92/agent-standup" rel="noopener">GitHub</a><span>Unofficial: not affiliated with Anthropic. Made by a bored dev and his robots.</span></nav></div></footer>
 
 <script>
@@ -143,6 +180,7 @@ const hash = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c
 const L = (fr, en) => en, FR = () => false;   // the art block shared with the app expects these two helpers
 /*ART_JS*/
 /*STATS_JS*/
+/*LINES_JS*/
 
 const $ = (s) => document.querySelector(s), show = (el, on) => { el.hidden = !on; };
 const fmt = (n) => Math.round(n).toLocaleString('en-US');
@@ -193,77 +231,154 @@ function review(r) {
   const bad = rows.filter((x) => x.g === G.down).length, good = rows.filter((x) => x.g === G.up).length;
   const overall = bad >= 3 ? 'Performance improvement plan' : bad === 0 && good >= 2 ? 'Exceeds expectations' : bad >= 2 ? 'Meets expectations (barely)' : 'Meets expectations';
   const titles = [
-    [nightShare / .06, 'Chief Night Officer'], [r.peak / 6 + perSession / 3, 'Head of Agent Operations'], [escRate / .04, 'Senior Micromanager'],
-    [polite / .1, 'Head of Diplomacy'], [swearRate / .015, 'Director of Strong Feelings'], [shortRate / .05, top ? `Principal “${top[0]}” Engineer` : ''], [(r.ar / n) / .04, 'Most Validated Employee'],
-  ].filter((t) => t[1]).sort((a, b) => b[0] - a[0]);
-  const title = titles[0][1];
-  const action = { 'Chief Night Officer': 'Action: go to bed. We’ll still be here.', 'Head of Agent Operations': 'Action: hold a standup. You have a team now.', 'Senior Micromanager': 'Action: let one of us finish a sentence.',
-    'Head of Diplomacy': 'Action: keep it up. We noticed.', 'Director of Strong Feelings': 'Action: breathe. The tests were already red.', 'Most Validated Employee': 'Action: none. You’re absolutely right.' }[title] || 'Action: write a prompt longer than three words.';
-  const words = r.words, gatsby = words / 47094;
-  const S = [];   // [who, line, stat]: 0 Margot, 1 Remy, 2 Iris, 3 Hugo, 4 you
-  S.push([0, `Thanks for joining. This is your ${year} performance review. Camera on, please.`, '']);
-  S.push([1, `${since ? 'Since ' + since + ', you' : 'You'} sent us ${plural(r.prompts, 'prompt')} across ${plural(r.sessions, 'session')} in ${plural(r.projects, 'project')}.`, fmt(r.prompts) + ' prompts']);
-  if (top) S.push([1, `Your most detailed instruction: “${top[0]}”. You wrote it ${fmt(top[1])} times.`, `“${top[0]}” ×${fmt(top[1])}`]);
-  else S.push([1, `Your average prompt was ${plural(r.avgWords, 'word')}. We read all of them. Mostly.`, plural(r.avgWords, 'word')]);
-  if (r.ar) S.push([2, `We told you “You’re absolutely right” ${plural(r.ar, 'time')}. Legal asked us to stop. We told them they’re absolutely right.`, `×${fmt(r.ar)}`]);
-  else S.push([2, 'We never once said “You’re absolutely right”. We are working on our feelings.', '×0']);
-  if (r.night) S.push([0, `${plural(r.night, 'message')} between midnight and 5 AM.` + (r.latest ? ` The latest at ${clock(r.latest)}, on a ${DAYS[new Date(r.latest).getDay()]}. We don’t sleep. You should.` : ''), r.latest ? clock(r.latest) : fmt(r.night) + ' after midnight']);
-  else S.push([0, 'You never wrote to us after midnight. HR finds this suspicious.', '0 after midnight']);
-  S.push([2, `You interrupted us ${plural(r.esc, 'time')} mid-sentence.` + (r.alone > 20 * 60e3 ? ` The longest you left us alone: ${dur(r.alone)}. We were fine. Mostly.` : ''), `${fmt(r.esc)} × Esc`]);
-  S.push([3, `Finance note: we wrote you ${fmt(words)} words. That’s ` + (gatsby >= 1 ? `${gatsby >= 10 ? fmt(gatsby) : gatsby.toFixed(1)} copies of The Great Gatsby.` : `${Math.max(1, Math.round(gatsby * 100))}% of The Great Gatsby.`) + (bash ? ` Plus ${fmt(bash)} shell commands.` : ''), fmt(words) + ' words']);
-  if (r.spawned) S.push([1, `You hired ${plural(r.spawned, 'sub-agent')}. At one point ${fmt(r.peak)} of us were working at once, and nobody held a standup.`, fmt(r.peak) + ' at once']);
-  else S.push([1, 'You never delegated to a sub-agent. One of us did everything. She’d like a word.', '0 sub-agents']);
-  S.push([0, `On the bright side: “please” ${plural(r.please, 'time')}, “thank you” ${plural(r.thanks, 'time')}.` + (swear ? ` Also “${swear[0]}” ${plural(swear[1], 'time')}. It’s in your file.` : ''), swear ? `“${swear[0]}” ×${fmt(swear[1])}` : `${fmt(r.please)} × please`]);
-  S.push([0, 'Anything you’d like to add, for the record?', '']);
-  S.push([4, top ? `${top[0][0].toUpperCase() + top[0].slice(1)}.` : 'Continue.', '']);
-  S.push([0, `Thank you. Overall: ${overall.toLowerCase()}. Next year’s title: ${title}. ${action}`, title]);
+    [nightShare / .06, 'night'], [r.peak / 6 + perSession / 3, 'ops'], [escRate / .04, 'micro'], [polite / .1, 'diplomacy'], [swearRate / .015, 'feelings'], [top ? shortRate / .05 : -1, 'principal'], [(r.ar / n) / .04, 'validated'],
+  ].sort((a, b) => b[0] - a[0]);
+  const tk = titles[0][1], title = REVIEW_TITLES[tk].title.replace('{short}', top ? top[0] : ''), action = REVIEW_TITLES[tk].act;
+  const gatsby = r.words / 47094, gatsbyText = gatsby >= 1 ? `= ${gatsby >= 10 ? fmt(gatsby) : gatsby.toFixed(1)} copies of The Great Gatsby` : `= ${Math.max(1, Math.round(gatsby * 100))}% of The Great Gatsby`;
+  // the beats of the meeting: who speaks (0 Margot, 1 Remy, 2 Iris, 3 Hugo, 4 you), the lines they say (review-lines.js), and what lands on the screen.
+  // The number counts up while the first line is said and lands when it ends; `then` replaces it during the second line; `detail` shows once the number has landed.
+  const B = [];
+  B.push({ who: 0, kick: 'Annual performance review', big: String(year), plain: true, unit: 'Employee: you (the human)', detail: 'Reviewers: Margot, Remy, Iris and Hugo, your Claude Code agents', lines: ['intro'] });
+  B.push({ who: 1, kick: 'Communication', big: fmt(r.prompts), unit: 'prompts you sent us', detail: `${plural(r.sessions, 'session')} · ${plural(r.projects, 'project')}` + (since ? ` · since ${since}` : ''), lines: ['prompts'] });
+  B.push(top ? { who: 1, kick: 'Your most detailed instruction', big: `“${top[0]}”`, unit: `×${fmt(top[1])}`, lines: ['short'], bad: true }
+    : { who: 1, kick: 'Communication', big: fmt(r.avgWords), unit: 'words per prompt, on average', lines: ['shortNone'] });
+  B.push(r.ar ? { who: 2, kick: 'Being right', big: '×' + fmt(r.ar), unit: '“You’re absolutely right”', detail: r.right ? `plus ${fmt(r.right)} plain “you’re right”` : '', lines: ['ar', 'ar2'] }
+    : { who: 2, kick: 'Being right', big: '×0', unit: '“You’re absolutely right”', lines: ['arNone'] });
+  B.push(r.night ? { who: 0, kick: 'Work-life balance', big: fmt(r.night), unit: 'prompts between midnight and 5 AM', detail: r.latest ? `Latest: ${clock(r.latest)}, on a ${DAYS[new Date(r.latest).getDay()]}` : '', lines: ['night', 'night2'], bad: true }
+    : { who: 0, kick: 'Work-life balance', big: '0', unit: 'prompts after midnight', lines: ['nightNone'] });
+  B.push({ who: 2, kick: 'Letting us finish', big: fmt(r.esc), unit: 'times you hit Esc on us', detail: r.alone > 20 * 60e3 ? `Longest you left us alone: ${dur(r.alone)}` : '', lines: ['esc', 'esc2'], bad: escRate > .04 });
+  B.push({ who: 3, kick: 'Finance', big: fmt(r.words), unit: 'words we wrote you', detail: gatsbyText + (bash ? ` · ${fmt(bash)} shell commands` : ''), lines: ['words', 'words2'] });
+  B.push(r.spawned ? { who: 1, kick: 'Delegation', big: fmt(r.spawned), unit: 'sub-agents you hired', then: { big: fmt(r.peak), unit: 'of us working at once' }, detail: 'Standups held: 0', lines: ['sub', 'sub2'] }
+    : { who: 1, kick: 'Delegation', big: '0', unit: 'sub-agents', lines: ['subNone'] });
+  B.push({ who: 0, kick: 'Tone', big: '×' + fmt(r.please), unit: '“please”', detail: `and ${fmt(r.thanks)} “thank you”`, lines: ['please'] });
+  if (swear) B.push({ who: 0, kick: 'Tone', big: `“${swear[0]}”`, unit: '×' + fmt(swear[1]), lines: ['swear'], bad: true });
+  B.push({ who: 0, kick: 'For the record', big: '', unit: '', lines: ['record'] });
+  B.push({ who: 4, kick: 'Your statement', big: top ? `“${top[0]}”` : '“continue”', unit: '', lines: [top ? reviewYouId(top[0]) : 'you_default'] });
+  B.push({ who: 0, kick: 'Overall', big: overall, unit: '', lines: [bad >= 3 ? 'overallPip' : bad === 0 && good >= 2 ? 'overallUp' : bad >= 2 ? 'overallBarely' : 'overallOk'], stamp: bad >= 3 ? 'PIP' : bad === 0 && good >= 2 ? 'Promoted' : 'Noted' });
+  B.push({ who: 0, kick: 'Next year’s title', big: title, unit: '', detail: action, lines: ['title_' + tk, 'act_' + tk] });
+  B.push({ who: 0, kick: '', big: '', unit: '', lines: ['outro'], end: true });
   const head = r.ar ? { big: `×${fmt(r.ar)}`, small: '“You’re absolutely right”' } : r.latest ? { big: clock(r.latest), small: 'latest prompt' } : { big: fmt(r.prompts), small: 'prompts' };
-  return { year, since, rows, overall, title, action, lines: S, head, share: `My Claude Code agents gave me my ${year} performance review. ${r.ar ? `They said “You’re absolutely right” ${plural(r.ar, 'time')}. ` : ''}Overall: ${overall.toLowerCase()}. New title: ${title}.` };
+  return { year, since, rows, overall, title, action, beats: B, head, share: `My Claude Code agents gave me my ${year} performance review. ${r.ar ? `They said “You’re absolutely right” ${plural(r.ar, 'time')}. ` : ''}Overall: ${overall.toLowerCase()}. New title: ${title}.` };
 }
 
-// ---- the meeting
-let RV = null, step = 0, timer = null, paused = false, muted = false, mouth = null, voices = [];
-const synth = window.speechSynthesis;
-function pickVoices() { if (!synth) return; const all = synth.getVoices().filter((v) => /^en[-_]/i.test(v.lang)), good = all.filter((v) => /natural|premium|enhanced|neural|google|samantha|daniel|karen|moira|serena|aaron|nicky/i.test(v.name)); voices = (good.length >= 3 ? good : all); }
-if (synth) { pickVoices(); synth.onvoiceschanged = pickVoices; }
-function say(i) {
-  const [who, line, stat] = RV.lines[i];
-  CAST.forEach((p, j) => { const t = $('#c' + j); t.classList.toggle('speaking', j === who); });
-  $('#c4').classList.toggle('sweat', who !== 4 && i > 0);
-  $('#cWho').textContent = CAST[who].name + ' · ' + CAST[who].role; $('#cSay').textContent = line; $('#cStat').textContent = stat;
-  const m = $('#c' + who + ' .mouthE'); clearInterval(mouth); let open = false;
-  mouth = setInterval(() => { open = !open; if (m) { m.setAttribute('ry', open ? 4.2 : 1.1); m.setAttribute('rx', open ? 4 : 4.7); } }, 120);
-  const next = () => { clearInterval(mouth); if (m) { m.setAttribute('ry', 1.1); m.setAttribute('rx', 4.7); } clearTimeout(timer); timer = setTimeout(() => advance(), 650); };
-  const read = Math.max(2600, line.length * 62);
-  if (!muted && synth && voices.length) {
-    synth.cancel(); const u = new SpeechSynthesisUtterance(line), v = voices[[0, 1, 2, 3, 4][who] % voices.length];
-    u.voice = v; u.lang = v.lang; u.pitch = [1.1, .9, 1.25, .8, 1][who]; u.rate = 1.04;
-    let ended = false; u.onend = u.onerror = () => { if (!ended) { ended = true; next(); } };
-    synth.speak(u); clearTimeout(timer); timer = setTimeout(() => { if (!ended) { ended = true; synth.cancel(); next(); } }, read + 6000);   // a voice that never says it ended
-  } else { clearTimeout(timer); timer = setTimeout(next, read); }
+// ---- the sound: the recorded lines and the music, through one AudioContext (it may only start from a click), with the speaker's mouth driven by the loudness of the line
+const AU = { ctx: null, buf: {}, muted: false };
+function audioStart() {
+  if (AU.ctx) { try { AU.ctx.resume(); } catch {} return; }
+  try { AU.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
+  const c = AU.ctx; AU.master = c.createGain(); AU.master.connect(c.destination);
+  AU.voice = c.createGain(); AU.an = c.createAnalyser(); AU.an.fftSize = 512; AU.voice.connect(AU.an); AU.an.connect(AU.master);
+  AU.music = c.createGain(); AU.music.gain.value = 0; AU.music.connect(AU.master); AU.fx = c.createGain(); AU.fx.gain.value = .5; AU.fx.connect(AU.master);
 }
-function advance() { if (paused) return; step++; if (step >= RV.lines.length) return finish(); say(step); }
-function meet(stats, sample) {
-  RV = review(stats); RV.stats = stats; RV.sample = sample; step = 0; paused = false;
-  show($('#start'), false); show($('#reading'), false); show($('#done'), false); show($('#caption'), true); show($('#controls'), true);
-  $('#bPause').textContent = '⏸ Pause'; $('#caption').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  say(0); drawCard().catch(() => {});
+const load = (url) => AU.buf[url] || (AU.buf[url] = fetch(url).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status)))).then((b) => new Promise((ok, no) => AU.ctx.decodeAudioData(b, ok, no))).catch(() => null));
+const lineUrl = (id) => 'voices/' + id + '.mp3';
+function duck(on) { if (!AU.ctx) return; const g = AU.music.gain, t = AU.ctx.currentTime; g.cancelScheduledValues(t); g.setTargetAtTime(on ? .05 : .13, t, on ? .08 : .5); }
+function thunk(big) {   // a soft low hit when a number lands, a heavier one with a paper slap for the stamp
+  if (!AU.ctx || AU.muted) return; const c = AU.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+  o.frequency.setValueAtTime(big ? 120 : 170, t); o.frequency.exponentialRampToValueAtTime(big ? 38 : 60, t + .28); g.gain.setValueAtTime(big ? .9 : .5, t); g.gain.exponentialRampToValueAtTime(.001, t + .4);
+  o.connect(g); g.connect(AU.fx); o.start(t); o.stop(t + .42);
+  const n = c.createBufferSource(), nb = c.createBuffer(1, c.sampleRate * .12, c.sampleRate), d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, big ? 2 : 5);
+  const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = big ? 1800 : 3200; const ng = c.createGain(); ng.gain.value = big ? .5 : .18; n.buffer = nb; n.connect(f); f.connect(ng); ng.connect(AU.fx); n.start(t);
+}
+let mouthEl = null, raf = 0; const td = new Uint8Array(512);
+function lips() {
+  raf = requestAnimationFrame(lips); if (!mouthEl) return; let v = 0;
+  if (AU.an && speaking) { AU.an.getByteTimeDomainData(td); let s = 0; for (let i = 0; i < td.length; i++) { const x = (td[i] - 128) / 128; s += x * x; } v = Math.min(1, Math.sqrt(s / td.length) * 6); }
+  else if (speaking) v = .5 + .5 * Math.sin(performance.now() / 70);   // no sound to follow (muted, or a line that did not load)
+  mouthEl.setAttribute('ry', (1.1 + v * 3.3).toFixed(2)); mouthEl.setAttribute('rx', (4.7 - v * .8).toFixed(2));
+}
+
+// ---- the film
+let RV = null, token = 0, paused = false, speaking = false, clockAt = 0, clockT = 0;
+const sleep = (ms, my) => new Promise((ok) => { let left = ms, last = performance.now(); const t = setInterval(() => { const now = performance.now(); if (!paused) left -= now - last; last = now; if (left <= 0 || my !== token) { clearInterval(t); ok(); } }, 40); });
+const FILM = { big: [], strip: [] };
+CAST.forEach((p, i) => {
+  const big = document.createElement('div'); big.className = 'tile'; big.innerHTML = avatarSVG(p, undefined, 'b' + i + '_') + '<div class="tag">' + p.name + '<small>' + p.role + '</small></div>'; $('#fBig').appendChild(big); FILM.big.push(big);
+  const sm = document.createElement('div'); sm.className = 'tile' + (p.id === 'user' ? ' you' : ''); sm.innerHTML = avatarSVG(p, undefined, 's' + i + '_') + '<div class="tag">' + p.name + '</div>'; $('#fStrip').appendChild(sm); FILM.strip.push(sm);
+});
+function react(cls, who, ms = 1400) { (who == null ? FILM.strip : [FILM.strip[who]]).forEach((t) => { t.classList.add(cls); setTimeout(() => t.classList.remove(cls), ms); }); }
+function spotlight(who) {
+  FILM.big.forEach((t, i) => t.classList.toggle('on', i === who)); FILM.strip.forEach((t, i) => t.classList.toggle('speaking', i === who));
+  mouthEl = FILM.big[who].querySelector('.mouthE');
+}
+function countTo(el, text, ms, my) {   // a number counts up to its value; anything else simply appears
+  const m = /^(×?)([\d,]+)$/.exec(text); el.classList.toggle('long', text.length > 9); el.classList.toggle('xlong', text.length > 20);
+  if (!m || ms < 300) { el.textContent = text; return; }
+  const goal = +m[2].replace(/,/g, ''), t0 = performance.now(), step = () => { if (my !== token) return; const k = Math.min(1, (performance.now() - t0) / ms), v = Math.round(goal * (1 - Math.pow(1 - k, 3))); el.textContent = m[1] + fmt(v); if (k < 1) requestAnimationFrame(step); };
+  el.textContent = m[1] + '0'; step();
+}
+function land(text, b, heavy) {
+  const el = $('#fNum'); el.textContent = text; el.classList.toggle('long', text.length > 9); el.classList.toggle('xlong', text.length > 20); el.classList.remove('land'); void el.offsetWidth; el.classList.add('land'); thunk(heavy);
+  react(Math.random() < .5 ? 'wow' : 'nod1'); if (b.bad) react('inhale', 4, 1800);
+}
+async function say(id, my) {
+  const line = REVIEW_LINES[id]; if (!line) return; $('#fSub').textContent = line[1];
+  const buf = AU.ctx ? await load(lineUrl(id)) : null; if (my !== token) return;
+  speaking = true; duck(true); FILM.big.forEach((t) => t.classList.add('speaking'));
+  if (buf) { const s = AU.ctx.createBufferSource(); s.buffer = buf; s.connect(AU.voice); AU.src = s; await new Promise((ok) => { s.onended = ok; s.start(); }); }
+  else await sleep(Math.max(1800, line[1].length * 60), my);
+  speaking = false; duck(false); FILM.big.forEach((t) => t.classList.remove('speaking')); mouthEl && mouthEl.setAttribute('ry', 1.1);
+}
+let lastWho = -1;
+async function beat(b, my) {
+  const turn = b.who !== lastWho; lastWho = b.who; spotlight(b.who); $('#fKick').textContent = b.kick; $('#fUnit').textContent = b.unit; $('#fDetail').textContent = b.detail || ''; $('#fDetail').classList.remove('on');
+  const num = $('#fNum'); num.textContent = ''; num.classList.remove('land');
+  if (b.end) { $('#fNum').textContent = ''; }
+  if (turn) await sleep(450, my);   // the new speaker's tile has faded in before they talk
+  const first = b.lines[0], buf = AU.ctx ? await load(lineUrl(first)) : null, ms = buf ? buf.duration * 1000 * .92 : 1600;
+  if (b.big) countTo(num, b.big, !b.plain && /^×?[\d,]+$/.test(b.big) ? ms : 0, my);
+  if (b.big && !/^×?[\d,]+$/.test(b.big)) num.style.opacity = 0;
+  await say(first, my); if (my !== token) return;
+  if (b.big) { num.style.opacity = 1; land(b.big, b, !!b.stamp); }
+  if (b.stamp) { const st = $('#fStamp'); st.textContent = b.stamp; st.classList.remove('on'); void st.offsetWidth; st.classList.add('on'); if (b.stamp === 'Promoted') react('yay', null, 2200); }
+  if (b.who === 4) react('wow', null, 1600);
+  await sleep(b.stamp ? 1800 : b.then || b.lines[1] ? 350 : 900, my); if (my !== token) return;
+  if (b.detail && !b.then) $('#fDetail').classList.add('on');
+  if (b.lines[1]) {
+    if (b.then) { $('#fUnit').textContent = b.then.unit; const b2 = await load(lineUrl(b.lines[1])); countTo(num, b.then.big, b2 ? b2.duration * 920 * .6 : 1200, my); }
+    await say(b.lines[1], my); if (my !== token) return;
+    if (b.then) { land(b.then.big, b, false); await sleep(500, my); $('#fDetail').classList.add('on'); }
+    await sleep(700, my);
+  }
+  $('#fStamp').classList.remove('on'); $('#fSub').textContent = '';
+}
+function tickClock() { if (!$('#film').hidden) { if (!paused) { const s = Math.floor((performance.now() - clockAt) / 1000); $('#fClock').textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); } setTimeout(tickClock, 250); } }
+async function film(stats, sample) {
+  RV = review(stats); RV.stats = stats; RV.sample = sample; const my = ++token; lastWho = 0; paused = false; $('#bPause').textContent = '⏸';
+  const f = $('#film'); show(f, true); requestAnimationFrame(() => f.classList.add('on')); document.body.style.overflow = 'hidden';
+  $('#fYear').textContent = RV.year; $('#fKick').textContent = ''; $('#fNum').textContent = ''; $('#fUnit').textContent = ''; $('#fDetail').textContent = ''; $('#fSub').textContent = 'Margot is letting everyone in…'; $('#fProg').style.width = '0';
+  spotlight(0); drawCard().catch(() => {});
+  if (AU.ctx) { const all = RV.beats.flatMap((b) => b.lines).map(lineUrl); await Promise.race([Promise.all([...all.map(load), load('music.mp3')]), sleep(8000, my)]); }
+  if (my !== token) return;
+  if (!AU.ctx || AU.ctx.state !== 'running') {   // no click to start the sound from (a link with ?sample, a dropped folder): one click on the button does it
+    $('#fSub').textContent = ''; const go = $('#bGo'); show(go, true); await new Promise((ok) => (go.onclick = () => { audioStart(); ok(); })); show(go, false); if (AU.ctx) await Promise.all([load('music.mp3'), ...RV.beats.flatMap((b) => b.lines).map((id) => load(lineUrl(id)))]);
+  }
+  $('#fSub').textContent = '';
+  const mb = AU.ctx && (await load('music.mp3')); if (mb && !AU.mus) { const s = AU.ctx.createBufferSource(); s.buffer = mb; s.loop = true; s.connect(AU.music); s.start(); AU.mus = s; } duck(false);
+  clockAt = performance.now(); tickClock(); cancelAnimationFrame(raf); lips();
+  for (let i = 0; i < RV.beats.length; i++) { if (my !== token) return; $('#fProg').style.width = (100 * i / RV.beats.length) + '%'; await beat(RV.beats[i], my); }
+  if (my === token) finish();
+}
+function stopFilm() {
+  token++; paused = false; if (AU.ctx && AU.ctx.state === 'suspended') AU.ctx.resume(); try { AU.src && AU.src.stop(); } catch {}
+  if (AU.mus) { const t = AU.ctx.currentTime; AU.music.gain.cancelScheduledValues(t); AU.music.gain.setTargetAtTime(0, t, .4); const m = AU.mus; AU.mus = null; setTimeout(() => { try { m.stop(); } catch {} }, 1800); }
+  speaking = false; cancelAnimationFrame(raf); $('#fStamp').classList.remove('on');
+  const f = $('#film'); f.classList.remove('on'); setTimeout(() => { if (!f.classList.contains('on')) show(f, false); }, 500); document.body.style.overflow = '';
 }
 function finish() {
-  clearTimeout(timer); clearInterval(mouth); if (synth) synth.cancel();
-  CAST.forEach((p, j) => $('#c' + j).classList.remove('speaking', 'sweat'));
-  show($('#controls'), false); show($('#caption'), false); show($('#done'), true);
+  stopFilm(); show($('#start'), false); show($('#reading'), false); show($('#done'), true); thunk(true);
   $('#rTitle').textContent = RV.sample ? 'A sample review.' : 'Your review is in: ' + RV.overall.toLowerCase() + '.';
   $('#rSub').textContent = RV.sample ? 'Made from made-up numbers. Yours is one folder away, and it stays on your computer.' : 'Next year’s title: ' + RV.title + '. ' + RV.action;
   $('#bX').href = 'https://x.com/intent/post?text=' + encodeURIComponent(RV.share + ' Get yours:') + '&url=' + encodeURIComponent('https://agent-standup.com/review/');
-  $('#done').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => $('#done').scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
 }
-$('#bPause').onclick = () => { paused = !paused; $('#bPause').textContent = paused ? '▶ Resume' : '⏸ Pause'; if (paused) { clearTimeout(timer); if (synth) synth.cancel(); clearInterval(mouth); } else say(step); };
-$('#bMute').onclick = () => { muted = !muted; $('#bMute').textContent = muted ? '🔇 Voices off' : '🔊 Voices on'; if (muted && synth) synth.cancel(); };
+$('#bPause').onclick = () => { paused = !paused; $('#bPause').textContent = paused ? '▶' : '⏸'; if (AU.ctx) paused ? AU.ctx.suspend() : AU.ctx.resume(); };
+$('#bMute').onclick = () => { AU.muted = !AU.muted; $('#bMute').textContent = AU.muted ? '🔇' : '🔊'; if (AU.master) AU.master.gain.value = AU.muted ? 0 : 1; };
 $('#bSkip').onclick = finish;
-$('#bReplay').onclick = () => meet(RV.stats, RV.sample);
+document.addEventListener('keydown', (e) => { if ($('#film').hidden) return; if (e.key === 'Escape') finish(); else if (e.key === ' ') { e.preventDefault(); $('#bPause').click(); } });
+$('#bReplay').onclick = () => { audioStart(); film(RV.stats, RV.sample); };
 $('#bAgain').onclick = () => { show($('#done'), false); show($('#start'), true); $('#start').scrollIntoView({ behavior: 'smooth' }); };
-$('#bSample').onclick = () => { track('sample'); meet(SAMPLE, true); };
+$('#bSample').onclick = () => { audioStart(); track('sample'); film(SAMPLE, true); };
 
 // ---- the card: a PNG drawn on a canvas, so it can be downloaded and posted
 const svgImg = (p) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(avatarSVG(p, {}, 'k' + p.id + '_')); });
@@ -336,7 +451,7 @@ async function readAll(list) {   // list: [{ path, file }]
   }
   const r = st.result();
   if (!r.prompts) return fail('We found session files but no prompts typed by you in them. Is that the right folder?');
-  $('#barI').style.width = '100%'; meet(r, false);
+  $('#barI').style.width = '100%'; film(r, false);
 }
 async function walkHandle(dir, pre, out) {
   for await (const [name, h] of dir.entries()) {
@@ -345,6 +460,7 @@ async function walkHandle(dir, pre, out) {
   }
 }
 $('#bPick').onclick = async () => {
+  audioStart();
   if (window.showDirectoryPicker) {
     let dir; try { dir = await window.showDirectoryPicker({ id: 'claude-projects', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; return $('#fPick').click(); }
     const out = []; show($('#start'), false); show($('#reading'), true); $('#status').textContent = 'Listing your sessions…';
@@ -363,6 +479,7 @@ const drop = $('#drop');
 ['dragenter', 'dragover'].forEach((k) => document.addEventListener(k, (e) => { e.preventDefault(); drop.classList.add('drag'); }));
 ['dragleave', 'drop'].forEach((k) => document.addEventListener(k, (e) => { e.preventDefault(); if (k === 'dragleave' && e.relatedTarget) return; drop.classList.remove('drag'); }));
 document.addEventListener('drop', async (e) => {
+  audioStart();
   const items = [...(e.dataTransfer.items || [])].map((i) => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean); if (!items.length) return;
   const out = []; show($('#start'), false); show($('#reading'), true); $('#status').textContent = 'Listing your sessions…';
   try { for (const it of items) await walkEntry(it, '', out); } catch {}

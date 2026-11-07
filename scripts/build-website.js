@@ -147,8 +147,8 @@ page('TRADEMARKS.md', 'name-and-logo', 'Name and logo', 'The code of Agent Stand
   const app = read('public/index.html'), sep = '// =====================================================================\n';
   const jsStart = app.indexOf(sep + '//  cast: soft mascots'), jsEnd = app.indexOf(sep + '//  state'), cssStart = app.indexOf('/* character animation'), cssLast = app.indexOf('@media (prefers-reduced-motion:reduce)', cssStart), cssEnd = app.indexOf('\n', cssLast);
   if (jsStart < 0 || jsEnd <= jsStart || cssStart < 0 || cssLast < 0 || cssEnd < 0) throw new Error('art markers not found in public/index.html');
-  const stats = read('website/src/review-stats.js').replace(/\nif \(typeof module[^\n]*\n?$/, '\n');
-  write('review/index.html', read('website/src/review.html').replace('/*ART_CSS*/', () => app.slice(cssStart, cssEnd)).replace('/*ART_JS*/', () => app.slice(jsStart, jsEnd)).replace('/*STATS_JS*/', () => stats)
+  const strip = (f) => read(f).replace(/\nif \(typeof module[^\n]*\n?$/, '\n'), stats = strip('website/src/review-stats.js'), lines = strip('website/src/review-lines.js');   // the reader, and what the cast says (its recordings are in website/static/review/, made by scripts/review-voices.js)
+  write('review/index.html', read('website/src/review.html').replace('/*ART_CSS*/', () => app.slice(cssStart, cssEnd)).replace('/*ART_JS*/', () => app.slice(jsStart, jsEnd)).replace('/*STATS_JS*/', () => stats).replace('/*LINES_JS*/', () => lines)
     .replace(/__SITE__/g, site).replace('<!--ANALYTICS-->', () => analytics));
 }
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${site}sitemap.xml\n`);

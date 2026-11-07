@@ -1,6 +1,8 @@
 // The numbers behind agent-standup.com/review/: one pass over Claude Code transcripts (~/.claude/projects/**/*.jsonl), line by line, in the visitor's browser.
 // Nothing here sends anything: the page calls add() for each line of each file and reads result() at the end. Node can require it too (see test/review-stats.test.js).
 // Old transcript formats lack fields (isSidechain, isMeta, message.id, subagents/ folders): every read below tolerates their absence.
+// The short prompts counted as "your most detailed instruction". The review says the most frequent one aloud, so each has a recording (scripts/review-voices.js): add one there too.
+const REVIEW_SHORT = ['y', 'yes', 'yep', 'yeah', 'ok', 'okay', 'k', 'go', 'go on', 'go ahead', 'continue', 'proceed', 'do it', 'fix it', 'fix', 'try again', 'again', 'next', 'more', 'keep going', 'sure', 'lgtm', 'ship it', 'oui', 'vas-y', 'ok go', 'yes please', 'ok continue', 'no', 'nope', 'non'];
 function reviewStats() {
   const R = {
     files: 0, subFiles: 0, lines: 0, sessions: new Set(), projects: new Set(), first: Infinity, last: 0,
@@ -11,7 +13,7 @@ function reviewStats() {
   };
   const seen = new Set(), buckets = new Map(), BUCKET = 60e3, IDLE = 5 * 60e3;   // seen: ids of records already counted (an old resume copied the whole conversation into a new file); buckets: 1-minute slots -> the files busy in them; IDLE: a longer gap is a pause, not work
   let f = null;
-  const SHORT = /^(?:y|yes|yep|yeah|ok|okay|k|go|go on|go ahead|continue|cont|proceed|do it|fix it|fix|try again|again|next|more|keep going|sure|lgtm|ship it|oui|vas-y|continue stp|ok go|yes please|ok continue|no|nope|non)$/;
+  const SHORT = new Set(REVIEW_SHORT);
   const SWEARS = [['wtf', /\bwtf\b/g], ['f***', /\bf+u+c+k+\w*/g], ['s***', /\bshit\w*/g], ['damn', /\bdamn\w*/g], ['ffs', /\bffs\b/g], ['what the hell', /\bwhat the hell\b/g], ['p*tain', /\bputain\b/g], ['m*rde', /\bmerde\b/g], ['bordel', /\bbordel\b/g]];
   const AR = /\b(?:you[’']?re|you are) absolutely right\b|\b(?:vous avez|tu as) (?:absolument|tout à fait|parfaitement) raison\b/gi;
   const RIGHT = /\b(?:you[’']?re|you are) (?:totally |completely |quite |so |entirely )?right\b|\b(?:vous avez|tu as) raison\b/gi;
@@ -46,7 +48,7 @@ function reviewStats() {
     R.prompts++; if (sid) R.sessions.add(sid);
     const words = raw.split(/\s+/).filter(Boolean).length; R.promptWords += words;
     const low = raw.toLowerCase(), norm = low.replace(/[.!?,;:…]+$/g, '').replace(/\s+/g, ' ').trim();
-    if (norm.length <= 20 && SHORT.test(norm)) R.short[norm] = (R.short[norm] || 0) + 1;
+    if (SHORT.has(norm)) R.short[norm] = (R.short[norm] || 0) + 1;
     const letters = raw.replace(/[^A-Za-z]/g, ''); if (letters.length >= 12 && letters === letters.toUpperCase()) R.caps++;
     if (/\b(?:please|pls|plz|stp|svp)\b|s[’']il (?:te|vous) pla[iî]t/.test(low)) R.please++;
     if (/\b(?:thanks|thank you|thx|ty|merci|cheers)\b/.test(low)) R.thanks++;
@@ -103,4 +105,4 @@ function reviewStats() {
   }
   return { open, add, end, result };
 }
-if (typeof module === 'object' && module.exports) module.exports = { reviewStats };
+if (typeof module === 'object' && module.exports) module.exports = { reviewStats, REVIEW_SHORT };
