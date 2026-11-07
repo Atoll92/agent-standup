@@ -266,8 +266,8 @@
   .ticker { display:none; position:absolute; left:6px; right:6px; bottom:30px; font:10.5px/1.3 ui-monospace,Menlo,monospace; color:#fff; background:rgba(15,20,35,.8); border-radius:5px; padding:2px 7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
   .ticker.on { display:block } .ticker i { font-style:normal; color:#ffd24a } .ticker.flash { animation:flash .25s } @keyframes flash { from { background:#3b5bdb } }
   /* character animation: all state-driven from the tile's classes */
-  .fig { transform-origin:50px 76px; animation:bob 4.4s ease-in-out infinite; animation-delay:var(--d,0s) }   /* the endless motions are moved by one clock in the script (IDLE_ANIMS), not 60 times a second by the browser */ @keyframes bob { 50% { transform:translateY(-.9px) } }
-  .tile.speaking .fig { animation:talk .46s ease-in-out infinite } .tile.speaking .fig.still { animation:bob 4.4s ease-in-out infinite; animation-delay:var(--d,0s) }   /* a character with a head of its own: the body does not squash, the head nods */
+  .fig { transform-origin:50px 76px; animation:bob var(--bd,4.4s) ease-in-out infinite; animation-delay:var(--d,0s) }   /* the endless motions are moved by one clock in the script (IDLE_ANIMS), not 60 times a second by the browser */ @keyframes bob { 50% { transform:translateY(-.9px) } }
+  .tile.speaking .fig { animation:talk .46s ease-in-out infinite } .tile.speaking .fig.still { animation:bob var(--bd,4.4s) ease-in-out infinite; animation-delay:var(--d,0s) }   /* a character with a head of its own: the body does not squash, the head nods */
   .chead { transform-origin:50px 44px } .tile.speaking .chead, #pcam.speaking .chead { animation:nod .6s ease-in-out infinite } @keyframes nod { 35% { transform:rotate(-.25deg) translateY(-.18px) } 75% { transform:rotate(.15deg) } }   /* very light: the mouth does the talking */ @keyframes talk { 50% { transform:scale(1.025,.985) translateY(-.5px) } }
   .tile.vanishing { pointer-events:none; z-index:3; animation:vanish 1.2s cubic-bezier(.45,0,.75,.35) forwards }
   @keyframes vanish { 0% { filter:none; transform:none; opacity:1 } 16% { filter:brightness(1.7) saturate(1.5); transform:scale(1.05) } 55% { filter:brightness(2.3) blur(1.5px); transform:scale(.88) rotate(-3deg); opacity:.85 } 100% { filter:brightness(3.4) blur(11px); transform:scale(.12) rotate(11deg); opacity:0 } }
@@ -278,11 +278,11 @@
   .toast.offer { pointer-events:auto; animation:none; display:flex; align-items:center; gap:8px; padding:4px 6px 4px 12px; order:9 } .toast.offer .btn { padding:3px 10px; font-size:12px; white-space:nowrap } .toast.offer .ic { font-size:11px; padding:2px 6px }
 #packNoteI { width:48px; height:36px; border-radius:4px; object-fit:cover; flex:none; cursor:pointer; margin-left:-6px }   /* the offer of the real voices: stays until answered, under the passing toasts */
   .toast { background:rgba(27,29,39,.92); border:1px solid var(--line); border-radius:99px; padding:5px 12px; font-size:12px; animation:toast 3s ease forwards } @keyframes toast { 0% { opacity:0; transform:translateY(6px) } 10%, 80% { opacity:1; transform:none } 100% { opacity:0 } }
-  .eye { transform-box:fill-box; transform-origin:center; animation:blink 4.6s infinite; animation-delay:var(--d,0s) } @keyframes blink { 0%,94%,100% { transform:scaleY(1) } 97% { transform:scaleY(.08) } }
+  .eye { transform-box:fill-box; transform-origin:center; animation:blink var(--kd,4.6s) infinite; animation-delay:var(--d,0s) } @keyframes blink { 0%,94%,100% { transform:scaleY(1) } 97% { transform:scaleY(.08) } }
   .brow { transform-box:fill-box; transform-origin:center; transition:transform .25s } .tile.speaking .brow { animation:brow .7s ease-in-out infinite } @keyframes brow { 50% { transform:translateY(-1.1px) } }
   .tile.working .brow.l { transform:rotate(13deg) translateY(.5px) } .tile.working .brow.r { transform:rotate(-13deg) translateY(.5px) } .tile.working .pupil { transform:translateY(1.2px) }
-  .arm.l { transform-origin:27px 48px } .arm.r { transform-origin:73px 48px } .tile.speaking .arm.r { animation:wave .7s ease-in-out infinite } @keyframes wave { 50% { transform:rotate(-34deg) } }
-  .tile.working .arm { display:none } .tile .laptop, .tile .hands, .tile .sparks, .tile .grin, .tile .eyes-happy, .tile .mouth { display:none }
+  .arm { transition:transform .35s ease } .arm.l { transform-origin:27px 48px } .arm.r { transform-origin:73px 48px } .tile.speaking .arm.r { animation:wave .7s ease-in-out infinite } @keyframes wave { 50% { transform:rotate(-34deg) } }
+  .tile.working .arm.l { transform:rotate(-24deg) } .tile.working .arm.r { transform:rotate(24deg); animation:none }   /* at work the arms reach in, behind the laptop */ .tile .laptop, .tile .hands, .tile .sparks, .tile .grin, .tile .eyes-happy, .tile .mouth { display:none }
   .tile.working .laptop, .tile.working .hands, .tile.done .sparks, .tile.done .eyes-happy { display:inline } .tile.done .eyes-open { display:none }
   .tile .eyes-open { transition:transform .45s ease; transform:translate(calc(var(--lx,0) * 1.4px), calc(var(--ly,0) * .9px)) } .tile.working .eyes-open { transform:translate(0,0) }   /* the others glance at whoever speaks (gaze()); one move per line, not an endless animation; at work, eyes on the laptop */
   .tile.speaking .mouth { display:inline } .tile.speaking .smile, .tile.speaking .grin { display:none } .tile.done:not(.speaking) .smile { display:none } .tile.done:not(.speaking) .grin { display:inline }
@@ -293,6 +293,14 @@
   .drift { animation:drift 24s ease-in-out infinite alternate } @keyframes drift { to { transform:translateX(9px) } }
   .steam { animation:steam 2.6s ease-in-out infinite } @keyframes steam { 50% { transform:translateY(-1.4px); opacity:.25 } }
   .tile.done .sparks path { animation:tw 1.6s ease-in-out infinite }
+  /* one-shot moves (oneShot()), never endless: the lid opens and closes, the hands come to the keyboard once it is open, arms up when the work is done, a nod, raised eyebrows, a breath before the first word, the mouth settling into a smile, a stretch */
+  .lid { transform-origin:50px 64px } .tile.working .lid { animation:lidup .45s cubic-bezier(.2,.8,.3,1) } .tile.lidshut .laptop { display:inline } .tile.lidshut .lid { animation:lidshut .38s ease-in forwards } .tile.working .hands { animation:handsin .3s ease-out .25s both }
+  @keyframes lidup { from { transform:scaleY(.06) } } @keyframes lidshut { to { transform:scaleY(.06) } } @keyframes handsin { from { opacity:0; transform:translateY(2px) } }
+  .tile.yay .arm.l { animation:yayl .9s ease-in-out } .tile.yay .arm.r { animation:yayr .9s ease-in-out } .tile.yay:not(.speaking) .fig { animation:hop .7s ease-out } @keyframes yayl { 35%, 65% { transform:rotate(58deg) } } @keyframes yayr { 35%, 65% { transform:rotate(-58deg) } } @keyframes hop { 30% { transform:translateY(-2.4px) } 55% { transform:none } 75% { transform:translateY(-.8px) } }
+  .tile.nod1:not(.speaking) .fig { animation:nod1 .75s ease-in-out } @keyframes nod1 { 30% { transform:translateY(1px) rotate(.5deg) } 60% { transform:translateY(-.4px) } }
+  .tile.stretch:not(.speaking) .fig { animation:stretch 1.2s ease-in-out } @keyframes stretch { 40% { transform:scale(1.03,.97) translateY(.6px) } 65% { transform:scale(.98,1.035) translateY(-1.2px) } }
+  .tile.inhale .brow { animation:browup .34s ease-out } .tile.wow .brow { animation:wow 1.1s ease-out } @keyframes browup { 50% { transform:translateY(-1.8px) } } @keyframes wow { 20%, 70% { transform:translateY(-1.9px) } }
+  .tile.settle .smile, .tile.settle .grin { transform-box:fill-box; transform-origin:center; animation:settle .35s ease-out } @keyframes settle { from { transform:scale(.55,1.8) } }
   @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important } .confetti, .fly { display:none !important } }
   .tile:focus-visible, .rr:focus-visible, .bcard:focus-visible { outline:2px solid var(--accent); outline-offset:2px }
   .fly { position:fixed; left:0; top:0; font-size:28px; z-index:8; pointer-events:none; filter:drop-shadow(0 3px 4px rgba(0,0,0,.5)) }
@@ -829,7 +837,7 @@ function avatarSVG(p, o, uid = '') {   // uid keeps SVG ids unique per instance:
   const st = !!o, sh = SHAPES[p.shape], fy = sh.fy, top = sh.top, bot = p.shape === 4, c = p.shirt, c1 = mix(c, '#ffffff', .3), c2 = mix(c, '#000000', .2);
   const ink = bot ? '#8ff0ff' : '#2a2233', gid = uid + 'b' + p.gid, sc = SCENES[p.scene], eg = EYES[p.eye], ex = p.shape === 1 ? [43, 57] : [41.5, 58.5];
   const V = (cls, show, html) => (st ? (show ? html : '') : `<g class="${cls}">${html}</g>`);
-  const d0 = -((hash(p.id) % 45) / 10);
+  const d0 = -((hash(p.id) % 45) / 10), bd = 4 + ((hash(p.id) >>> 4) % 15) / 10, kd = 4 + ((hash(p.id) >>> 9) % 21) / 10;   // its own breathing (4 to 5.4 s) and blinking (4 to 6 s): a full call does not move in step
   const eye = (x) => `<g class="eye"><ellipse cx="${x}" cy="${fy}" rx="${eg.rx}" ry="${eg.ry}" fill="${ink}"/><g class="pupil"><circle cx="${x + 1}" cy="${fy - 1.5}" r="1.1" fill="#fff"/><circle cx="${x - 1}" cy="${fy + 1.4}" r=".55" fill="#fff" opacity=".7"/></g></g>`;
   const happy = (x) => `<path d="M${x - 3.6} ${fy + 1.4}Q${x} ${fy - 4.2} ${x + 3.6} ${fy + 1.4}" fill="none" stroke="${ink}" stroke-width="1.7" stroke-linecap="round"/>`;
   const brow = (x, s) => `<path class="brow ${s}" d="M${x - 3.6} ${fy - eg.ry - 3}q3.6-2 7.2 0" fill="none" stroke="${ink}" stroke-width="1.4" stroke-linecap="round"/>`;
@@ -841,13 +849,13 @@ function avatarSVG(p, o, uid = '') {   // uid keeps SVG ids unique per instance:
     ${V('mouth', speaking, `<ellipse class="mouthE" cx="50" cy="${my + 1}" rx="${mopen ? 4 : 4.6}" ry="${mopen ? 4.4 : .9}" fill="${bot ? '#8ff0ff' : '#4b1c2c'}"/>`)}
     ${p.glasses ? `<g fill="rgba(255,255,255,.16)" stroke="#2c2f40" stroke-width="1.1"><circle cx="${ex[0]}" cy="${fy}" r="6.2"/><circle cx="${ex[1]}" cy="${fy}" r="6.2"/><path d="M${ex[0] + 6.2} ${fy}h${ex[1] - ex[0] - 12.4}" fill="none"/></g>` : ''}`;
   const acc = ACC[p.acc](top, p.acc2, fy, sh.hw) + (p.lead ? `<path d="M${50 - sh.hw} ${fy + 5}q-2 11 13 12" fill="none" stroke="#2c2f40" stroke-width="1.2" stroke-linecap="round"/><circle cx="${50 - sh.hw + 13}" cy="${fy + 17}" r="1.9" fill="#2c2f40"/>` : '');
-  const arm = (side) => `<g class="arm ${side}"><ellipse cx="${side === 'l' ? 25 : 75}" cy="56" rx="4.6" ry="9" fill="${c2}" transform="rotate(${side === 'l' ? 12 : -12} ${side === 'l' ? 25 : 75} 56)"/></g>`;
+  const arm = (side) => `<g class="arm ${side}"${working ? ` transform="rotate(${side === 'l' ? -24 : 24} ${side === 'l' ? 27 : 73} 48)"` : ''}><ellipse cx="${side === 'l' ? 25 : 75}" cy="56" rx="4.6" ry="9" fill="${c2}" transform="rotate(${side === 'l' ? 12 : -12} ${side === 'l' ? 25 : 75} 56)"/></g>`;
   const prop = [`<path d="M11 62.4l1.6-7.4h7.2l1.6 7.4z" fill="#e07a5f"/><path d="M16 55q-6-8-2-12q5 4 2 12z" fill="#3fbf7f"/><path d="M16 55q6-7 10-5q-1 6-10 5z" fill="#53c98a"/>`,
     `<rect x="79" y="55.6" width="7.4" height="6.8" rx="1.6" fill="#f6f2ea"/><path d="M86.2 57q3.2 0 3.2 2.2t-3.2 2.2" fill="none" stroke="#f6f2ea" stroke-width="1.3"/><g class="steam" fill="none" stroke="#fff" stroke-width=".8" stroke-linecap="round" opacity=".7"><path d="M81.5 53q-1.4-1.8 0-3.4M84.3 53q-1.4-1.8 0-3.4"/></g>`,
     `<rect x="76" y="58.2" width="14" height="4.2" rx="1" fill="#ff7a6b"/><rect x="77.5" y="54.4" width="12" height="3.8" rx="1" fill="#4cc3ff"/><rect x="76.5" y="50.8" width="11" height="3.6" rx="1" fill="#ffd84a"/>`][p.prop] + (pumpkinDay() ? pumpkin(p.prop === 0 ? 83 : 17) : '');   /* on the 30th and 31st of October, a carved pumpkin on the other side of the desk */
-  const lap = `<rect x="33" y="46" width="34" height="18" rx="2.8" fill="#d3d8e6"/><rect x="33" y="46" width="34" height="18" rx="2.8" fill="url(#${uid}lg)" opacity=".5"/><circle cx="50" cy="55" r="2.3" fill="${c1}"/><rect x="29.5" y="63.4" width="41" height="3" rx="1.5" fill="#aab1c2"/>`;
+  const lap = `<g class="lid"><rect x="33" y="46" width="34" height="18" rx="2.8" fill="#d3d8e6"/><rect x="33" y="46" width="34" height="18" rx="2.8" fill="url(#${uid}lg)" opacity=".5"/><circle cx="50" cy="55" r="2.3" fill="${c1}"/></g><rect x="29.5" y="63.4" width="41" height="3" rx="1.5" fill="#aab1c2"/>`;
   const lapDark = `<rect x="33" y="46" width="34" height="18" rx="2.8" fill="#3b4152"/><rect x="33" y="46" width="34" height="18" rx="2.8" fill="url(#${uid}lg)" opacity=".18"/><circle cx="50" cy="55" r="2.3" fill="${c1}"/><rect x="29.5" y="63.4" width="41" height="3" rx="1.5" fill="#262a36"/>`;   // for custom characters: darker, so it still shows under a white or cream sprite
-  const hands = `<circle class="hand l" cx="38" cy="65.6" r="3.1" fill="${c2}"/><circle class="hand r" cx="62" cy="65.6" r="3.1" fill="${c2}"/>`;
+  const hands = `<circle class="hand l" cx="32.7" cy="59.8" r="3.1" fill="${c2}"/><circle class="hand r" cx="67.3" cy="59.8" r="3.1" fill="${c2}"/>`;   // on the keyboard, behind the lid we see from the back: only their outer sides show
   const sparks = star(22, 28, 3) + star(78, 22, 2.6, '#ff9bb8') + star(70, 40, 1.9, '#9be7ff') + star(30, 46, 1.6, '#ffe58a');
   const custFig = (c, talking, who) => { const base = c.full ? 'width="100" height="75" preserveAspectRatio="xMidYMid slice"' : 'x="20" y="6" width="60" height="58" preserveAspectRatio="xMidYMax meet"', px = c.smooth ? '' : 'image-rendering:pixelated;';
     const worn = c.extras ? Object.keys(c.extras).filter((k) => !/^sticker/.test(k)).map((k) => { const n = c.extras[k].length, i = hash(who + '+' + k) % (2 * n); return i < n ? `<image href="${c.extras[k][i]}" ${base} style="${px}"/>` : ''; }).join('') : '';   // one of each kind, or none, half of the time: always the same for a given agent
@@ -867,12 +875,12 @@ function avatarSVG(p, o, uid = '') {   // uid keeps SVG ids unique per instance:
       <linearGradient id="${uid}dk${p.scene}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sc.desk[0]}"/><stop offset="1" stop-color="${sc.desk[1]}"/></linearGradient>
       <linearGradient id="${uid}lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
     ${room ? `<clipPath id="${room}c"><rect y="62" width="100" height="13"/></clipPath><image id="${room}" href="${p.custom.bg}" width="100" height="75" preserveAspectRatio="xMidYMid slice"${p.custom.bgSmooth ? '' : ' style="image-rendering:pixelated"'}/>` : sc.svg().replace(/id="(g[a-z]\d)"/g, `id="${uid}$1"`).replace(/url\(#(g[a-z]\d)\)/g, `url(#${uid}$1)`)}
-    <g class="fig${p.custom && p.custom.head ? ' still' : ''}" style="--d:${d0}s">
+    <g class="fig${p.custom && p.custom.head ? ' still' : ''}" style="--d:${d0}s;--bd:${bd}s;--kd:${kd}s">
       ${fig}
     </g>
     ${p.custom ? custFront(p.custom, uid + 'hd' + p.gid, p.id || p.gid) : ''}
     ${room ? `<use href="#${room}" clip-path="url(#${room}c)"/>` : `<rect y="62" width="100" height="13" fill="url(#${uid}dk${p.scene})"/><rect y="62" width="100" height="1.3" fill="#fff" opacity=".38"/><rect y="63.3" width="100" height="2.6" fill="#000" opacity=".1"/>`}
-    ${room ? '' : prop}${p.custom ? (prefs.customLaptop && !(p.custom.desks && p.custom.desks.length) ? V('laptop', working, lapDark) : '') : V('laptop', working, lap) + V('hands', working, hands)}${V('sparks', done, `<g class="sparks">${sparks}</g>`)}
+    ${room ? '' : prop}${p.custom ? (prefs.customLaptop && !(p.custom.desks && p.custom.desks.length) ? V('laptop', working, lapDark) : '') : V('hands', working, hands) + V('laptop', working, lap)}${V('sparks', done, `<g class="sparks">${sparks}</g>`)}
   </svg>`;
 }
 
@@ -1622,8 +1630,9 @@ function paintStates() {
     STATE_CLASSES.forEach((c) => t.classList.toggle(c, st.k === c && !(c === 'done' && st.stop)));   /* stopped by the usage limit or a logout: resting, not the happy face and sparkles of done */
     const el = t.querySelector('.status'); if (el.textContent !== st.txt) { el.textContent = st.txt; const tb = t.querySelector('.tbadge'); if (tb) tb.style.top = el.offsetHeight > 26 ? el.offsetTop + el.offsetHeight + 4 + 'px' : ''; } /* a status on two lines: the badges under it move down */ const go = st.k === 'blocked' && st.sure ? L('Cliquez pour aller répondre', 'Click to go and answer') : ''; if (el.title !== go) el.title = go; const sc = 'status ' + st.k + (isTurn(p.id, st) ? ' turn' : '') + (st.gave || st.stop ? ' gave' : ''); if (el.className !== sc) el.className = sc;
     const pr = t.querySelector('.prop'), want = { blocked: '✋', stalled: '😰', waiting: '⌛' }[st.k] || '', was = S.prevState[p.id];   // a raised hand, a sweat drop, an hourglass: the call metaphor for "needs you / stuck / waiting"
+    if (was === 'working' && st.k !== 'working' && shown && !p.custom && !S.hold) oneShot(t, 'lidshut', 420); else if (st.k === 'working') t.classList.remove('lidshut');   /* the drawn cast closes its laptop rather than see it vanish */
     const spot = S.spotted || (S.spotted = new Set()); if (st.k !== 'blocked' || !st.sure) spot.delete(p.id); else if (!spot.has(p.id) && shown && !S.gone.has(p.id) && !S.speakers.size && !(S.focusLock > Date.now())) { spot.add(p.id); setFocus(p.id); }   // one that waits on you takes the spotlight once per wait, as soon as nobody talks (the speaker has it until then)
-    if (st.k === 'done' && was && was !== 'done' && was !== 'idle') { pr.textContent = '🎉'; pr.className = 'prop cheer'; setTimeout(() => { if (pr.classList.contains('cheer')) { pr.textContent = ''; pr.className = 'prop'; } }, 1200); }
+    if (st.k === 'done' && was && was !== 'done' && was !== 'idle') { pr.textContent = '🎉'; pr.className = 'prop cheer'; if (shown) oneShot(t, 'yay', 950); setTimeout(() => { if (pr.classList.contains('cheer')) { pr.textContent = ''; pr.className = 'prop'; } }, 1200); }
     else if (!pr.classList.contains('cheer')) { if (pr.textContent !== want) pr.textContent = want; const pc = 'prop ' + (want ? st.k : ''); if (pr.className !== pc) pr.className = pc; }
     if (shown && !S.gone.has(p.id)) ros.push({ p, st });
     if (p.id === 'main' && st.k === 'done' && was && was !== 'done' && was !== 'idle' && S.live && S.playing) { S.wrap = was; if (Date.now() - (S.mainBusyAt || 0) > 45000) confetti(); if (S.mainBusyAt) coffeeAsk(S.mainBusyAt); }   // the lead is done, its face says so: it always has a word for it (see wrapUp, which needs to know what it was doing just before), and confetti after a long turn
@@ -1800,7 +1809,7 @@ function setTicker(id, e) {   // the strip on the tile: spinner while running, t
   tk.classList.add('on'); if (running) { tk.classList.remove('flash'); void tk.offsetWidth; tk.classList.add('flash'); }
 }
 function tickTools(ev) {
-  ev._n = ev.tools.length; const t = $('#t-' + ev.agent); if (!t) return; t.style.display = '';
+  ev._n = ev.tools.length; const t = $('#t-' + ev.agent); if (!t) return; if (t.style.display === 'none') flip(() => (t.style.display = ''));
   ev.tools.forEach((tool) => pushTerm(ev.agent, tool));
   const buf = S.term[ev.agent], k = ev.tools[ev.tools.length - 1];
   S.tc[ev.agent] = (S.tc[ev.agent] || 0) + ev.tools.length; S.lastTool[ev.agent] = k.name + ' ' + (k.arg || '').slice(-38);
@@ -2148,8 +2157,21 @@ addEventListener('click', (e) => { if ($('#fpop') && !e.target.closest('#fpop, #
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#fpop')) { filesPop(false); const b = $('#fAll'); if (b) b.focus(); } });
 // the speaker always gets the spotlight (and keeps it until someone else talks)
 function setFocus(id) {
-  if (S.focus === id) return; const o = $('#t-' + S.focus); if (o) o.classList.remove('focus'); S.focus = id; const t = $('#t-' + id);
-  if (t) { t.classList.add('focus'); $('#stage').scrollTo({ top: 0, behavior: 'smooth' }); }
+  if (S.focus === id) return; flip(() => { const o = $('#t-' + S.focus); if (o) o.classList.remove('focus'); S.focus = id; const t = $('#t-' + id); if (t) t.classList.add('focus'); });
+  if ($('#t-' + id)) $('#stage').scrollTo({ top: 0, behavior: 'smooth' });
+}
+// the tiles slide to their new places instead of jumping there: a spotlight that moves, a tile that comes or goes. Not in a frozen moment (screenshots), while a replay is recomputed, in the compact rows, nor with reduced motion
+function flip(fn) {
+  const b = document.body; if (S.hold || S.recomputing || document.hidden || reduced() || !Element.prototype.animate || b.classList.contains('compact') || b.classList.contains('tree') || b.classList.contains('board')) return fn();
+  const was = new Map(); for (const t of $('#stage').children) if (t.classList.contains('tile') && t.style.display !== 'none') was.set(t, t.getBoundingClientRect());   /* where they are seen now, halfway through a slide included */
+  for (const t of was.keys()) if (t._flip) { t._flip.cancel(); t._flip = null; }
+  fn();
+  for (const [t, a] of was) {
+    if (t.style.display === 'none' || !a.width) continue; const r = t.getBoundingClientRect(); if (!r.width) continue;
+    const dx = a.left + a.width / 2 - (r.left + r.width / 2), dy = a.top + a.height / 2 - (r.top + r.height / 2), sx = a.width / r.width, sy = a.height / r.height;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(sx - 1) < .02 && Math.abs(sy - 1) < .02) continue;
+    try { const an = t.animate([{ transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})` }, { transform: 'none' }], { duration: 340, easing: 'cubic-bezier(.25,.8,.3,1)', composite: 'add' }); t._flip = an; an.onfinish = () => { if (t._flip === an) t._flip = null; }; } catch {}   /* add: on top of a pop or a join the tile may be doing */
+  }
 }
 function fly(fromId, toId, emoji) {
   const a = $('#t-' + fromId), b = $('#t-' + toId); if (!a || !b || document.body.classList.contains('tree')) return;
@@ -2184,7 +2206,7 @@ function vanish(id) {
   toast(`${p.name} ${L('a quitté l’appel', 'left the call')} 👋`);
   if (t.style.display === 'none' || document.body.classList.contains('tree')) return;
   S.leaving.add(id); const say = prefs.banter && !S.hurry && !S.speakers.has(id), go = () => { t.classList.remove('bye'); if (!S.leaving.has(id)) return; t.classList.add('vanishing'); poof(t, p.shirt); AUD.tone(660, .35, 'sine', .07); AUD.tone(330, .5, 'sine', .06, .12);
-    setTimeout(() => { S.leaving.delete(id); t.classList.remove('vanishing'); if (S.gone.has(id)) t.style.display = 'none'; }, 1250); };
+    setTimeout(() => { S.leaving.delete(id); t.classList.remove('vanishing'); if (S.gone.has(id)) flip(() => (t.style.display = 'none')); }, 1250); };
   if (say) { const b = t.querySelector('.bubble'), line = byeLine(id); b.innerHTML = `<small>👋</small>${esc(line)}`; t.classList.add('bye'); t._byeT = setTimeout(go, 1500); } else go();   // a short goodbye before the poof
 }
 setInterval(() => {
@@ -2199,15 +2221,18 @@ function startTalk(id, text, label) {
   const t = $('#t-' + id); if (!t) return; endThought(id); stopMumble(); TH.next[id] = Math.max(TH.next[id] || 0, Date.now() + 8000);   // a spoken line takes the bubble and the floor
   if (S.present && S.present !== id) hidePresent();
   S.spokeAt = performance.now(); S.fill = 0; S.mused = false;
-  if (!S.speakers.size && !(S.focusLock > Date.now())) setFocus(id); S.gone.delete(id); if (S.doneAt[id] != null) S.doneAt[id] = S.clock; t.style.display = ''; t.classList.add('speaking'); S.speakers.add(id); S.say[id] = { text, label }; AUD.duck(true);
+  if (!S.speakers.size && !(S.focusLock > Date.now())) setFocus(id); S.gone.delete(id); if (S.doneAt[id] != null) S.doneAt[id] = S.clock; if (t.style.display === 'none') flip(() => (t.style.display = '')); const fresh = !t.classList.contains('speaking'); t.classList.add('speaking'); if (fresh && !S.hold) { oneShot(t, 'inhale', 360); listen(id, text); } S.speakers.add(id); S.say[id] = { text, label }; AUD.duck(true);
   const shown0 = pieces(text), first = shown0.length > 1 ? shown0[0] : text; const b = t.querySelector('.bubble'); b.innerHTML = (label ? `<small>${esc(label)}</small>` : '') + esc(first);
   if (S.present === id) { $('#pcap').textContent = first; $('#pcam').classList.add('speaking'); }
-  const m = t.querySelector('.mouthE'); let open = false; clearInterval(mouths.get(id));
-  mouths.set(id, setInterval(() => {
-    if (!m) { const ct = t.querySelector('.cimg-talk'); if (ct) { const lv0 = S.level[id], op = lv0 ? lv0() > 0.05 : (open = !open); ct.style.display = op ? '' : 'none'; t.querySelector('.cimg').style.display = op ? 'none' : ''; if (S.present === id) { const pc = $('#pcam .cimg-talk'), pi = $('#pcam .cimg'); if (pc && pi) { pc.style.display = op ? '' : 'none'; pi.style.display = op ? 'none' : ''; } } } return; }   // custom character: swap between its two frames
-    const pm = S.present === id ? $('#pcam .mouthE') : null, lv = S.level[id]; if (lv) { const v = lv(); const ry = (.9 + Math.min(4.2, v * 28)).toFixed(1), rx = (4.8 - Math.min(1.1, v * 6)).toFixed(1); m.setAttribute('ry', ry); m.setAttribute('rx', rx); if (pm) { pm.setAttribute('ry', ry); pm.setAttribute('rx', rx); } }
-    else { open = !open; m.setAttribute('ry', open ? 4.2 : 1.1); m.setAttribute('rx', open ? 4 : 4.7); if (pm) { pm.setAttribute('ry', open ? 4.2 : 1.1); pm.setAttribute('rx', open ? 4 : 4.7); } }
-  }, 70));
+  const m = t.querySelector('.mouthE'); let open = false, lvS = 0, oS = 0, syl = 0, sylN = 0, sylA = 1, n = 0; clearInterval(mouths.get(id));
+  mouths.set(id, setInterval(() => {   // 25 times a second, the clock of the other moves (IDLE_ANIMS)
+    n++; if (!m) { const ct = t.querySelector('.cimg-talk'); if (ct) { const lv0 = S.level[id], op = lv0 ? lv0() > 0.05 : n % 2 ? open : (open = !open); ct.style.display = op ? '' : 'none'; t.querySelector('.cimg').style.display = op ? 'none' : ''; if (S.present === id) { const pc = $('#pcam .cimg-talk'), pi = $('#pcam .cimg'); if (pc && pi) { pc.style.display = op ? '' : 'none'; pi.style.display = op ? 'none' : ''; } } } return; }   // custom character: swap between its two frames
+    const pm = S.present === id ? $('#pcam .mouthE') : null, lv = S.level[id]; let o;
+    if (lv) { const v = lv(); lvS += (v - lvS) * (v > lvS ? .6 : .28); o = Math.min(1, lvS * 28 / 4.2); }   /* opens fast, closes a little slower: a mouth, not a level meter */
+    else { if (syl >= sylN) { syl = 0; sylN = 4 + Math.floor(Math.random() * 4); sylA = Math.random() < .12 ? 0 : .5 + Math.random() * .3; } o = sylA * Math.sin(Math.PI * syl++ / sylN); }   /* no sound to follow: syllables of 160 to 280 ms, now and then a short pause */
+    oS += (o - oS) * .55; o = oS;   /* eased toward where it goes: no jump from one frame to the next */
+    const ry = (.9 + 4.2 * o).toFixed(2), rx = (4.8 - .9 * o).toFixed(2); m.setAttribute('ry', ry); m.setAttribute('rx', rx); if (pm) { pm.setAttribute('ry', ry); pm.setAttribute('rx', rx); }
+  }, 40));
   if (document.body.classList.contains('tree')) renderTree();
   gaze();
 }
@@ -2227,17 +2252,35 @@ function stopTalk(id) {
   clearInterval(mouths.get(id)); mouths.delete(id); S.speakers.delete(id); if (!S.speakers.size) AUD.duck(false); if (S.focus === id && S.speakers.size) setFocus([...S.speakers][0]);
   if (S.present === id) { $('#pcap').textContent = ''; $('#pcam').classList.remove('speaking'); const pm = $('#pcam .mouthE'); if (pm) { pm.setAttribute('ry', .9); pm.setAttribute('rx', 4.6); } }
   const t = $('#t-' + id); if (!t) return;
-  gaze(); t.classList.remove('speaking'); const m = t.querySelector('.mouthE'); if (m) { m.setAttribute('ry', .9); m.setAttribute('rx', 4.6); }
+  gaze(); t.classList.remove('speaking'); if (!S.recomputing && !S.hold) oneShot(t, 'settle', 400); const m = t.querySelector('.mouthE'); if (m) { m.setAttribute('ry', .9); m.setAttribute('rx', 4.6); }
   const ct = t.querySelector('.cimg-talk'); if (ct) { ct.style.display = 'none'; t.querySelector('.cimg').style.display = ''; }
   const pc = $('#pcam .cimg-talk'), pi = $('#pcam .cimg'); if (pc && pi && S.present === id) { pc.style.display = 'none'; pi.style.display = ''; }
 }
 const clearSpeaking = () => [...S.speakers].forEach(stopTalk);
-function gaze() {   // the others turn their eyes to the one speaking, and back to the camera when the floor is free; after the spotlight has moved the tiles
+function gaze() {   // the others turn their eyes to the one speaking, and back to the camera when the floor is free; measured where the tiles go (their layout, not where a slide shows them), so the eyes turn while the tiles move
   clearTimeout(gaze.t); gaze.t = setTimeout(() => {
-    const sp = [...S.speakers][0], st = sp && $('#t-' + sp), r = st && st.getBoundingClientRect();
-    for (const t of document.querySelectorAll('#stage .tile')) { let x = 0, y = 0; if (r && r.width && t !== st) { const q = t.getBoundingClientRect(), dx = r.left + r.width / 2 - (q.left + q.width / 2), dy = r.top + r.height / 2 - (q.top + q.height / 2), d = Math.hypot(dx, dy) || 1; x = dx / d; y = dy / d; } const lx = x.toFixed(2), ly = y.toFixed(2); if (t.style.getPropertyValue('--lx') !== lx) t.style.setProperty('--lx', lx); if (t.style.getPropertyValue('--ly') !== ly) t.style.setProperty('--ly', ly); }
-  }, 250);
+    const box = (t) => ({ left: t.offsetLeft, top: t.offsetTop, width: t.offsetWidth, height: t.offsetHeight }), sp = [...S.speakers][0], st = sp && $('#t-' + sp), r = st && box(st);
+    for (const t of document.querySelectorAll('#stage .tile')) { let x = 0, y = 0; if (r && r.width && t !== st) { const q = box(t), dx = r.left + r.width / 2 - (q.left + q.width / 2), dy = r.top + r.height / 2 - (q.top + q.height / 2), d = Math.hypot(dx, dy) || 1; x = dx / d; y = dy / d; } const lx = x.toFixed(2), ly = y.toFixed(2); if (t.style.getPropertyValue('--lx') !== lx) t.style.setProperty('--lx', lx); if (t.style.getPropertyValue('--ly') !== ly) t.style.setProperty('--ly', ly); }
+  }, 60);
 }
+function oneShot(t, c, ms) { t.classList.remove(c); void t.offsetWidth; t.classList.add(c); clearTimeout(t['_' + c]); t['_' + c] = setTimeout(() => t.classList.remove(c), ms); }   // a move of a character that plays once: its class, restarted, then taken off
+const LISTEN = { good: /(^|[^\p{L}\p{N}])(done|fixed|passe[sd]|passing|works|merged|shipped|terminée?s?|corrigée?s?|réglée?s?|réussie?s?|finie?s?)(?![\p{L}\p{N}])|✅|🎉/iu, bad: /(^|[^\p{L}\p{N}])(fail|fails|failed|failing|failure|errors?|broken|broke|crash|crashed|crashes|bugs?|échoue|échoué|échec|erreurs?|plante|cassée?)(?![\p{L}\p{N}])|❌/iu, at: {} };
+function listen(id, text) {   // the others react once to a line: the one it names nods, a failure raises their eyebrows, good news gets a nod; each kind at most every 8 s, so a debugging session does not keep everyone's eyebrows up
+  if (S.hold || S.recomputing || reduced() || !text) return; const s = String(text), now = Date.now(), cool = (k) => now - (LISTEN.at[k] || 0) > 8000;
+  const bad = cool('bad') && LISTEN.bad.test(s), good = !bad && cool('good') && LISTEN.good.test(s); if (bad) LISTEN.at.bad = now; if (good) LISTEN.at.good = now;
+  for (const p of Object.values(S.agents)) {
+    if (p.id === id) continue; const t = $('#t-' + p.id); if (!t || t.style.display === 'none' || t.classList.contains('vanishing')) continue;
+    const nm = p.id !== 'user' && p.name && p.name.length > 2 && new RegExp('(^|[^\\p{L}\\p{N}])' + p.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\p{L}\\p{N}])', 'iu').test(s), c = nm || good ? 'nod1' : bad ? 'wow' : '';
+    if (c) setTimeout(() => { if (!t.classList.contains('speaking')) oneShot(t, c, c === 'wow' ? 1150 : 800); }, 250 + Math.random() * 450);
+  }
+}
+setInterval(() => {   // now and then someone who only listens moves a little: a look away, a stretch. One at a time, never while it works or speaks
+  if (!S.playing || document.hidden || S.hold || reduced() || Math.random() < .5) return;
+  const idle = [...document.querySelectorAll('#stage .tile')].filter((t) => t.style.display !== 'none' && !t.matches('.speaking, .working, .vanishing, .bye, .yay, .nod1, .wow, .stretch')); if (!idle.length) return;
+  const t = idle[Math.floor(Math.random() * idle.length)];
+  if (!S.speakers.size && !t.classList.contains('done') && Math.random() < .6) { const a = Math.random() * Math.PI * 2; t.style.setProperty('--lx', Math.cos(a).toFixed(2)); t.style.setProperty('--ly', (Math.sin(a) * .6).toFixed(2)); clearTimeout(t._glance); t._glance = setTimeout(gaze, 1500); }   /* gaze() brings the eyes back */
+  else oneShot(t, 'stretch', 1300);
+}, 9000);
 // =====================================================================
 //  inner thoughts: an agent that has been at work for a while thinks to itself, in a bubble it does not say. What it thinks is real: its own reasoning when the session kept it
 //  (rarely: Claude Code mostly stores a signature), otherwise what it is on right now (the command it waits for, the files it goes between, its to-do item, a failure, its task).
