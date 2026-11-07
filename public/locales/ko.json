@@ -193,7 +193,6 @@
  "Voice style": "목소리 스타일",
  "⌨ Keyboard shortcuts (?)": "⌨ 키보드 단축키 (?)",
  "Keyboard shortcuts": "키보드 단축키",
- "Mute / unmute": "음소거 / 해제",
  "Pause / play": "일시정지 / 재생",
  "Recap": "요약",
  "This help": "이 도움말",
@@ -459,5 +458,8 @@
  "Sub-agent names": "하위 에이전트 이름",
  "Rename every sub-agent: names separated by commas, given in the order the agents start. Empty: the built-in names.": "모든 하위 에이전트 이름 바꾸기: 이름을 쉼표로 구분해 입력하면 에이전트가 시작한 순서대로 붙습니다. 비우면 기본 이름을 씁니다.",
  "Agents you named yourself keep their names (switch below).": "직접 이름을 붙인 에이전트는 그 이름을 유지합니다(아래 스위치).",
- "Agents you named yourself take these names too (switch below).": "직접 이름을 붙인 에이전트도 이 이름을 받습니다(아래 스위치)."
+ "Agents you named yourself take these names too (switch below).": "직접 이름을 붙인 에이전트도 이 이름을 받습니다(아래 스위치).",
+ "Zen: alerts only, no voices (M key)": "젠: 알림음만, 목소리 없음 (M 키)",
+ "Sound: all, zen (alerts only), off": "소리: 전체, 젠 (알림음만), 끔",
+ "Zen mode: alerts, no voices": "젠 모드: 알림음만, 목소리 없음"
 }

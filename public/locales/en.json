@@ -211,7 +211,6 @@
  "Model": "Model",
  "More": "More",
  "Music volume": "Music volume",
- "Mute / unmute": "Mute / unmute",
  "My folder": "My folder",
  "Name for this project": "Name for this project",
  "Natural voices (installs on demand)": "Natural voices (installs on demand)",
@@ -345,6 +344,7 @@
  "Sound is playing in another Agent Standup window. Click 🔈 to take it over here.": "Sound is playing in another Agent Standup window. Click 🔈 to take it over here.",
  "Sound is playing in another window — click to take it over here": "Sound is playing in another window — click to take it over here",
  "Sound turns on with your first click in the call": "Sound turns on with your first click in the call",
+ "Sound: all, zen (alerts only), off": "Sound: all, zen (alerts only), off",
  "Source": "Source",
  "Speed": "Speed",
  "Speed presets": "Speed presets",
@@ -454,5 +454,7 @@
  "Your settings moved: the everyday ones are here, the rest in “All settings”.": "Your settings moved: the everyday ones are here, the rest in “All settings”.",
  "your turn": "your turn",
  "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.",
- "Yours": "Yours"
+ "Yours": "Yours",
+ "Zen mode: alerts, no voices": "Zen mode: alerts, no voices",
+ "Zen: alerts only, no voices (M key)": "Zen: alerts only, no voices (M key)"
 }

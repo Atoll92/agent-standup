@@ -410,6 +410,7 @@
   <div class="hint" id="trHint" style="display:none"></div>
   <h4 data-fr="Son" data-en="Sound">Son</h4>
   <button class="mi" data-t="voice"><span data-fr="Voix des agents" data-en="Agent voices">Voix des agents</span><i class="sw"></i></button>
+  <button class="mi" data-t="zen"><span data-fr="Mode zen : les alertes, sans les voix" data-en="Zen mode: alerts, no voices">Mode zen : les alertes, sans les voix</span><i class="sw"></i></button>
   <div class="box" id="voiceVolBox" style="display:none"><input id="voiceVol" type="range" min="0.05" max="1" step="0.05" style="width:100%" aria-label="Voice volume"></div>
   <div class="box" id="vstyleBox"><label class="lbl" for="vstyle" data-fr="Style des voix" data-en="Voice style">Style des voix</label><select id="vstyle"></select><div class="hint" id="vstyleTip" style="padding:6px 0 0;display:none" data-fr="Pour la meilleure expérience, choisissez les voix naturelles." data-en="For the best experience, pick the natural voices.">Pour la meilleure expérience, choisissez les voix naturelles.</div></div>
   <div class="box" id="kokoroBox" style="display:none"><button class="btn" id="kokoroInstall" style="width:100%"></button><div class="hint" id="kokoroHint" style="padding:2px 0 6px"></div></div>
@@ -1004,6 +1005,7 @@ function updateHint() {
 const AUD = {
   ctx: null, muted: false, live: new Set(), lastClick: 0,
   off() { return this.muted || !!S.hush || !!(S.owner && S.owner !== CID); },   // muted here, not turned on yet (S.hush: no click since the page opened), or another window holds the sound
+  calm() { return this.off() || !!prefs.zen; },   // zen mode: the alerts (done, needs you, a knock) still chime; voices, ambience, music and reaction pops are silent
   init() {
     if (this.ctx) { this.ctx.resume(); return; }
     let c; try { c = this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
@@ -1015,10 +1017,10 @@ const AUD = {
     const src = c.createBufferSource(); src.buffer = buf; src.loop = true; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500;
     const g = c.createGain(); g.gain.value = 0.3; src.connect(lp).connect(g).connect(this.sfx); src.start(); this.apply(); OFFICE.start();
   },
-  apply() { if (!this.ctx) return; this.sfx.gain.value = prefs.office && !this.off() ? 1 : 0; this.voice.gain.value = prefs.voice && !this.off() ? (prefs.voiceVol ?? 1) : 0; this.applyMusic(); RADIO.sync();  },
+  apply() { if (!this.ctx) return; this.sfx.gain.value = prefs.office && !this.calm() ? 1 : 0; this.voice.gain.value = prefs.voice && !this.calm() ? (prefs.voiceVol ?? 1) : 0; this.applyMusic(); RADIO.sync();  },
   // Music fades down quickly when an agent starts talking and comes back slowly once the room is quiet.
-  applyMusic() { if (!this.ctx) return; this.amb.gain.setTargetAtTime((this.ducked ? 0.35 : 1) * (prefs.officeVol ?? 0.8), this.ctx.currentTime, 0.25); const v = prefs.music && !this.off() ? (prefs.musicVol ?? 0.35) * (this.ducked ? 0.16 : 1) : 0; this.music.gain.setTargetAtTime(v, this.ctx.currentTime, this.ducked ? 0.12 : 0.7); },
-  blip(f) { if (!this.ctx || this.off()) return; const c = this.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.5, t + 0.1); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.25); },
+  applyMusic() { if (!this.ctx) return; this.amb.gain.setTargetAtTime((this.ducked ? 0.35 : 1) * (prefs.officeVol ?? 0.8), this.ctx.currentTime, 0.25); const v = prefs.music && !this.calm() ? (prefs.musicVol ?? 0.35) * (this.ducked ? 0.16 : 1) : 0; this.music.gain.setTargetAtTime(v, this.ctx.currentTime, this.ducked ? 0.12 : 0.7); },
+  blip(f) { if (!this.ctx || this.calm()) return; const c = this.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.5, t + 0.1); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.25); },
   alert() {   // a soft two-note chime for "your agents are done"; separate from the office sounds so it works with ambience off
     if (!this.ctx || this.off()) return; const c = this.ctx;
     [[784, 0], [1047, 0.16], [1319, 0.32]].forEach(([f, w]) => { const t = c.currentTime + w, o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9); o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.95); });
@@ -1056,7 +1058,7 @@ const AUD = {
 // Office ambience, all synthesised (no audio files): keyboards that follow real activity, a coffee machine, and small room noises.
 const OFFICE = {
   nb: null, ty: [0, 1, 2].map(() => ({ n: 0, at: 0, pan: 0 })), pt: 0, prev: 0, nextCoffee: 22000, nextMisc: 9000, timer: null,
-  ok() { return AUD.ctx && prefs.office && !AUD.off() && S.playing; },
+  ok() { return AUD.ctx && prefs.office && !AUD.calm() && S.playing; },
   noise() { const c = AUD.ctx; if (!this.nb) { this.nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate); const d = this.nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } return this.nb; },
   out(pan) { const c = AUD.ctx; if (!c.createStereoPanner) return AUD.amb; const p = c.createStereoPanner(); p.pan.value = pan; p.connect(AUD.amb); return p; },
   hit(t, out, o) {   // one short filtered noise burst (+ optional low thump): the building block of keys, clicks, doors, paper
@@ -1124,7 +1126,7 @@ const RADIO = {   // live web radio through WebAudio (so it can be faded when ag
       a.addEventListener('error', () => { this.err = !!this.cur; updateHint(); }); a.addEventListener('playing', () => { this.err = false; updateHint(); });
       AUD.ctx.createMediaElementSource(a).connect(AUD.music);
     }
-    const want = prefs.music && !AUD.off(), url = (STATIONS.find((s) => s.id === prefs.station) || STATIONS[0]).url;
+    const want = prefs.music && !AUD.calm(), url = (STATIONS.find((s) => s.id === prefs.station) || STATIONS[0]).url;
     if (want) { if (this.cur !== url) { this.cur = url; this.err = false; this.el.src = url; } if (this.el.paused) this.el.play().catch(() => {}); }
     else if (this.cur) { this.cur = null; this.el.pause(); this.el.removeAttribute('src'); this.el.load(); }   // stop downloading; it reconnects live next time
   },
@@ -1190,7 +1192,7 @@ function paceAt(k) {
   return { hurry, pace: Math.min(q > 7 ? 70 : q > 3 ? 130 : 260, lg > 30 ? 70 : lg > 15 ? 130 : lg > 6 ? 200 : 260), boost: hurry || S.events.length - k > 60 ? 3 : 1 };
 }
 function warmTTS(i) {   // called by run() before each line (i is that line) and when new events arrive (i is the first of them)
-  if (!TTS.server || !AUD.ctx || AUD.off() || !prefs.voice || babbles()) return;
+  if (!TTS.server || !AUD.ctx || AUD.calm() || !prefs.voice || babbles()) return;
   const fresh = i <= S.idx, from = fresh ? i : S.idx + 1, len = S.events.length, jobs = []; let n = 0; if (!fresh && !S.playing) return;   // new events while a line is being read: the lines after it are planned again, they may now be read shorter and faster
   for (let k = from; k < Math.min(len, from + 400) && n < 4;) {
     const e = S.events[k]; if (quiet(e)) { k++; continue; }
@@ -1353,7 +1355,7 @@ function sessVoice(text, ev) {   // for the lines that come from the session (ev
 }
 async function speakLine(text, p, primary, token, lo = voiceLang(text), always = false) {   // always: your own lines are voiced even when the call is behind
   captionRun(p.id, text, estMs(text));
-  if (AUD.off() || !prefs.voice) { if (!AUD.off() && prefs.office) AUD.murmur(0.5 + (p.vi % 5) / 10, estMs(text) / 1000); return sleep(estMs(text)); }
+  if (AUD.calm() || !prefs.voice) { if (!AUD.calm() && prefs.office) AUD.murmur(0.5 + (p.vi % 5) / 10, estMs(text) / 1000); return sleep(estMs(text)); }
   if (S.hurry && !always) return sleep(estMs(text));
   const bab = babbles(); if (bab && AUD.ctx) { try { await speakBabble(text, p, primary ? 1 : 0.5, token); return; } catch {} }
   if (!bab && TTS.server && AUD.ctx) { try { await speakServer(text, p, primary ? 1 : 0.5, token, lo); return; } catch {} }
@@ -2337,7 +2339,7 @@ function endThought(id) {
 const clearThoughts = () => { document.querySelectorAll('.tile.musing').forEach((t) => endThought(t.id.slice(2))); stopMumble(); };
 function stopMumble() { const v = TH.voice; if (v) { TH.voice = null; try { v.src.stop(); } catch {} } }
 async function mumble(id, text) {   // lips closed: the mouth does not move, the music does not make room, and anyone who starts to speak cuts it
-  const p = S.agents[id], t = $('#t-' + id); if (!p || !t || !prefs.voice || AUD.off() || !AUD.ctx || S.speakers.size || TH.voice) return;
+  const p = S.agents[id], t = $('#t-' + id); if (!p || !t || !prefs.voice || AUD.calm() || !AUD.ctx || S.speakers.size || TH.voice) return;
   if (!TTS.server || babbles()) { const o = AUD.murmur(0.5 + (p.vi % 5) / 10, Math.min(2.2, estMs(text) / 1000), 0.4); if (o) { TH.voice = { id, src: o }; o.addEventListener('ended', () => { if (TH.voice && TH.voice.src === o) TH.voice = null; }); } return; }
   const voice = TTS.voiceFor(p, voiceLang(text)), token = S.token; if (!voice) return; let buf; try { buf = await TTS.buf(speakable(text), voice, TTS.rate(), true); } catch { return; }   // made like a line prepared ahead: it never delays a real one
   if (token !== S.token || S.speakers.size || TH.voice || !t.classList.contains('musing')) return;   // someone spoke meanwhile, or the thought is gone
@@ -3054,7 +3056,7 @@ function amend(e, was) {   // the server corrected an event the call already has
 let polling = false, polledAt = 0;
 setInterval(async () => {
   if (!S.live || polling) return;
-  if (document.hidden && AUD.off() && Date.now() - polledAt < 2500) return;   // hidden and not heard (muted, or another window has the sound): every 2.5 s is enough for the alerts; a call you listen to keeps its pace
+  if (document.hidden && AUD.calm() && Date.now() - polledAt < 2500) return;   // hidden and not heard (muted, zen, or another window has the sound): every 2.5 s is enough for the alerts; a call you listen to keeps its pace
   polling = true; polledAt = Date.now();
   try {
     const switched = await followCurrent(); if (S.offline) { S.offline = false; syncUI(); }
@@ -3250,7 +3252,7 @@ function showVisit(v) {   // the same face and name each time for a given sessio
 }
 function hideVisit() { clearTimeout(showVisit.t); S.visit = S.knock = null; const el = $('#visit'); if (el.className) { el.className = ''; el.innerHTML = ''; } }
 async function visitSay(v, token) {
-  if (S.visit !== v || AUD.off() || !prefs.voice) return; const el = $('#visit'); el.classList.add('speaking'); AUD.duck(true);
+  if (S.visit !== v || AUD.calm() || !prefs.voice) return; const el = $('#visit'); el.classList.add('speaking'); AUD.duck(true);
   await speakLine(v.line, v.p, true, token); el.classList.remove('speaking'); if (!S.speakers.size) AUD.duck(false);
 }
 $('#visit').onclick = (e) => { const v = S.visit; if (!v) return; if (e.target.closest('.vx')) hideVisit(); else { goSession(v.r.proj, v.r.id); answerAt(v.r); } };
@@ -3384,9 +3386,9 @@ function applyLang() {
 }
 const elsewhere = () => !!(S.owner && S.owner !== CID);
 function applyMute() {
-  const b = $('#bMute'); b.textContent = AUD.muted || S.hush ? '🔇' : elsewhere() ? '🔈' : '🔊';
-  b.title = S.hush ? L('Le son s’active à votre premier clic dans l’appel', 'Sound turns on with your first click in the call') : elsewhere() ? L('Le son est joué dans une autre fenêtre — cliquer pour le reprendre ici', 'Sound is playing in another window — click to take it over here') : L('Son (touche M)', 'Sound (M key)');
-  AUD.apply(); if (AUD.off()) { synth && synth.cancel(); AUD.stopAll(); }
+  const b = $('#bMute'); b.textContent = AUD.muted || S.hush ? '🔇' : elsewhere() ? '🔈' : prefs.zen ? '🔔' : '🔊';
+  b.title = S.hush ? L('Le son s’active à votre premier clic dans l’appel', 'Sound turns on with your first click in the call') : elsewhere() ? L('Le son est joué dans une autre fenêtre — cliquer pour le reprendre ici', 'Sound is playing in another window — click to take it over here') : prefs.zen ? L('Zen : seulement les alertes, sans les voix (touche M)', 'Zen: alerts only, no voices (M key)') : L('Son (touche M)', 'Sound (M key)');
+  AUD.apply(); if (AUD.calm()) { synth && synth.cancel(); AUD.stopAll(); }
 }
 async function audioSync(claim) {   // heartbeat + ownership: avoids two Agent Standup windows talking at the same time
   try {
@@ -3396,7 +3398,7 @@ async function audioSync(claim) {   // heartbeat + ownership: avoids two Agent S
 }
 const claimAudio = () => { S.owner = CID; applyMute(); audioSync(true); };
 setInterval(() => audioSync(false), 1500);
-function toggleMute() { if (S.hush) return joinSound(); if (elsewhere()) { AUD.muted = false; claimAudio(); return; } AUD.muted = !AUD.muted; applyMute(); }
+function toggleMute() { if (S.hush) return joinSound(); if (elsewhere()) { AUD.muted = false; claimAudio(); return; } if (AUD.muted) { AUD.muted = false; prefs.zen = false; } else if (prefs.zen) AUD.muted = true; else prefs.zen = true; savePrefs(); document.querySelectorAll('.mi[data-t="zen"] .sw').forEach((w) => w.classList.toggle('on', !!prefs.zen)); syncSwitches(); applyMute(); }   // 🔊 everything → 🔔 zen (only the alerts) → 🔇 nothing
 function setView(v) { prefs.view = v; savePrefs(); document.body.classList.toggle('tree', v === 'tree'); document.body.classList.toggle('board', v === 'board'); if (v === 'board') renderBoardView(); document.querySelectorAll('#viewSeg button').forEach((b) => b.classList.toggle('on', b.dataset.v === v)); renderTree(); }
 
 $('#viewSeg').onclick = (e) => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); };
@@ -3434,6 +3436,7 @@ function menuInit() {
 }
 const onSwitch = (e) => { const b = e.target.closest('.mi[data-t]'); if (!b) return; prefs[b.dataset.t] = !prefs[b.dataset.t]; savePrefs(); if (prefs[b.dataset.t] && ['voice', 'office', 'music', 'notify'].includes(b.dataset.t)) claimAudio(); b.querySelector('.sw').classList.toggle('on', prefs[b.dataset.t]); AUD.apply(); if (b.dataset.t === 'shareUsage') { prefs.usageAsked = true; savePrefs(); usageOpened(true); } if (b.dataset.t === 'office') $('#officeBox').style.display = prefs.office ? '' : 'none'; if (b.dataset.t === 'callTr') { prefs.callTrSeen = true; savePrefs(); setLang(prefs.lang); } if (b.dataset.t === 'voice') { voiceOffer(); $('#voiceVolBox').style.display = prefs.voice ? '' : 'none'; } if (b.dataset.t === 'customLaptop') { for (const k in imgCache) delete imgCache[k]; buildStage(); paintStatus(); } if (b.dataset.t === 'files') paintFiles(); if (b.dataset.t === 'artNet' && S.present) renderPresent(); if (b.dataset.t === 'ownNames') { renameAll(); subField(); } if (b.dataset.t === 'reactions') document.body.classList.toggle('react', prefs.reactions); if (b.dataset.t === 'focusLayout') { document.body.classList.toggle('focusl', !!prefs.focusLayout); layout(); } if (b.dataset.t === 'roster') { document.body.classList.toggle('rost', prefs.roster); paintStates(); } if (b.dataset.t === 'notify') { prefs.notifyChosen = true; savePrefs(); } if (b.dataset.t === 'notify' && prefs.notify) askNotify(); if (b.dataset.t === 'vanish' && !prefs.vanish) { S.gone.clear(); paintStatus(); }
   if (b.dataset.t === 'askCard') paintAsk(Date.now());
+  if (b.dataset.t === 'zen') applyMute();
   if (b.dataset.t === 'updateNotice') { prefs.updateAsked = true; savePrefs(); $('#updTip').style.display = 'none'; if (prefs.updateNotice) { updStart.at = 0; setTimeout(updStart, 600); } }   /* an answer too; on: asked once the settings file says so (savePrefs waits 400 ms) */
   if (b.dataset.t === 'music') { $('#musicBox').style.display = prefs.music ? '' : 'none'; if (prefs.music) { AUD.init(); AUD.apply(); } } };
 $('#menu').onclick = onSwitch; $('#prefs').onclick = (e) => { if (e.target === $('#prefs')) return closePrefs(); onSwitch(e); setTimeout(syncSwitches); };
@@ -3695,7 +3698,7 @@ setInterval(() => {
   if (pos[k] !== S.idx) { delete pos[k]; pos[k] = S.idx; const ks = Object.keys(pos); while (ks.length > 40) delete pos[ks.shift()]; savePrefs(); }
 }, 3000);
 function openKeys() {
-  const rows = [['Space', L('Pause / lecture', 'Pause / play')], ['← / →', L('Replay : événement précédent / suivant', 'Replay: previous / next event')], ['N / Shift+N', L('Replay : moment clé suivant / précédent', 'Replay: next / previous highlight')], ['M', L('Son coupé / activé', 'Mute / unmute')], ['T', L('Vue arbre ↔ appel', 'Tree view ↔ call')], ['R', L('Récapitulatif', 'Recap')], ['L', L('Transcription', 'Transcript')], ['G', L('Aller à ce qui a besoin de vous (ici ou dans une autre session)', 'Go to what needs you (here or in another session)')], ['J / K', L('Agent suivant / précédent qui a besoin de vous', 'Next / previous agent that needs you')], ['Cmd / Ctrl + K', L('Aller à une session', 'Go to a session')], ['?', L('Cette aide', 'This help')], ['Esc', L('Fermer', 'Close')]];
+  const rows = [['Space', L('Pause / lecture', 'Pause / play')], ['← / →', L('Replay : événement précédent / suivant', 'Replay: previous / next event')], ['N / Shift+N', L('Replay : moment clé suivant / précédent', 'Replay: next / previous highlight')], ['M', L('Son : tout, zen (les alertes seules), coupé', 'Sound: all, zen (alerts only), off')], ['T', L('Vue arbre ↔ appel', 'Tree view ↔ call')], ['R', L('Récapitulatif', 'Recap')], ['L', L('Transcription', 'Transcript')], ['G', L('Aller à ce qui a besoin de vous (ici ou dans une autre session)', 'Go to what needs you (here or in another session)')], ['J / K', L('Agent suivant / précédent qui a besoin de vous', 'Next / previous agent that needs you')], ['Cmd / Ctrl + K', L('Aller à une session', 'Go to a session')], ['?', L('Cette aide', 'This help')], ['Esc', L('Fermer', 'Close')]];
   $('#recap .box').innerHTML = `<h1>${L('Raccourcis clavier', 'Keyboard shortcuts')}</h1><table>${rows.map(([k, d]) => `<tr><td class="f"><b>${esc(k)}</b></td><td>${esc(d)}</td></tr>`).join('')}</table><h3>${L('Les états', 'What the states mean')}</h3><table>${[['⚙', L('au travail', 'working')], ['🔗', L('attend un autre agent', 'waiting on another agent')], ['✋', L('attend votre réponse ou votre feu vert (avec « ? » : sans doute, d’après le temps écoulé)', 'waits for your answer or approval (with “?”: probably, from how long it has waited)')], ['⚠', L('bloqué : un sous-agent est silencieux depuis longtemps', 'stalled: a sub-agent has been silent for a long time')], ['✓', L('terminé', 'done')]].map(([k, d]) => `<tr><td class="f">${k}</td><td>${esc(d)}</td></tr>`).join('')}</table><p class="dim" style="margin:14px 0 0;font-size:12px">${L('Les vues Appel, Arbre et Sessions se changent aussi en haut de la fenêtre.', 'You can also switch between Call, Tree and Sessions at the top of the window.')}</p><div style="margin-top:14px"><button class="btn" id="recapx">${L('Fermer', 'Close')}</button></div>`;
   $('#recapx').onclick = () => $('#recap').classList.remove('on'); $('#recap').classList.add('on');
 }

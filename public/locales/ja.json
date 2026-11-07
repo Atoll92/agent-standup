@@ -193,7 +193,6 @@
  "Voice style": "声のスタイル",
  "⌨ Keyboard shortcuts (?)": "⌨ キーボードショートカット (?)",
  "Keyboard shortcuts": "キーボードショートカット",
- "Mute / unmute": "ミュート / 解除",
  "Pause / play": "一時停止 / 再生",
  "Recap": "要約",
  "This help": "このヘルプ",
@@ -459,5 +458,8 @@
  "Sub-agent names": "サブエージェントの名前",
  "Rename every sub-agent: names separated by commas, given in the order the agents start. Empty: the built-in names.": "すべてのサブエージェントの名前を変更：名前をカンマで区切って入力すると、エージェントが開始した順に割り当てられます。空欄：組み込みの名前。",
  "Agents you named yourself keep their names (switch below).": "自分で名前を付けたエージェントはその名前のままです（下のスイッチ）。",
- "Agents you named yourself take these names too (switch below).": "自分で名前を付けたエージェントにもこれらの名前が付きます（下のスイッチ）。"
+ "Agents you named yourself take these names too (switch below).": "自分で名前を付けたエージェントにもこれらの名前が付きます（下のスイッチ）。",
+ "Zen: alerts only, no voices (M key)": "Zen：通知音のみ、声なし（Mキー）",
+ "Sound: all, zen (alerts only), off": "サウンド：すべて、Zen（通知音のみ）、オフ",
+ "Zen mode: alerts, no voices": "Zenモード：通知音のみ、声なし"
 }

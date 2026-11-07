@@ -103,7 +103,6 @@
  "Looking for a tool": "Leder efter et værktøj",
  "looping?": "går i ring?",
  "Music volume": "Lydstyrke for musik",
- "Mute / unmute": "Slå lyd fra / til",
  "need you": "har brug for dig",
  "needs you? ": "har brug for dig? ",
  "No agents were harmed.": "Ingen agenter kom til skade.",
@@ -458,5 +457,8 @@
  "Sub-agent names": "Navne på underagenter",
  "Rename every sub-agent: names separated by commas, given in the order the agents start. Empty: the built-in names.": "Omdøb alle underagenter: navne adskilt af kommaer, givet i den rækkefølge agenterne starter. Tom: de indbyggede navne.",
  "Agents you named yourself keep their names (switch below).": "Agenter, du selv har navngivet, beholder deres navne (kontakten nedenfor).",
- "Agents you named yourself take these names too (switch below).": "Agenter, du selv har navngivet, får også disse navne (kontakten nedenfor)."
+ "Agents you named yourself take these names too (switch below).": "Agenter, du selv har navngivet, får også disse navne (kontakten nedenfor).",
+ "Zen: alerts only, no voices (M key)": "Zen: kun advarsler, ingen stemmer (M-tasten)",
+ "Sound: all, zen (alerts only), off": "Lyd: alt, zen (kun advarsler), fra",
+ "Zen mode: alerts, no voices": "Zen-tilstand: advarsler, ingen stemmer"
 }

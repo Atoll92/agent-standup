@@ -193,7 +193,6 @@
  "Voice style": "Estilo de voz",
  "⌨ Keyboard shortcuts (?)": "⌨ Atalhos de teclado (?)",
  "Keyboard shortcuts": "Atalhos de teclado",
- "Mute / unmute": "Silenciar / ativar som",
  "Pause / play": "Pausar / reproduzir",
  "Recap": "Resumo",
  "This help": "Esta ajuda",
@@ -459,5 +458,8 @@
  "Sub-agent names": "Nomes dos subagentes",
  "Rename every sub-agent: names separated by commas, given in the order the agents start. Empty: the built-in names.": "Renomeie todos os subagentes: nomes separados por vírgulas, dados na ordem em que os agentes começam. Vazio: os nomes embutidos.",
  "Agents you named yourself keep their names (switch below).": "Os agentes que você mesmo nomeou mantêm seus nomes (chave abaixo).",
- "Agents you named yourself take these names too (switch below).": "Os agentes que você mesmo nomeou também recebem esses nomes (chave abaixo)."
+ "Agents you named yourself take these names too (switch below).": "Os agentes que você mesmo nomeou também recebem esses nomes (chave abaixo).",
+ "Zen: alerts only, no voices (M key)": "Zen: só os alertas, sem vozes (tecla M)",
+ "Sound: all, zen (alerts only), off": "Som: tudo, zen (só alertas), desligado",
+ "Zen mode: alerts, no voices": "Modo zen: alertas, sem vozes"
 }

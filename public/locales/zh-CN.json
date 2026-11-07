@@ -193,7 +193,6 @@
  "Voice style": "语音风格",
  "⌨ Keyboard shortcuts (?)": "⌨ 键盘快捷键 (?)",
  "Keyboard shortcuts": "键盘快捷键",
- "Mute / unmute": "静音 / 取消静音",
  "Pause / play": "暂停 / 播放",
  "Recap": "回顾",
  "This help": "此帮助",
@@ -459,5 +458,8 @@
  "Sub-agent names": "子代理名字",
  "Rename every sub-agent: names separated by commas, given in the order the agents start. Empty: the built-in names.": "重命名所有子代理：用逗号分隔名字，按代理启动的顺序分配。留空：使用内置名字。",
  "Agents you named yourself keep their names (switch below).": "你自己命名的代理保留其名字（见下方开关）。",
- "Agents you named yourself take these names too (switch below).": "你自己命名的代理也会使用这些名字（见下方开关）。"
+ "Agents you named yourself take these names too (switch below).": "你自己命名的代理也会使用这些名字（见下方开关）。",
+ "Zen: alerts only, no voices (M key)": "禅模式：只有提示音，没有语音（M 键）",
+ "Sound: all, zen (alerts only), off": "声音：全部、禅模式（仅提示音）、关闭",
+ "Zen mode: alerts, no voices": "禅模式：提示音，无语音"
 }
