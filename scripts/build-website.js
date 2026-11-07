@@ -141,7 +141,17 @@ page('website/guides/codex-sessions.md', 'codex-sessions', 'Codex session viewer
 page('website/guides/mistral-vibe-sessions.md', 'mistral-vibe-sessions', 'Mistral Vibe session viewer', 'Follow and replay your Mistral Vibe sessions and sub-agents as a live call, in both of Vibe\'s log formats. Free, local, zero tokens.');
 page('website/guides/claude-code-session-files.md', 'claude-code-session-files', 'What Claude Code writes to disk while it works', 'Where Claude Code keeps its transcripts, sub-agents, live status and background output, and how to tell from them whether an agent is done, stuck or waiting for you.');
 page('TRADEMARKS.md', 'name-and-logo', 'Name and logo', 'The code of Agent Standup is MIT licensed. What you may and may not do with its name, its logo and its characters.');
+// ---- /review/: the agents give the person their performance review, read from their Claude Code sessions in their own browser (website/src/review-stats.js); nothing is sent.
+// The cast is the app's own drawing code, cut out of public/index.html as the landing page does (scripts/build-landing.js).
+{
+  const app = read('public/index.html'), sep = '// =====================================================================\n';
+  const jsStart = app.indexOf(sep + '//  cast: soft mascots'), jsEnd = app.indexOf(sep + '//  state'), cssStart = app.indexOf('/* character animation'), cssLast = app.indexOf('@media (prefers-reduced-motion:reduce)', cssStart), cssEnd = app.indexOf('\n', cssLast);
+  if (jsStart < 0 || jsEnd <= jsStart || cssStart < 0 || cssLast < 0 || cssEnd < 0) throw new Error('art markers not found in public/index.html');
+  const stats = read('website/src/review-stats.js').replace(/\nif \(typeof module[^\n]*\n?$/, '\n');
+  write('review/index.html', read('website/src/review.html').replace('/*ART_CSS*/', () => app.slice(cssStart, cssEnd)).replace('/*ART_JS*/', () => app.slice(jsStart, jsEnd)).replace('/*STATS_JS*/', () => stats)
+    .replace(/__SITE__/g, site).replace('<!--ANALYTICS-->', () => analytics));
+}
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${site}sitemap.xml\n`);
-write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...LANGS.map((l) => l[4]), ...LANGS.map((l) => l[4] + 'shop/'), 'claude-code-subagents/', 'codex-sessions/', 'mistral-vibe-sessions/', 'claude-code-session-files/', 'privacy/', 'terms/', 'name-and-logo/'].map((p) => `  <url><loc>${site}${p}</loc></url>`).join('\n')}\n</urlset>\n`);
+write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...LANGS.map((l) => l[4]), ...LANGS.map((l) => l[4] + 'shop/'), 'claude-code-subagents/', 'codex-sessions/', 'mistral-vibe-sessions/', 'claude-code-session-files/', 'review/', 'privacy/', 'terms/', 'name-and-logo/'].map((p) => `  <url><loc>${site}${p}</loc></url>`).join('\n')}\n</urlset>\n`);
 const size = (d) => fs.readdirSync(d, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? size(path.join(d, e.name)) : fs.statSync(path.join(d, e.name)).size), 0);
 console.log(`website built for ${site} in website/dist (v${version}, ${(size(dist) / 1048576).toFixed(1)} MB${waitlist ? ', waitlist on' : ', no waitlist form yet'}, ${people} supporter(s))`);

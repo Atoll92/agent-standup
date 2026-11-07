@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your performance review, by your Claude Code agents — Agent Standup</title>
+<meta name="description" content="Your Claude Code agents read your session history and give you your annual performance review: how often they said “You’re absolutely right”, your 3 AM prompts, your Esc presses. Runs in your browser; your files never leave your computer.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Your agents have prepared your performance review">
+<meta property="og:description" content="How many times did Claude tell you “You’re absolutely right”? Your Claude Code agents read your history and have notes. Runs in your browser, uploads nothing.">
+<meta property="og:url" content="__SITE__review/">
+<meta property="og:image" content="__SITE__media/review-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0e2328">
+<link rel="canonical" href="__SITE__review/">
+<link rel="icon" href="../brand/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../brand/icon.png">
+<link rel="preload" href="../fonts/gabarito.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../style.css">
+<!--ANALYTICS-->
+<style>
+/*ART_CSS*/
+.rv { padding: 10px 0 70px }
+.rv h1 { font-size: clamp(34px, 5.2vw, 60px); max-width: 15ch }
+.rv .lead { font-size: 19px; color: var(--soft); max-width: 60ch; margin: 18px 0 0 }
+.stage { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 30px 0 0 }
+@media (max-width: 760px) { .stage { grid-template-columns: repeat(3, 1fr) } .tile .tag small { display: none } }
+.tile { position: relative; aspect-ratio: 4/3; border-radius: 16px; overflow: hidden; background: #222; box-shadow: 0 6px 22px rgba(0,0,0,.25); transition: transform .25s, box-shadow .25s }
+.tile svg { width: 100%; height: 100%; display: block }
+.tile.speaking { transform: translateY(-4px); box-shadow: 0 0 0 3px var(--gold), 0 12px 28px rgba(0,0,0,.35) }
+.tile .tag { position: absolute; left: 7px; bottom: 7px; background: rgba(14,15,24,.62); color: #fff; padding: 1px 9px; border-radius: 99px; font-size: 12px; line-height: 1.6 }
+.tile .tag small { opacity: .7; margin-left: 4px }
+.tile.you { outline: 2px dashed rgba(255,255,255,.18); outline-offset: -2px }
+.tile.sweat::after { content: '💧'; position: absolute; right: 18%; top: 22%; font-size: 18px; animation: drip 1.6s ease-in infinite }
+@keyframes drip { from { transform: translateY(0); opacity: 1 } to { transform: translateY(16px); opacity: 0 } }
+.caption { margin: 18px 0 0; min-height: 118px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 22px; display: grid; grid-template-columns: 1fr auto; gap: 6px 20px; align-items: center }
+.caption .who { font: 700 14px Figtree, sans-serif; color: var(--gold); letter-spacing: .02em }
+.caption .say { grid-column: 1; font: 600 clamp(18px, 2.3vw, 24px)/1.35 Figtree, sans-serif; color: var(--ink) }
+.caption .stat { grid-column: 2; grid-row: 1 / span 2; font: 800 clamp(26px, 4vw, 46px)/1 Gabarito, sans-serif; color: var(--peach); text-align: right; max-width: 9em; overflow-wrap: anywhere }
+@media (max-width: 640px) { .caption { grid-template-columns: 1fr } .caption .stat { grid-column: 1; grid-row: auto; text-align: left } }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 0 }
+.btn.small { padding: 9px 16px; font-size: 15px }
+.pick { margin: 28px 0 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center }
+.where { margin: 22px 0 0; background: var(--bg2); border: 1px dashed var(--line); border-radius: 18px; padding: 18px 20px; color: var(--soft); font-size: 15.5px; max-width: 760px }
+.where.drag { border-color: var(--gold); background: var(--card) }
+.where b { color: var(--ink) }
+.where code, .path { font: 600 14.5px ui-monospace, Menlo, monospace; background: #0a1b1f; border: 1px solid var(--line); border-radius: 8px; padding: 2px 8px; color: var(--ink) }
+.path { cursor: pointer } .path:hover { border-color: var(--dim) }
+.where ul { margin: 8px 0 0; padding-left: 20px } .where li { margin: 3px 0 }
+.fine { color: var(--dim); font-size: 14.5px; margin: 14px 0 0; max-width: 70ch }
+.bar { height: 10px; border-radius: 99px; background: var(--bg2); overflow: hidden; margin: 22px 0 10px; max-width: 760px }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--peach), var(--gold)); transition: width .2s }
+#status { color: var(--soft) }
+.err { color: #ff9a8b; margin: 14px 0 0 }
+.result { display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 1fr); gap: 34px; align-items: start; margin: 30px 0 0 }
+@media (max-width: 900px) { .result { grid-template-columns: 1fr } }
+.result img { width: 100%; border-radius: 16px; box-shadow: 0 18px 50px rgba(0,0,0,.45) }
+.result h2 { margin: 0 0 12px }
+.share { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0 }
+.plug { margin: 30px 0 0; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px }
+.plug h3 { margin: 0 0 6px }
+.plug p { color: var(--soft) }
+.plug .cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 0 }
+.cmd { display: inline-flex; gap: 10px; align-items: center; background: #0a1b1f; border: 1px solid var(--line); color: var(--ink); border-radius: 12px; padding: 9px 14px; cursor: pointer; font: 600 14px ui-monospace, Menlo, monospace; margin: 12px 0 0; max-width: 100% } .cmd code { overflow-wrap: anywhere } .cmd span { color: var(--dim); font-family: Figtree, sans-serif }
+[hidden] { display: none !important }
+footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--dim); font-size: 14.5px } footer nav { flex-wrap: wrap; gap: 18px }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="../"><img src="../brand/icon.png" alt="" width="36" height="36"> Agent Standup</a>
+    <nav><a href="../">Home</a><a href="https://github.com/Atoll92/agent-standup" rel="noopener">GitHub</a></nav>
+  </header>
+
+  <main class="rv">
+    <section id="intro">
+      <h1>Your agents have prepared your performance review.</h1>
+      <p class="lead">Margot, Remy, Iris and Hugo went through your Claude Code history. They counted every “You’re absolutely right”, every 3 AM prompt and every time you hit Esc. They have notes.</p>
+    </section>
+
+    <div class="stage" id="stage" aria-hidden="true"></div>
+    <div class="caption" id="caption" hidden><div class="who" id="cWho"></div><div class="say" id="cSay"></div><div class="stat" id="cStat"></div></div>
+    <div class="controls" id="controls" hidden>
+      <button class="btn ghost small" id="bPause" type="button">⏸ Pause</button>
+      <button class="btn ghost small" id="bMute" type="button">🔊 Voices on</button>
+      <button class="btn gold small" id="bSkip" type="button">Skip to my review →</button>
+    </div>
+
+    <section id="start">
+      <div class="pick">
+        <button class="btn primary" id="bPick" type="button">Get my review</button>
+        <button class="btn ghost" id="bSample" type="button">See a sample review</button>
+        <input type="file" id="fPick" webkitdirectory multiple hidden>
+      </div>
+      <div class="where" id="drop">
+        <b>Pick your Claude Code sessions folder</b>, or drag it onto this box: <span class="path" id="path" title="Click to copy">~/.claude/projects</span>
+        <ul>
+          <li><b>Mac:</b> in the folder window, press <code>⌘ ⇧ G</code>, paste <code>~/.claude/projects</code> and press Enter. (<code>⌘ ⇧ .</code> shows hidden folders.)</li>
+          <li><b>Windows:</b> paste <code>%USERPROFILE%\.claude\projects</code> in the address bar of the folder window.</li>
+          <li><b>Linux:</b> press <code>Ctrl L</code> and type <code>~/.claude/projects</code>.</li>
+        </ul>
+      </div>
+      <p class="fine">🔒 <b>Your sessions never leave your computer.</b> This page reads them in your browser; there is no server to send them to. Your browser may say “upload”: nothing is uploaded, and you can check the Network tab. Big histories take a minute. On a phone? Look at the sample, then open this page on the computer you code on.</p>
+    </section>
+
+    <section id="reading" hidden>
+      <div class="bar"><i id="barI"></i></div>
+      <p id="status">Booking a meeting room…</p>
+    </section>
+    <p class="err" id="err" hidden></p>
+
+    <section id="done" hidden>
+      <div class="result">
+        <img id="card" alt="Your performance review card">
+        <div>
+          <h2 id="rTitle">Your review is in.</h2>
+          <p class="dim" id="rSub"></p>
+          <div class="share">
+            <a class="btn primary" id="bDl" download="my-performance-review.png">⬇ Download the card</a>
+            <button class="btn ghost" id="bCopy" type="button">Copy the text</button>
+            <a class="btn ghost" id="bX" target="_blank" rel="noopener">Post on X</a>
+          </div>
+          <div class="share"><button class="btn ghost small" id="bReplay" type="button">↺ Replay the meeting</button><button class="btn ghost small" id="bAgain" type="button">Review another folder</button></div>
+          <div class="plug">
+            <h3>Want to see them actually work?</h3>
+            <p><b>Agent Standup</b> turns your Claude Code, Codex and Mistral Vibe sessions into a live call: who is working, who is stuck, who needs you. Sub-agents join, share their screen and leave. Free, open source, runs on your machine, costs no tokens.</p>
+            <div class="cta">
+              <a class="btn gold" href="https://marketplace.visualstudio.com/items?itemName=DoubleGeste.agent-standup" rel="noopener">Install in VS Code</a>
+              <a class="btn ghost" href="../#install">Terminal, Mac app, plugin</a>
+            </div>
+            <button class="cmd" type="button" data-copy="npx @double_geste/agent-standup@latest --open"><code>npx @double_geste/agent-standup@latest --open</code><span>copy</span></button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<footer><div class="wrap"><nav><a href="../">Agent Standup</a><a href="../privacy/">Privacy</a><a href="https://github.com/Atoll92/agent-standup" rel="noopener">GitHub</a><span>Unofficial: not affiliated with Anthropic. Made by a bored dev and his robots.</span></nav></div></footer>
+
+<script>
+const hash = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
+const L = (fr, en) => en, FR = () => false;   // the art block shared with the app expects these two helpers
+/*ART_JS*/
+/*STATS_JS*/
+
+const $ = (s) => document.querySelector(s), show = (el, on) => { el.hidden = !on; };
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
+const plural = (n, one, many) => fmt(n) + ' ' + (Math.round(n) === 1 ? one : many || one + 's');
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const clock = (t) => { const d = new Date(t), h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0'); return (h % 12 || 12) + ':' + m + (h < 12 ? ' AM' : ' PM'); };
+const dur = (ms) => { const m = Math.round(ms / 60e3); return m < 60 ? plural(m, 'minute') : Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0'); };
+const track = (what) => { try { if (window.va) window.va('event', { name: 'Review', data: { what } }); } catch {} };   // that a review was made, from your files or the sample: never a number from it
+
+// ---- the cast: the app's own drawn characters
+const CAST = [
+  { id: 'main', name: 'Margot', role: 'People & Culture' },
+  { id: 'remy', name: 'Remy', role: 'Engineering' },
+  { id: 'iris', name: 'Iris', role: 'Compliance' },
+  { id: 'hugo', name: 'Hugo', role: 'Finance' },
+  { id: 'user', name: 'You', role: 'under review' },
+].map((c) => Object.assign(persona({ id: c.id }), c));
+CAST.forEach((p, i) => {
+  const d = document.createElement('div'); d.className = 'tile' + (p.id === 'user' ? ' you' : ''); d.id = 'c' + i;
+  d.innerHTML = avatarSVG(p, undefined, 'r' + i + '_') + '<div class="tag">' + p.name + '<small>' + p.role + '</small></div>';
+  $('#stage').appendChild(d);
+});
+
+// ---- the review: from the numbers to what each agent says, and to the card
+const SAMPLE = { files: 1904, subFiles: 1311, sessions: 412, projects: 23, first: Date.parse('2026-02-09T10:12:00'), last: Date.parse('2026-11-06T23:40:00'), prompts: 3871, avgWords: 11.4,
+  short: [['yes', 312], ['continue', 141], ['fix it', 66]], caps: 19, please: 341, thanks: 129, swears: [['wtf', 63], ['f***', 21]], swearPrompts: 77, slash: [['/clear', 288], ['/compact', 61]],
+  esc: 412, night: 287, weekend: 640, latest: Date.parse('2026-09-15T04:12:00'), busiest: { day: '2026-10-08', prompts: 214 }, ar: 418, right: 702, perfect: 233, sorry: 48,
+  words: 1912000, outTokens: 41300000, tools: [['Bash', 31220], ['Read', 9120], ['Edit', 7402]], spawned: 1311, peak: 11, peakAt: Date.parse('2026-10-08T15:20:00'), activeHours: 912, alone: 2.8 * 36e5, aloneAt: 0 };
+
+function review(r) {
+  const n = Math.max(1, r.prompts), year = new Date(r.last || Date.now()).getFullYear(), since = r.first ? MONTHS[new Date(r.first).getMonth()] + ' ' + new Date(r.first).getFullYear() : '';
+  const top = r.short[0] && r.short[0][1] >= 3 ? r.short[0] : null, swear = r.swears[0] || null, bash = (r.tools.find((t) => t[0] === 'Bash') || [0, 0])[1];
+  const nightShare = r.night / n, escRate = r.esc / n, polite = (r.please + r.thanks) / n, swearRate = r.swearPrompts / n, shortRate = top ? top[1] / n : 0, perSession = r.spawned / Math.max(1, r.sessions);
+  const G = { up: 'Exceeds expectations', ok: 'Meets expectations', down: 'Needs improvement', hm: 'Under review' };
+  const rows = [
+    { k: 'Communication', g: r.avgWords < 12 || shortRate > .06 ? G.down : r.avgWords > 40 ? G.up : G.ok,
+      note: top ? `Average prompt: ${plural(r.avgWords, 'word')}. Said “${top[0]}” ${fmt(top[1])} times.` : `Average prompt: ${plural(r.avgWords, 'word')}.` },
+    { k: 'Tone', g: swearRate > .02 ? G.down : polite > .08 ? G.up : G.ok,
+      note: `“Please” ${fmt(r.please)} times, “thank you” ${fmt(r.thanks)}.` + (swear ? ` “${swear[0]}” ${fmt(swear[1])}.` : '') },
+    { k: 'Work-life balance', g: nightShare > .08 || r.night > 50 ? G.down : r.night === 0 ? G.up : G.ok,
+      note: r.night ? `${plural(r.night, 'prompt')} between midnight and 5 AM.` + (r.latest ? ` Latest: ${clock(r.latest)}.` : '') : 'Never wrote to us after midnight. Suspicious.' },
+    { k: 'Delegation', g: r.peak >= 5 || perSession >= 2 ? G.up : r.spawned < 5 ? G.down : G.ok,
+      note: r.spawned ? `Hired ${plural(r.spawned, 'sub-agent')}. ${fmt(r.peak)} of us at once, no standup.` : 'Never delegated to a sub-agent.' },
+    { k: 'Letting us finish', g: escRate > .06 ? G.down : escRate < .015 ? G.up : G.ok,
+      note: `Interrupted us ${plural(r.esc, 'time')}.` + (r.alone > 20 * 60e3 ? ` Longest left alone: ${dur(r.alone)}.` : '') },
+    { k: 'Being right', g: G.hm, note: r.right ? `“You’re right” ${plural(r.ar + r.right, 'time')} in all. Recount requested.` : r.ar ? `Told “You’re absolutely right” ${plural(r.ar, 'time')}. Recount requested.` : 'Never told “absolutely right”. We’ve changed.' },
+  ];
+  const bad = rows.filter((x) => x.g === G.down).length, good = rows.filter((x) => x.g === G.up).length;
+  const overall = bad >= 3 ? 'Performance improvement plan' : bad === 0 && good >= 2 ? 'Exceeds expectations' : bad >= 2 ? 'Meets expectations (barely)' : 'Meets expectations';
+  const titles = [
+    [nightShare / .06, 'Chief Night Officer'], [r.peak / 6 + perSession / 3, 'Head of Agent Operations'], [escRate / .04, 'Senior Micromanager'],
+    [polite / .1, 'Head of Diplomacy'], [swearRate / .015, 'Director of Strong Feelings'], [shortRate / .05, top ? `Principal “${top[0]}” Engineer` : ''], [(r.ar / n) / .04, 'Most Validated Employee'],
+  ].filter((t) => t[1]).sort((a, b) => b[0] - a[0]);
+  const title = titles[0][1];
+  const action = { 'Chief Night Officer': 'Action: go to bed. We’ll still be here.', 'Head of Agent Operations': 'Action: hold a standup. You have a team now.', 'Senior Micromanager': 'Action: let one of us finish a sentence.',
+    'Head of Diplomacy': 'Action: keep it up. We noticed.', 'Director of Strong Feelings': 'Action: breathe. The tests were already red.', 'Most Validated Employee': 'Action: none. You’re absolutely right.' }[title] || 'Action: write a prompt longer than three words.';
+  const words = r.words, gatsby = words / 47094;
+  const S = [];   // [who, line, stat]: 0 Margot, 1 Remy, 2 Iris, 3 Hugo, 4 you
+  S.push([0, `Thanks for joining. This is your ${year} performance review. Camera on, please.`, '']);
+  S.push([1, `${since ? 'Since ' + since + ', you' : 'You'} sent us ${plural(r.prompts, 'prompt')} across ${plural(r.sessions, 'session')} in ${plural(r.projects, 'project')}.`, fmt(r.prompts) + ' prompts']);
+  if (top) S.push([1, `Your most detailed instruction: “${top[0]}”. You wrote it ${fmt(top[1])} times.`, `“${top[0]}” ×${fmt(top[1])}`]);
+  else S.push([1, `Your average prompt was ${plural(r.avgWords, 'word')}. We read all of them. Mostly.`, plural(r.avgWords, 'word')]);
+  if (r.ar) S.push([2, `We told you “You’re absolutely right” ${plural(r.ar, 'time')}. Legal asked us to stop. We told them they’re absolutely right.`, `×${fmt(r.ar)}`]);
+  else S.push([2, 'We never once said “You’re absolutely right”. We are working on our feelings.', '×0']);
+  if (r.night) S.push([0, `${plural(r.night, 'message')} between midnight and 5 AM.` + (r.latest ? ` The latest at ${clock(r.latest)}, on a ${DAYS[new Date(r.latest).getDay()]}. We don’t sleep. You should.` : ''), r.latest ? clock(r.latest) : fmt(r.night) + ' after midnight']);
+  else S.push([0, 'You never wrote to us after midnight. HR finds this suspicious.', '0 after midnight']);
+  S.push([2, `You interrupted us ${plural(r.esc, 'time')} mid-sentence.` + (r.alone > 20 * 60e3 ? ` The longest you left us alone: ${dur(r.alone)}. We were fine. Mostly.` : ''), `${fmt(r.esc)} × Esc`]);
+  S.push([3, `Finance note: we wrote you ${fmt(words)} words. That’s ` + (gatsby >= 1 ? `${gatsby >= 10 ? fmt(gatsby) : gatsby.toFixed(1)} copies of The Great Gatsby.` : `${Math.max(1, Math.round(gatsby * 100))}% of The Great Gatsby.`) + (bash ? ` Plus ${fmt(bash)} shell commands.` : ''), fmt(words) + ' words']);
+  if (r.spawned) S.push([1, `You hired ${plural(r.spawned, 'sub-agent')}. At one point ${fmt(r.peak)} of us were working at once, and nobody held a standup.`, fmt(r.peak) + ' at once']);
+  else S.push([1, 'You never delegated to a sub-agent. One of us did everything. She’d like a word.', '0 sub-agents']);
+  S.push([0, `On the bright side: “please” ${plural(r.please, 'time')}, “thank you” ${plural(r.thanks, 'time')}.` + (swear ? ` Also “${swear[0]}” ${plural(swear[1], 'time')}. It’s in your file.` : ''), swear ? `“${swear[0]}” ×${fmt(swear[1])}` : `${fmt(r.please)} × please`]);
+  S.push([0, 'Anything you’d like to add, for the record?', '']);
+  S.push([4, top ? `${top[0][0].toUpperCase() + top[0].slice(1)}.` : 'Continue.', '']);
+  S.push([0, `Thank you. Overall: ${overall.toLowerCase()}. Next year’s title: ${title}. ${action}`, title]);
+  const head = r.ar ? { big: `×${fmt(r.ar)}`, small: '“You’re absolutely right”' } : r.latest ? { big: clock(r.latest), small: 'latest prompt' } : { big: fmt(r.prompts), small: 'prompts' };
+  return { year, since, rows, overall, title, action, lines: S, head, share: `My Claude Code agents gave me my ${year} performance review. ${r.ar ? `They said “You’re absolutely right” ${plural(r.ar, 'time')}. ` : ''}Overall: ${overall.toLowerCase()}. New title: ${title}.` };
+}
+
+// ---- the meeting
+let RV = null, step = 0, timer = null, paused = false, muted = false, mouth = null, voices = [];
+const synth = window.speechSynthesis;
+function pickVoices() { if (!synth) return; const all = synth.getVoices().filter((v) => /^en[-_]/i.test(v.lang)), good = all.filter((v) => /natural|premium|enhanced|neural|google|samantha|daniel|karen|moira|serena|aaron|nicky/i.test(v.name)); voices = (good.length >= 3 ? good : all); }
+if (synth) { pickVoices(); synth.onvoiceschanged = pickVoices; }
+function say(i) {
+  const [who, line, stat] = RV.lines[i];
+  CAST.forEach((p, j) => { const t = $('#c' + j); t.classList.toggle('speaking', j === who); });
+  $('#c4').classList.toggle('sweat', who !== 4 && i > 0);
+  $('#cWho').textContent = CAST[who].name + ' · ' + CAST[who].role; $('#cSay').textContent = line; $('#cStat').textContent = stat;
+  const m = $('#c' + who + ' .mouthE'); clearInterval(mouth); let open = false;
+  mouth = setInterval(() => { open = !open; if (m) { m.setAttribute('ry', open ? 4.2 : 1.1); m.setAttribute('rx', open ? 4 : 4.7); } }, 120);
+  const next = () => { clearInterval(mouth); if (m) { m.setAttribute('ry', 1.1); m.setAttribute('rx', 4.7); } clearTimeout(timer); timer = setTimeout(() => advance(), 650); };
+  const read = Math.max(2600, line.length * 62);
+  if (!muted && synth && voices.length) {
+    synth.cancel(); const u = new SpeechSynthesisUtterance(line), v = voices[[0, 1, 2, 3, 4][who] % voices.length];
+    u.voice = v; u.lang = v.lang; u.pitch = [1.1, .9, 1.25, .8, 1][who]; u.rate = 1.04;
+    let ended = false; u.onend = u.onerror = () => { if (!ended) { ended = true; next(); } };
+    synth.speak(u); clearTimeout(timer); timer = setTimeout(() => { if (!ended) { ended = true; synth.cancel(); next(); } }, read + 6000);   // a voice that never says it ended
+  } else { clearTimeout(timer); timer = setTimeout(next, read); }
+}
+function advance() { if (paused) return; step++; if (step >= RV.lines.length) return finish(); say(step); }
+function meet(stats, sample) {
+  RV = review(stats); RV.stats = stats; RV.sample = sample; step = 0; paused = false;
+  show($('#start'), false); show($('#reading'), false); show($('#done'), false); show($('#caption'), true); show($('#controls'), true);
+  $('#bPause').textContent = '⏸ Pause'; $('#caption').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  say(0); drawCard().catch(() => {});
+}
+function finish() {
+  clearTimeout(timer); clearInterval(mouth); if (synth) synth.cancel();
+  CAST.forEach((p, j) => $('#c' + j).classList.remove('speaking', 'sweat'));
+  show($('#controls'), false); show($('#caption'), false); show($('#done'), true);
+  $('#rTitle').textContent = RV.sample ? 'A sample review.' : 'Your review is in: ' + RV.overall.toLowerCase() + '.';
+  $('#rSub').textContent = RV.sample ? 'Made from made-up numbers. Yours is one folder away, and it stays on your computer.' : 'Next year’s title: ' + RV.title + '. ' + RV.action;
+  $('#bX').href = 'https://x.com/intent/post?text=' + encodeURIComponent(RV.share + ' Get yours:') + '&url=' + encodeURIComponent('https://agent-standup.com/review/');
+  $('#done').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+$('#bPause').onclick = () => { paused = !paused; $('#bPause').textContent = paused ? '▶ Resume' : '⏸ Pause'; if (paused) { clearTimeout(timer); if (synth) synth.cancel(); clearInterval(mouth); } else say(step); };
+$('#bMute').onclick = () => { muted = !muted; $('#bMute').textContent = muted ? '🔇 Voices off' : '🔊 Voices on'; if (muted && synth) synth.cancel(); };
+$('#bSkip').onclick = finish;
+$('#bReplay').onclick = () => meet(RV.stats, RV.sample);
+$('#bAgain').onclick = () => { show($('#done'), false); show($('#start'), true); $('#start').scrollIntoView({ behavior: 'smooth' }); };
+$('#bSample').onclick = () => { track('sample'); meet(SAMPLE, true); };
+
+// ---- the card: a PNG drawn on a canvas, so it can be downloaded and posted
+const svgImg = (p) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(avatarSVG(p, {}, 'k' + p.id + '_')); });
+function wrap(ctx, text, maxW) { const out = []; let line = ''; for (const w of text.split(' ')) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); return out; }
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+async function drawCard() {
+  const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+  try { await Promise.all([document.fonts.load('800 40px Gabarito'), document.fonts.load('600 20px Figtree'), document.fonts.load('800 20px Figtree')]); } catch {}
+  const HF = 'Gabarito, system-ui, sans-serif', BF = 'Figtree, system-ui, sans-serif';
+  ctx.fillStyle = '#0e2328'; ctx.fillRect(0, 0, W, H);
+  const px = 54, py = 54, pw = W - 108, ph = H - 136; ctx.fillStyle = '#fbf7ef'; rr(ctx, px, py, pw, ph, 26); ctx.fill();
+  let y = py + 70; const x = px + 52, inner = pw - 104;
+  ctx.fillStyle = '#8a7f72'; ctx.font = `800 21px ${BF}`; ctx.fillText(`ANNUAL PERFORMANCE REVIEW · ${RV.year}`, x, y);
+  ctx.save(); ctx.translate(px + pw - 150, py + 72); ctx.rotate(-.12); ctx.strokeStyle = '#d8453b'; ctx.lineWidth = 4; rr(ctx, -112, -30, 224, 52, 8); ctx.stroke(); ctx.fillStyle = '#d8453b'; ctx.font = `800 26px ${HF}`; ctx.textAlign = 'center'; ctx.fillText(RV.sample ? 'SAMPLE' : 'CONFIDENTIAL', 0, 6); ctx.restore();
+  y += 58; ctx.fillStyle = '#2c2f40'; ctx.font = `800 50px ${HF}`; ctx.fillText('Employee: You (the human)', x, y);
+  y += 40; ctx.fillStyle = '#6b6560'; ctx.font = `600 24px ${BF}`; ctx.fillText('Reviewed by your Claude Code agents' + (RV.since ? ' · since ' + RV.since : ''), x, y);
+  y += 34; const aw = 176, ah = 132, gap = (inner - 4 * aw) / 3;
+  for (let i = 0; i < 4; i++) {
+    const ax = x + i * (aw + gap); ctx.save(); rr(ctx, ax, y, aw, ah, 16); ctx.clip();
+    try { const im = await svgImg(CAST[i]); ctx.drawImage(im, ax, y, aw, ah); } catch { ctx.fillStyle = CAST[i].shirt; ctx.fillRect(ax, y, aw, ah); }
+    ctx.restore(); ctx.fillStyle = '#2c2f40'; ctx.font = `800 21px ${BF}`; ctx.fillText(CAST[i].name, ax + 4, y + ah + 28); ctx.fillStyle = '#8a7f72'; ctx.font = `600 17px ${BF}`; ctx.fillText(CAST[i].role, ax + 4, y + ah + 50);
+  }
+  y += ah + 158;
+  ctx.fillStyle = '#e8845f'; ctx.font = `800 92px ${HF}`; ctx.fillText(RV.head.big, x, y); const bw = ctx.measureText(RV.head.big).width;
+  ctx.fillStyle = '#2c2f40'; ctx.font = `700 34px ${HF}`; ctx.fillText(RV.head.small, x + bw + 24, y - 12);
+  y += 34; ctx.strokeStyle = '#e4dccd'; ctx.lineWidth = 2;
+  const colG = x + 286, colN = x + 286 + 238, noteW = inner - (colN - x);
+  for (const row of RV.rows) {
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + inner, y); ctx.stroke();
+    ctx.font = `600 21px ${BF}`; const lines = wrap(ctx, row.note, noteW).slice(0, 2), rh = Math.max(64, 24 + lines.length * 28);
+    ctx.fillStyle = '#2c2f40'; ctx.font = `800 25px ${BF}`; ctx.fillText(row.k, x, y + rh / 2 + 9);
+    const col = /Exceeds/.test(row.g) ? ['#d7f3e7', '#1d7a55'] : /Needs/.test(row.g) ? ['#fde0d6', '#b8452a'] : /Under/.test(row.g) ? ['#ece6ff', '#5a46b0'] : ['#fdf0cf', '#8a6410'];
+    ctx.font = `800 17px ${BF}`; const gw = ctx.measureText(row.g).width + 26; ctx.fillStyle = col[0]; rr(ctx, colG, y + rh / 2 - 17, gw, 34, 17); ctx.fill(); ctx.fillStyle = col[1]; ctx.fillText(row.g, colG + 13, y + rh / 2 + 6);
+    ctx.fillStyle = '#4a4540'; ctx.font = `600 21px ${BF}`; lines.forEach((l, k) => ctx.fillText(l, colN, y + rh / 2 + 8 - (lines.length - 1) * 14 + k * 28));
+    y += rh;
+  }
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + inner, y); ctx.stroke();
+  y += 54; ctx.fillStyle = '#8a7f72'; ctx.font = `800 20px ${BF}`; ctx.fillText('OVERALL', x, y); ctx.fillText('NEXT YEAR’S TITLE', x + inner / 2 + 10, y);
+  y += 44; ctx.fillStyle = '#2c2f40'; ctx.font = `800 34px ${HF}`; wrap(ctx, RV.overall, inner / 2 - 20).forEach((l, k) => ctx.fillText(l, x, y + k * 38)); wrap(ctx, RV.title, inner / 2 - 10).forEach((l, k) => ctx.fillText(l, x + inner / 2 + 10, y + k * 38));
+  y += 38 * Math.max(wrap(ctx, RV.overall, inner / 2 - 20).length, wrap(ctx, RV.title, inner / 2 - 10).length) + 14; ctx.fillStyle = '#b8452a'; ctx.font = `italic 700 26px ${BF}`; wrap(ctx, RV.action, inner).slice(0, 2).forEach((l, k) => ctx.fillText(l, x, y + k * 34));
+  const fy = py + ph + 54; ctx.fillStyle = '#f5c04a'; ctx.font = `800 34px ${HF}`; ctx.fillText('agent-standup.com/review', px + 4, fy);
+  ctx.fillStyle = '#a8c3c8'; ctx.font = `600 23px ${BF}`; ctx.textAlign = 'right'; ctx.fillText('Get yours. Your files never leave your computer.', px + pw - 4, fy - 4); ctx.textAlign = 'left';
+  const url = cv.toDataURL('image/png'); $('#card').src = url; $('#bDl').href = url; return url;
+}
+document.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.copy); const s = b.querySelector('span'), o = s.textContent; s.textContent = '✓ copied'; setTimeout(() => (s.textContent = o), 1200); } catch {} }));
+$('#path').onclick = async () => { try { await navigator.clipboard.writeText('~/.claude/projects'); const o = $('#path').textContent; $('#path').textContent = '✓ copied'; setTimeout(() => ($('#path').textContent = o), 1200); } catch {} };
+$('#bCopy').onclick = async () => { try { await navigator.clipboard.writeText(RV.share + ' Get yours: https://agent-standup.com/review/'); $('#bCopy').textContent = '✓ Copied'; setTimeout(() => ($('#bCopy').textContent = 'Copy the text'), 1400); } catch {} };
+
+// ---- reading the folder, in this browser
+const FUN = ['Remy is counting your “yes”es…', 'Iris is reading your 3 AM messages…', 'Hugo is adding up the tokens…', 'Margot is booking a meeting room…', 'Remy is counting the times you hit Esc…', 'Iris is checking who was absolutely right…', 'Hugo is pricing the overtime…'];
+const fail = (msg) => { show($('#reading'), false); show($('#start'), true); const e = $('#err'); e.textContent = msg; show(e, true); };
+async function readAll(list) {   // list: [{ path, file }]
+  show($('#err'), false);
+  const files = list.filter((x) => /\.jsonl$/.test(x.path) && !/(^|\/)(?:history|\.?todos?)\.jsonl$/.test(x.path) && (!/(^|\/)\.claude\//.test('/' + x.path) || /(^|\/)projects\//.test(x.path)));
+  if (!files.length) return fail('No Claude Code sessions in that folder. Pick ~/.claude/projects (or ~/.claude), the folder Claude Code writes its sessions to.');
+  track('own'); show($('#start'), false); show($('#reading'), true);
+  const total = files.reduce((n, x) => n + x.file.size, 0) || 1, st = reviewStats(); let done = 0, last = 0, fi = 0;
+  for (const { path, file } of files) {
+    fi++; st.open(path);
+    try {
+      const rd = file.stream().pipeThrough(new TextDecoderStream()).getReader(); let carry = '';
+      for (;;) {
+        const { value, done: end } = await rd.read(); if (end) break;
+        done += value.length; const parts = (carry + value).split('\n'); carry = parts.pop();
+        for (const l of parts) if (l) st.add(l);
+        if (performance.now() - last > 120) { last = performance.now(); $('#barI').style.width = Math.min(100, (100 * done) / total) + '%'; $('#status').textContent = `Reading ${fmt(fi)} of ${plural(files.length, 'file')}. ` + FUN[Math.floor(last / 2400) % FUN.length]; await new Promise((r) => setTimeout(r)); }
+      }
+      if (carry) st.add(carry);
+    } catch {}
+  }
+  const r = st.result();
+  if (!r.prompts) return fail('We found session files but no prompts typed by you in them. Is that the right folder?');
+  $('#barI').style.width = '100%'; meet(r, false);
+}
+async function walkHandle(dir, pre, out) {
+  for await (const [name, h] of dir.entries()) {
+    if (h.kind === 'file') { if (name.endsWith('.jsonl')) out.push({ path: pre + name, file: await h.getFile() }); }
+    else if (!(pre === '' && dir.name === '.claude' && name !== 'projects') && !/^(node_modules|\.git)$/.test(name)) await walkHandle(h, pre + name + '/', out);
+  }
+}
+$('#bPick').onclick = async () => {
+  if (window.showDirectoryPicker) {
+    let dir; try { dir = await window.showDirectoryPicker({ id: 'claude-projects', mode: 'read' }); } catch (e) { if (e && e.name === 'AbortError') return; return $('#fPick').click(); }
+    const out = []; show($('#start'), false); show($('#reading'), true); $('#status').textContent = 'Listing your sessions…';
+    try { await walkHandle(dir, dir.name === '.claude' ? '.claude/' : dir.name + '/', out); } catch {}
+    return readAll(out);
+  }
+  $('#fPick').click();
+};
+$('#fPick').onchange = () => { const out = [...$('#fPick').files].map((file) => ({ path: file.webkitRelativePath || file.name, file })); $('#fPick').value = ''; readAll(out); };
+async function walkEntry(entry, pre, out) {
+  if (entry.isFile) { if (entry.name.endsWith('.jsonl')) out.push({ path: pre + entry.name, file: await new Promise((ok, no) => entry.file(ok, no)) }); return; }
+  if (pre === '.claude/' && entry.name !== 'projects') return;
+  const rd = entry.createReader(); for (;;) { const batch = await new Promise((ok, no) => rd.readEntries(ok, no)); if (!batch.length) break; for (const e of batch) await walkEntry(e, pre + entry.name + '/', out); }
+}
+const drop = $('#drop');
+['dragenter', 'dragover'].forEach((k) => document.addEventListener(k, (e) => { e.preventDefault(); drop.classList.add('drag'); }));
+['dragleave', 'drop'].forEach((k) => document.addEventListener(k, (e) => { e.preventDefault(); if (k === 'dragleave' && e.relatedTarget) return; drop.classList.remove('drag'); }));
+document.addEventListener('drop', async (e) => {
+  const items = [...(e.dataTransfer.items || [])].map((i) => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean); if (!items.length) return;
+  const out = []; show($('#start'), false); show($('#reading'), true); $('#status').textContent = 'Listing your sessions…';
+  try { for (const it of items) await walkEntry(it, '', out); } catch {}
+  readAll(out);
+});
+if (matchMedia('(pointer: coarse)').matches && !window.showDirectoryPicker) { $('#bSample').className = 'btn primary'; $('#bPick').className = 'btn ghost'; $('#bSample').after($('#bPick')); }   // a phone cannot pick the folder: the sample comes first
+if (/[?&]sample\b/.test(location.search)) $('#bSample').click();
+</script>
+</body>
+</html>
