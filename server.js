@@ -39,10 +39,11 @@ function claudeHomes() {   // [CLAUDE_HOME, the other folders that hold sessions
   const home = os.homedir(), real = (d) => { try { return fs.statSync(d).isDirectory() ? fs.realpathSync(d) : ''; } catch { return ''; } };
   let names = []; try { names = fs.readdirSync(home).filter((n) => /^\.claude[-_.][^\\/]+$/.test(n) && !/([-_.~ ](bak|bkp|backup|old|orig|copy|save|saved|prev|archive|snapshot)[\dT_.-]*| \(copy( \d+)?\)| \d+|[-_.]\d{6,}[\dT_.-]*|~)$/i.test(n) && ['.claude.json', '.config.json', '.claude-custom-oauth.json'].some((j) => isFile(path.join(home, n, j)))).sort(); } catch {}
   const extra = EXTRA_HOMES.split(path.delimiter).map((d) => d.trim()).filter(Boolean).map((d) => path.resolve(d.replace(/^~(?=$|[\\/])/, home)));
-  const list = [CLAUDE_HOME], seen = new Set([real(path.join(CLAUDE_HOME, 'projects')) || path.join(CLAUDE_HOME, 'projects')]);
-  for (const d of [path.join(home, '.claude'), ...names.map((n) => path.join(home, n)), ...extra]) { const r = real(path.join(d, 'projects')); if (r && !seen.has(r)) { seen.add(r); list.push(d); } }
-  homesMemo = { at: now, list }; return list;
+  const list = [CLAUDE_HOME], seen = new Set([real(path.join(CLAUDE_HOME, 'projects')) || path.join(CLAUDE_HOME, 'projects')]), twins = [], seenS = new Set([real(path.join(CLAUDE_HOME, 'sessions')) || path.join(CLAUDE_HOME, 'sessions')]);
+  for (const d of [path.join(home, '.claude'), ...names.map((n) => path.join(home, n)), ...extra]) { const r = real(path.join(d, 'projects')), s = real(path.join(d, 'sessions')); if (r && !seen.has(r)) { seen.add(r); list.push(d); if (s) seenS.add(s); } else if (r && s && !seenS.has(s)) { seenS.add(s); twins.push(d); } }   // a twin: its projects folder is a link to one already read (claude --resume works from both logins), its sessions folder its own
+  homesMemo = { at: now, list, twins }; return list;
 }
+function twinHomes() { claudeHomes(); return homesMemo.twins || []; }   // the twins of the last look: their sessions folders are read for status, their projects never twice
 const projRoots = () => { const h = claudeHomes(); return h.length < 2 ? [ROOT] : h.map((d) => path.join(d, 'projects')); };   // one folder, as most people have: exactly the one read before
 const PUBLIC = path.join(__dirname, 'public');
 // Cowork, a tab of the Claude desktop app, keeps each of its sessions in the app's own folder, in the format of Claude Code: <folder>/<account>/<organisation>/<session>/.claude/projects/<project>/<id>.jsonl.
@@ -593,7 +594,7 @@ const menuOf = (b) => {   // what a menu waiting for you shows, from the call it
 // Claude Code also keeps <config>/sessions/<pid>.json for each open session: its status (busy, idle, or waiting while a menu waits for your answer: a permission, a question) and since when.
 // It is the only sign of a Bash approval: in the transcript, a command waiting for your go-ahead looks just like one that runs. A file whose process has ended is left out.
 const CC_SESSIONS = process.env.AGENT_STANDUP_CC_SESSIONS || path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'sessions'), CC_SESSIONS_SET = !!process.env.AGENT_STANDUP_CC_SESSIONS;
-const statusDirs = () => { const h = CC_SESSIONS_SET ? [] : claudeHomes(); return h.length < 2 ? [CC_SESSIONS] : h.map((d) => path.join(d, 'sessions')); };   // each folder read keeps the status of its own sessions
+const statusDirs = () => { const h = CC_SESSIONS_SET ? [] : claudeHomes().concat(twinHomes()); return h.length < 2 ? [CC_SESSIONS] : h.map((d) => path.join(d, 'sessions')); };   // each folder read keeps the status of its own sessions
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
 function liveStatus() {   // session id → { status, since, pid, ep (where it runs: claude-vscode, cli, claude-desktop, sdk-cli…), and for missingTranscripts: raw (the status as written), cwd, kind, startedAt, version, updatedAt (when the file was last written: a /clear moves it, and the id, but not statusUpdatedAt) }
   const out = new Map(), later = (a, b) => Math.max(a.updatedAt, a.since) > Math.max(b.updatedAt, b.since);
