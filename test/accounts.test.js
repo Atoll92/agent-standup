@@ -86,3 +86,17 @@ test('the command line reads every account, or the one --config names', () => {
   assert.deepEqual(ids(), [id(1), id(2), id(3)].sort());
   assert.deepEqual(ids('--config', path.join(HOME, '.claude-pro')), [id(2)]);
 });
+
+test('a twin account, whose projects folder is a link to another account, still has its own sessions folder read', (t) => {
+  // claude --resume works from both logins when one config folder links its projects to the other's; each login still keeps the status of its own sessions in its own sessions folder
+  const home = path.join(tmp, 'home-twin'), main = path.join(home, '.claude'), twin = path.join(home, '.claude-twin'), env = { ...process.env, HOME: home, USERPROFILE: home }; delete env.AGENT_STANDUP_CLAUDE_DIRS;
+  put(path.join(main, 'projects', '-work-app', id(6) + '.jsonl'), [user('Ship it', 80e3), bash('npm publish', 30e3)], 30e3); fs.mkdirSync(path.join(main, 'sessions'), { recursive: true });
+  fs.mkdirSync(path.join(twin, 'sessions'), { recursive: true }); fs.writeFileSync(path.join(twin, '.claude.json'), '{}');
+  try { fs.symlinkSync(path.join(main, 'projects'), path.join(twin, 'projects'), 'junction'); } catch (e) { t.skip('no symlinks here: ' + e.code); return; }
+  const k = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 600e3)'], { stdio: 'ignore' }); k.unref(); t.after(() => { try { k.kill(); } catch {} });
+  fs.writeFileSync(path.join(twin, 'sessions', '601.json'), JSON.stringify({ pid: k.pid, sessionId: id(6), status: 'waiting', waitingFor: 'permission prompt', statusUpdatedAt: now - 20e3, updatedAt: now - 20e3 }));
+  const r = spawnSync(process.execPath, ['-e', "const s = require(process.argv[1]); console.log(JSON.stringify(s.boardRows().map((r) => [r.id, r.state]))); s.shutdown(); process.exit(0)", path.join(__dirname, '..', 'server.js')], { env, encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr); const rows = JSON.parse(r.stdout.trim().split('\n').pop());
+  assert.equal(rows.filter(([x]) => x === id(6)).length, 1, 'listed once: the shared projects folder is read once');
+  assert.deepEqual(rows.find(([x]) => x === id(6)), [id(6), 'blocked'], "the twin's status file says a menu waits");
+});
