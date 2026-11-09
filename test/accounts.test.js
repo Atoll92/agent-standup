@@ -100,3 +100,16 @@ test('a twin account, whose projects folder is a link to another account, still 
   assert.equal(rows.filter(([x]) => x === id(6)).length, 1, 'listed once: the shared projects folder is read once');
   assert.deepEqual(rows.find(([x]) => x === id(6)), [id(6), 'blocked'], "the twin's status file says a menu waits");
 });
+
+test("a twin account's plan, written in its own plans folder, is the plan its menu shows", (t) => {
+  // the twin writes its plans in <its folder>/plans, not in the folder its projects link to
+  const home = path.join(tmp, 'home-twin-plan'), main = path.join(home, '.claude'), twin = path.join(home, '.claude-twin'), pf = path.join(twin, 'plans', 'tidy-plan.md'), env = { ...process.env, HOME: home, USERPROFILE: home }; delete env.AGENT_STANDUP_CLAUDE_DIRS;
+  const write = { type: 'assistant', timestamp: iso(60e3), message: { role: 'assistant', stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'toolu_w', name: 'Write', input: { file_path: pf, content: 'old' } }] } }, done = { type: 'user', timestamp: iso(60e3), message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_w', content: 'ok' }] } };
+  put(path.join(main, 'projects', '-work-app', id(6) + '.jsonl'), [user('Plan it', 90e3), write, done], 50e3); fs.mkdirSync(path.join(main, 'sessions'), { recursive: true });
+  fs.mkdirSync(path.join(twin, 'plans'), { recursive: true }); fs.writeFileSync(pf, '# Plan\n1. Tidy\n'); fs.mkdirSync(path.join(twin, 'sessions'), { recursive: true }); fs.writeFileSync(path.join(twin, '.claude.json'), '{}');
+  try { fs.symlinkSync(path.join(main, 'projects'), path.join(twin, 'projects'), 'junction'); } catch (e) { t.skip('no symlinks here: ' + e.code); return; }
+  const k = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 600e3)'], { stdio: 'ignore' }); k.unref(); t.after(() => { try { k.kill(); } catch {} });
+  fs.writeFileSync(path.join(twin, 'sessions', '602.json'), JSON.stringify({ pid: k.pid, sessionId: id(6), status: 'waiting', waitingFor: 'permission prompt', statusUpdatedAt: now - 45e3, updatedAt: now - 45e3 }));   // the plan menu is open, its call not written yet
+  const r = spawnSync(process.execPath, ['-e', "const s = require(process.argv[1]); console.log(JSON.stringify(s.boardRows().filter((r) => r.id === process.argv[2]).map((r) => [r.state, r.menu && r.menu.kind, r.menu && r.menu.text]))); s.shutdown(); process.exit(0)", path.join(__dirname, '..', 'server.js'), id(6)], { env, encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr); assert.deepEqual(JSON.parse(r.stdout.trim().split('\n').pop()), [['blocked', 'plan', '# Plan\n1. Tidy']]);
+});
