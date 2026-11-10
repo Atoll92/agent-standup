@@ -1,7 +1,7 @@
 # Publishes a release everywhere it can: VS Code Marketplace, Open VSX (Cursor, Windsurf, VSCodium…) and npm (the `agent-standup` command).
-# The Marketplace and npm are skipped when their secret is not set. Secrets to add in the repository settings:
-#   VSCE_PAT  (Azure DevOps token, scope Marketplace > Manage)   NPM_TOKEN  (npm automation token)
-# Open VSX needs no secret: this file (publish.yml) is registered there as the trusted publisher of the extension. Renaming the file breaks that link.
+# The Marketplace is skipped when its secret is not set. Secret to add in the repository settings:
+#   VSCE_PAT  (Azure DevOps token, scope Marketplace > Manage)
+# Open VSX and npm need no secret: this file (publish.yml) is registered on both as the trusted publisher (npmjs.com → the package → Settings → Trusted Publisher, with direct publishing allowed). Renaming the file breaks that link.
 name: Publish
 on:
   push:
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write   # Open VSX trusted publishing: the registry gives this workflow a short-lived token in exchange for its identity, so there is no Open VSX secret to keep
+      id-token: write   # trusted publishing on Open VSX and npm: each registry gives this workflow a short-lived token in exchange for its identity, so there is no secret to keep or renew
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -38,10 +38,8 @@ jobs:
         id: has
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}   # not called NODE_AUTH_TOKEN on purpose: setup-node fills that one with a placeholder when it is unset, which would make the check always true
         run: |
           echo "vsce=${VSCE_PAT:+yes}" >> "$GITHUB_OUTPUT"
-          echo "npm=${NPM_TOKEN:+yes}" >> "$GITHUB_OUTPUT"
       - name: Build the extension package
         run: npx --yes @vscode/vsce@4.0.0 package -o extension.vsix
       - name: VS Code Marketplace
@@ -49,12 +47,9 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx --yes @vscode/vsce@4.0.0 publish --packagePath extension.vsix --skip-duplicate
-      - name: npm
-        if: steps.has.outputs.npm == 'yes'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: npm   # trusted publishing needs npm 11.5.1 or newer; Node 22 comes with npm 10. Provenance is added on its own
         run: |
-          echo "npm account: $(npm whoami 2>/dev/null || echo 'unknown (token cannot read the profile, that is fine)')"
+          npm install -g npm@11.21.1
           node scripts/build-cli.js
           cd dist-cli
           if npm view "$(node -p "require('./package.json').name")@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then echo "already published"; else npm publish --access public; fi
