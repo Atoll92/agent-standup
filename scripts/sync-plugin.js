@@ -4,7 +4,7 @@
 //   node scripts/sync-plugin.js --check    changes nothing, exits 1 when something is behind (CI)
 const fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..'), version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version, check = process.argv.includes('--check');
-const files = ['plugin/.claude-plugin/plugin.json', 'plugin-band/.claude-plugin/plugin.json', 'plugin/README.md', 'plugin/skills/open/SKILL.md', 'plugin/skills/status/SKILL.md'], behind = [];
+const files = ['plugin/.claude-plugin/plugin.json', 'plugin-band/.claude-plugin/plugin.json', 'plugin/README.md', 'plugin/skills/open/SKILL.md', 'plugin/skills/status/SKILL.md', 'plugin/skills/whiteboard/SKILL.md', 'plugin/skills/timesheet/SKILL.md'], behind = [];
 for (const rel of files) {
   const f = path.join(root, rel), was = fs.readFileSync(f, 'utf8');
   const now = rel.endsWith('plugin.json') ? was.replace(/("version":\s*")[^"]*(")/, `$1${version}$2`) : was.replace(/(@double_geste\/agent-standup@)\d+\.\d+\.\d+/g, `$1${version}`);

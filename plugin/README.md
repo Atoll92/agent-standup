@@ -4,7 +4,7 @@
 
 Watch the Claude Code, Codex, Mistral Vibe and Cowork sessions on your computer as a live team call. Each agent is a small character at its desk: the lead gives orders, sub-agents join, share their screen with the real commands and diffs, and report back. You see at a glance who is working, who waits on whom, and who needs you.
 
-This plugin is a thin way in to the [Agent Standup](https://github.com/Atoll92/agent-standup) app. It adds two skills to Claude Code.
+This plugin is a thin way in to the [Agent Standup](https://github.com/Atoll92/agent-standup) app. It adds four skills to Claude Code.
 
 ## Install
 
@@ -21,6 +21,10 @@ In earlier versions, in two steps:
 
 - `/agent-standup:open` starts the app and opens the call in your browser at `http://localhost:4747`. You can also ask Claude to "open the standup" or "show me my agents".
 - `/agent-standup:status` prints one line: how many sessions are working, how many need you, and whether it is your turn, or whether a session stopped on Claude's usage limit (with when it resets) or because Claude Code is logged out. You can also ask "is anything waiting for me?".
+- `/agent-standup:whiteboard` draws the day's standup on a Claude Whiteboard: one section per session, with what it was asked, what it did and what it waits on, and what needs you standing out. You can also ask "put today's standup on a whiteboard".
+- `/agent-standup:timesheet` fills a Claude Sheet with one row per session: start, end, project, time worked, time it waited for you, turns, commands, edits and files changed, with totals. You can also ask "make me a timesheet of my agents for this week".
+
+The whiteboard and the timesheet are artifacts on claude.ai: they need Claude Code signed in to claude.ai on a paid plan, and are private until you share them.
 
 It needs Node.js 18 or later and works where Claude Code runs on your own computer. In a chat on claude.ai there is no computer to run it on, so Claude will give you the command to run yourself.
 
@@ -32,11 +36,11 @@ A second plugin, `agent-standup-band`, tells you inside Claude Code when another
 
 ## What it runs
 
-Both skills run one command, pinned to an exact version of the app's npm package:
+Every skill runs one command, pinned to an exact version of the app's npm package:
 
     npx -y @double_geste/agent-standup@1.45.0
 
-`npx` downloads that package from the npm registry the first time. The package has no dependencies. `open` starts a web server that listens on your own machine only (`127.0.0.1`); `status` starts nothing and exits.
+`npx` downloads that package from the npm registry the first time. The package has no dependencies. `open` starts a web server that listens on your own machine only (`127.0.0.1`); `status` and `report` (which the whiteboard and the timesheet read) start nothing and exit.
 
 ## Data
 
@@ -45,6 +49,8 @@ The app reads the session files Claude Code writes in `~/.claude/projects` (and 
 On your machine it keeps your settings in one small file, the list of sessions you put away as done, a log of its own errors, a character pack if you buy one, and, when voices are on, the spoken lines as sound files in a private folder, deleted after a day.
 
 Only these can leave your computer, each when you turn it on or start it yourself. The plugin turns none of them on.
+
+- **Whiteboard and timesheet:** when you ask for one, Claude puts on it what the day's report says of your sessions (their projects and titles, times and counts, and for the whiteboard a short summary of what each was asked and did, with file names), and creates it on claude.ai with your own Claude account. Nothing is sent until you ask, and only that one board or sheet.
 
 - **Translation and jokes:** with the interface in French, Spanish or Brazilian Portuguese (translation is on for those languages, and can be switched off for the last two), or with the jokes turned on, short lines of the session go to Anthropic through your own Claude Code login, or your own API key if you set one.
 - **Office radio:** a request for the audio stream, to Radio France.
