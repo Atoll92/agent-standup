@@ -17,6 +17,7 @@ jobs:
       - name: Syntax
         run: |
           node --check server.js
+          node --check boards.js
           node --check codex.js
           node --check vibe.js
           node --check kokoro.js

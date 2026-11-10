@@ -1771,7 +1771,8 @@ function activityLabel(t) {   // the short "what is on their screen" tag
     case 'glob': return L('Liste ', 'Listing ') + String(d.pattern || '').slice(0, 24);
     case 'todo': case 'task': return L('Met à jour sa todo', 'Updating todo list');
     case 'plan': return L('Présente le plan', 'Presenting the plan');
-    case 'artifact': return (d.open ? L('Montre ', 'Showing ') : d.doc ? L('Crée ', 'Writing ') : L('Publie ', 'Publishing ')) + (d.title || (d.open ? 'Artifact' : f)).slice(0, 30);
+    case 'artifact': if (d.live) return (d.live === 'board' ? L('Dessine sur ', 'Drawing on ') : L('Remplit ', 'Filling ')) + (d.title || (d.live === 'board' ? 'Whiteboard' : 'Sheet')).slice(0, 30);   /* a write to a Claude Whiteboard or Sheet */
+      return (d.open ? L('Montre ', 'Showing ') : d.doc ? L('Crée ', 'Writing ') : L('Publie ', 'Publishing ')) + (d.title || (d.open ? 'Artifact' : f)).slice(0, 30);
     case 'browser': { const s = (d.steps || []).slice(-1)[0] || {}, n = (s.n || '').trim(), h = hostOf(s.u); if (n) return n.length > 36 ? n.slice(0, 36).replace(/\s+\S*$/, '') + '…' : n; if (!h && PREVIEW.test(t.name)) return 'Preview · ' + String(s.a || '').replace(/_/g, ' '); return h ? L('Navigue sur ', 'Browsing ') + h : L('Navigue sur le web', 'Browsing the web'); }
     case 'web': return d.url ? L('Consulte ', 'Fetching ') + d.url.replace(/^https?:\/\//, '').slice(0, 26) : L('Recherche sur le web', 'Web search');
     case 'text': { const w = d.what; if (w === 'question') return L('Pose une question', 'Asking a question'); if (w === 'skill') return L('Utilise ', 'Using skill ') + (d.v || ''); if (w === 'mcp') return d.v || t.name; if (w === 'toolsearch') return L('Cherche un outil', 'Looking for a tool'); return t.name; }
