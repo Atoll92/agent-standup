@@ -10,8 +10,8 @@ The user asked for a whiteboard of what their agent sessions did. Agent Standup 
 Run both. They read local session files only, start no server and need Node.js 18 or later.
 
 ```bash
-npx -y @double_geste/agent-standup@1.45.0 report --json --titles
-npx -y @double_geste/agent-standup@1.45.0 status --json --titles
+npx -y @double_geste/agent-standup@1.46.0 report --json --titles
+npx -y @double_geste/agent-standup@1.46.0 status --json --titles
 ```
 
 - `report` gives one row per session with something written that day: `project`, `tool`, `start` and `end` (local time), `workMin` (time worked), `waitMin` (time it waited for the user), `turns` (messages the user sent), `calls` (commands, edits, reads, web, browser, artifacts), `subAgents`, `filesChanged`; and with `--titles`: `title`, `asked` (the user's first message of the day), `said` (the agent's last words that day), `files`, `artifacts`.

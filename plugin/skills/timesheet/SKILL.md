@@ -10,7 +10,7 @@ The user asked for a timesheet of their agent sessions. Agent Standup reads the 
 Run this once per day the user asks for (today when they name none). It reads local session files only, starts no server and needs Node.js 18 or later.
 
 ```bash
-npx -y @double_geste/agent-standup@1.45.0 report --json --titles --day today
+npx -y @double_geste/agent-standup@1.46.0 report --json --titles --day today
 ```
 
 - `--day` takes `today`, `yesterday` or `YYYY-MM-DD`, in local time. Add `--here` for this folder's sessions only. A week is seven runs.
