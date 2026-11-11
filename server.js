@@ -488,9 +488,9 @@ function listSessions() {
   if (Date.now() - sessionsMemo.at < 2000) return sessionsMemo.rows;
   const out = listSessions0(); sessionsMemo = { at: Date.now(), rows: out }; return out;
 }
-function listSessions0() {
+function listSessions0(since) {   // since: every session written since then, however many (the day report), instead of the most recent ones
   const rows = [];
-  for (const m of SOURCES) for (const r of guard(() => m.sessions(30), [])) rows.push({ proj: m.PROJ, id: r.id, mtime: r.mtime, size: r.size, agents: guard(() => (m.subCount ? m.subCount(r.id) : m.subFiles ? m.subFiles(r.id).length : 0), 0), cx: r, src: m });
+  for (const m of SOURCES) for (const r of guard(() => m.sessions(since != null ? 2000 : 30), [])) rows.push({ proj: m.PROJ, id: r.id, mtime: r.mtime, size: r.size, agents: guard(() => (m.subCount ? m.subCount(r.id) : m.subFiles ? m.subFiles(r.id).length : 0), 0), cx: r, src: m });
   for (const proj of projects()) {
     for (const { id, file } of transcripts(proj)) {
       let st; try { st = fs.statSync(file); } catch { continue; }   // a link to a transcript that is gone
@@ -498,7 +498,7 @@ function listSessions0() {
     }
   }
   rows.sort((a, b) => b.mtime - a.mtime);
-  const own = (r) => !r.cx && r.proj !== COWORK, top = rows.filter(own).slice(0, 60).concat(rows.filter((r) => r.cx), rows.filter((r) => r.proj === COWORK).slice(0, 30)).sort((a, b) => b.mtime - a.mtime);   // the 60 most recent Claude Code sessions as always, and up to 30 of each other tool beside them, Cowork included: none pushes another out
+  const own = (r) => !r.cx && r.proj !== COWORK, top = since != null ? rows.filter((r) => r.mtime >= since) : rows.filter(own).slice(0, 60).concat(rows.filter((r) => r.cx), rows.filter((r) => r.proj === COWORK).slice(0, 30)).sort((a, b) => b.mtime - a.mtime);   // the 60 most recent Claude Code sessions as always, and up to 30 of each other tool beside them, Cowork included: none pushes another out
   for (const r of top) {
     if (r.cx) { const c = r.cx, m = r.src; delete r.cx; delete r.src; r.title = guard(() => m.title(c), '') || r.id; r.project = guard(() => m.projectLabel(c.cwd), '') || m.SOURCE; r.source = m.SOURCE; continue; }
     // titles come from the cached tail read (custom title, then AI title, then first prompt): no whole-file reads
@@ -1595,7 +1595,7 @@ function start(port = PORT) {
     if (url.pathname === '/api/artifact') {   // the page a publish of this session sent, for the frame of the shared screen · check=1: is there one, and does it name libraries (asked before the frame is drawn) · whole=1: the whole document
       const q = (k) => url.searchParams.get(k) || '', SAFE = /^[\w.\-]+$/, bad = [q('proj'), q('id'), q('agent'), q('tool')].some((v) => !SAFE.test(v) || v === '..' || v.length > 200) || q('tool').length < 6;
       if (bad) { res.writeHead(400); return res.end('bad request'); }
-      const file = sourceOf(q('proj')) ? null : mediaFile(q('proj'), q('id'), q('agent')), plan = file && fs.existsSync(file) && fs.existsSync(mediaFile(q('proj'), q('id'), 'main')) ? artifactPlan(q('proj'), q('id'), q('agent'), q('tool')) : null, page = plan ? artifactBuild(file, q('tool'), plan, q('whole') === '1') : file && fs.existsSync(file) ? boards.livePage(file, q('tool')) : null;   // no page sent: a write to a board or a Sheet, drawn again from the session's writes
+      const file = sourceOf(q('proj')) ? null : mediaFile(q('proj'), q('id'), q('agent')), plan = file && fs.existsSync(file) && fs.existsSync(mediaFile(q('proj'), q('id'), 'main')) ? artifactPlan(q('proj'), q('id'), q('agent'), q('tool')) : null, page = plan ? artifactBuild(file, q('tool'), plan, q('whole') === '1') : file && fs.existsSync(file) ? guard(() => boards.livePage(file, q('tool')), null) : null;   // no page sent: a write to a board or a Sheet, drawn again from the session's writes
       if (q('check')) return json(page ? { ok: true, net: page.net, ...(page.pages > 1 ? { pages: page.pages, label: page.label } : {}) } : { ok: false }, page ? 200 : 404);   // pages: a document of several pages, which can be shown whole (whole=1)
       if (!page) { res.writeHead(404); return res.end('not found'); }
       const body = Buffer.from((/^\s*<!doctype/i.test(page.html) ? '' : '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">') + page.html, 'utf8');   // an artifact is published as the inside of a page: claude.ai adds the rest, and so does this
@@ -1642,7 +1642,7 @@ function start(port = PORT) {
   } catch (e) { logError(req.method + ' ' + url.pathname, e); if (res.headersSent) return res.destroy(); json({ error: String(e.message || e) }, 500); }
   }).listen(port, '127.0.0.1', function () { console.log(`Agent Standup → http://localhost:${this.address().port}`); });
 }
-module.exports = { answerIn, missingTranscripts, noteEditor, forgetEditor, _winArg: winArg, start, currentSession, shutdown, findClaude, bundledClaude, boardRows, timeline: (proj, id) => timelineEntry(proj, id).tl, transcriptFile: (proj, id) => path.join(projDir(proj, id), id + '.jsonl'), sessionRows: listSessions, charactersDir, listCharacters, packsDir, installPack, logError, updateInfo, _reveal: reveal, _scrub: { tidy, homeRe }, _artifact: { page: artifactPage, csp: artifactCsp } };
+module.exports = { answerIn, missingTranscripts, noteEditor, forgetEditor, _winArg: winArg, start, currentSession, shutdown, findClaude, bundledClaude, boardRows, timeline: (proj, id) => timelineEntry(proj, id).tl, transcriptFile: (proj, id) => path.join(projDir(proj, id), id + '.jsonl'), sessionRows: listSessions, sessionsSince: (t) => listSessions0(+t || 0), charactersDir, listCharacters, packsDir, installPack, logError, updateInfo, _reveal: reveal, _scrub: { tidy, homeRe }, _artifact: { page: artifactPage, csp: artifactCsp } };
 if (require.main === module && process.env.AGENT_STANDUP_CHILD === '1' && typeof process.send === 'function') {   // started by the VS Code extension in a process of its own (see extension.js): reading a large session no longer stops the editor's extensions. Asked for by name: pm2 and others give any app a channel too
   const srv = start(+process.env.PORT || 0), tell = (m) => { try { process.send(m); } catch {} };
   srv.on('listening', () => tell({ port: srv.address().port })).on('error', (e) => { tell({ error: e.code || String(e) }); process.exit(1); });
