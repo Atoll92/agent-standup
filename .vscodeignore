@@ -5,6 +5,7 @@ landing/**
 brand/**
 plugin/**
 plugin-band/**
+raycast/**
 website/**
 vercel.json
 .vercelignore
