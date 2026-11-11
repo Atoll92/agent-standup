@@ -1,6 +1,6 @@
 ---
 name: timesheet
-description: Fill a Claude Sheet on claude.ai with the timesheet of the Claude Code, Codex, Mistral Vibe and Cowork sessions on this computer for a day or a few days, one row per session (start, end, project, time worked, time it waited for the user, turns, commands, edits, files changed), with totals. Use when the user asks for a timesheet, a log or a spreadsheet of what their agents did, or how long their agents worked.
+description: Fill a Claude Sheet on claude.ai with the timesheet of the Claude Code, Codex, Mistral Vibe and Cowork sessions on this computer for a day or a few days, one row per session (start, end, project, time worked, time it waited for the user, turns, commands, edits, files changed), with totals. Use when the user asks for a timesheet, or for a Sheet or spreadsheet of what their agents did. For a plain question about how long they worked, answer from `agent-standup report` in the conversation instead, and make no Sheet.
 ---
 
 The user asked for a timesheet of their agent sessions. Agent Standup reads the local session files and tells each day; you fill a Claude Sheet, a private spreadsheet on claude.ai that the user can share or download as .xlsx.

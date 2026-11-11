@@ -83,14 +83,15 @@ const dur = (min) => (min >= 60 ? `${Math.floor(min / 60)}h${pad(min % 60)}` : `
 function dayRange(d) {   // [start, end) of a local day
   const t = new Date(); t.setHours(0, 0, 0, 0);
   if (d === 'yesterday') t.setDate(t.getDate() - 1);
-  else if (d && d !== 'today') { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d); if (!m || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31) { console.error(`Invalid --day "${d}": use YYYY-MM-DD, today or yesterday.`); process.exit(2); } t.setFullYear(+m[1], +m[2] - 1, +m[3]); }
+  else if (d && d !== 'today') { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d); if (!m || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31) { console.error(`Invalid --day "${d}": use YYYY-MM-DD, today or yesterday.`); process.exit(2); } t.setFullYear(+m[1], +m[2] - 1, +m[3]); if (t.getMonth() !== +m[2] - 1) { console.error(`Invalid --day "${d}": there is no such day.`); process.exit(2); } }
   const end = new Date(t); end.setDate(end.getDate() + 1); return [+t, +end];
 }
+const TOOLS = { codex: 'Codex', vibe: 'Mistral Vibe', cowork: 'Cowork' }, projLabel = (p) => (path.isAbsolute(String(p)) ? String(p).split(/[\\/]+/).filter(Boolean).slice(-2).join('/') : p);   // a folder written whole (Codex, Vibe): its last two names, as Claude Code's projects read
 const CALLS = { cmd: 'commands', edit: 'edits', write: 'edits', read: 'reads', web: 'web', browser: 'browser', artifact: 'artifacts' };
 function report(day, dir, titles) {
   const [from, to] = dayRange(day), live = new Map(server.boardRows().map((r) => [r.proj + '/' + r.id, r])), home = require('os').homedir(), short = (f) => (f.startsWith(home + path.sep) ? '~' + f.slice(home.length) : f), rows = [];
-  for (const r of server.sessionRows()) {
-    if (r.mtime < from) continue;   // nothing written since that day began
+  for (const r of (server.sessionsSince ? server.sessionsSince(from) : server.sessionRows())) {   // every session written since that day began, not only the most recent ones
+    if (r.mtime < from) continue;
     const b = live.get(r.proj + '/' + r.id);
     if (dir && !(fold(r.proj) === fold(projKey(dir)) || (b && b.dir && fold(b.dir) === fold(projKey(dir))))) continue;
     let tl; try { tl = server.timeline(r.proj, r.id); } catch { continue; }   // a session that cannot be read costs that session only
@@ -104,7 +105,7 @@ function report(day, dir, titles) {
       if (e.kind === 'results') for (const it of e.items) if (it.art && it.art.url) arts.set(it.art.url, it.art.title || (arts.get(it.art.url) || ''));
       if (i) { const gap = ev[i].ts - ev[i - 1].ts; if (e.kind === 'user' || gap > GAP_WORK) wait += Math.min(gap, GAP_WAIT); else work += gap; }
     });
-    rows.push({ project: r.project || r.proj, tool: r.source || (r.project === 'Cowork' ? 'Cowork' : 'Claude Code'), id: r.id, state: b ? b.state : 'idle', start: hm(ev[0].ts), end: hm(ev[ev.length - 1].ts), t0: ev[0].ts,
+    rows.push({ project: projLabel(r.project || r.proj), tool: TOOLS[r.source] || r.source || (r.project === 'Cowork' ? 'Cowork' : 'Claude Code'), id: r.id, state: b ? b.state : 'idle', start: hm(ev[0].ts), end: hm(ev[ev.length - 1].ts), t0: ev[0].ts,
       workMin: Math.round(work / 60e3), waitMin: Math.round(wait / 60e3), turns, subAgents: subs.size, calls, filesChanged: files.size,
       ...(titles ? { title: clipT(r.title, 120), asked: clipT(asked, 240), said: clipT(said, 400), files: [...files].slice(0, 30), artifacts: [...arts].map(([url, title]) => ({ title: clipT(title, 120), url })) } : {}) });
   }

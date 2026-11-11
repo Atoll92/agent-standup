@@ -4,6 +4,7 @@
 - **Claude Whiteboards and Sheets on the shared screen.** When a session fills a Claude Whiteboard or a Claude Sheet, the call shows it on the shared screen as each write leaves it: the board with its sections, blocks and arrows, the Sheet as a grid with its tabs and what its formulas came to. It is drawn from the session file alone; nothing is fetched from claude.ai.
 - **Your standup on a whiteboard, your agents' timesheet in a Sheet.** Two new skills in the Claude Code plugin. `/agent-standup:whiteboard` puts the day's standup on a Claude Whiteboard: one section per session, with what it was asked, what it did and what waits on you. `/agent-standup:timesheet` fills a Claude Sheet with one row per session (start, end, time worked, time it waited for you, commands, edits, files) and totals. They need Claude Code signed in to claude.ai on a paid plan, and only the board or Sheet you ask for is sent.
 - **`agent-standup report`** tells one day of your sessions in the terminal: time worked, time waited for you, calls and files changed (`--day yesterday` or `YYYY-MM-DD`, `--here`, `--json`, `--titles`).
+- **Two logins on one computer.** A second Claude account whose projects folder is a link to the first one's keeps its own sessions folder read, so what waits for you there shows, and a plan it writes shows in its menu.
 - **Releases reach npm through trusted publishing**, so there is no npm token left to expire.
 
 ## 1.45.0

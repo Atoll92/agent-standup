@@ -50,7 +50,7 @@ On your machine it keeps your settings in one small file, the list of sessions y
 
 Only these can leave your computer, each when you turn it on or start it yourself. The plugin turns none of them on.
 
-- **Whiteboard and timesheet:** when you ask for one, Claude puts on it what the day's report says of your sessions (their projects and titles, times and counts, and for the whiteboard a short summary of what each was asked and did, with file names), and creates it on claude.ai with your own Claude account. Nothing is sent until you ask, and only that one board or sheet.
+- **Whiteboard and timesheet:** when you ask for one, Claude puts on it what the day's report says of your sessions (their projects and titles, times and counts, and for the whiteboard a short summary of what each was asked and did, with file names), and creates it on claude.ai with your own Claude account. To do so Claude reads the day's report in your conversation, as it reads any command's output: for each session, its title, your first message of the day and the agent's last words. Nothing is sent until you ask, and only that one board or sheet.
 
 - **Translation and jokes:** with the interface in French, Spanish or Brazilian Portuguese (translation is on for those languages, and can be switched off for the last two), or with the jokes turned on, short lines of the session go to Anthropic through your own Claude Code login, or your own API key if you set one.
 - **Office radio:** a request for the audio stream, to Radio France.
