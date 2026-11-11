@@ -77,13 +77,14 @@ function merge(into, data, depth = 0) {
   return into;
 }
 function boardStore(ops) {
+  let room = 4e6;   // what str_replace may add to the board's texts in all: a board holds 2 MB
   const docs = new Map(), one = (w) => {
     if (!boardDoc(w)) return;   // only the board's own documents
     const key = String(w.collection || '') + '/' + String(w.doc_id || ''), data = w.data && typeof w.data === 'object' ? w.data : null;
     if (w.op === 'delete' || w.action === 'delete') docs.delete(key);
     else if ((w.op || w.action) === 'set' && data) docs.set(key, clean(data));
     else if ((w.op || w.action) === 'update' && data) docs.set(key, merge(docs.get(key) || {}, clean(data)));
-    else if (w.action === 'str_replace' && docs.has(key) && !BAD_KEY.has(w.field)) { const d = docs.get(key), f = w.field; if (typeof d[f] === 'string' && typeof w.old_str === 'string' && w.old_str) { const n = w.replace_all ? d[f].split(w.old_str).length - 1 : 1, grows = String(w.new_str || '').length - w.old_str.length; if (d[f].length + n * grows <= 100000) d[f] = w.replace_all ? d[f].split(w.old_str).join(w.new_str || '') : d[f].replace(w.old_str, () => w.new_str || ''); } }   /* a text that would grow past what a board holds is not grown (doubling it could end the process) */
+    else if (w.action === 'str_replace' && docs.has(key) && !BAD_KEY.has(w.field)) { const d = docs.get(key), f = w.field; if (typeof d[f] === 'string' && typeof w.old_str === 'string' && w.old_str) { const n = w.replace_all ? d[f].split(w.old_str).length - 1 : 1, grows = String(w.new_str || '').length - w.old_str.length; if (d[f].length + n * grows <= 100000 && (grows <= 0 || (room -= n * grows) >= 0)) d[f] = w.replace_all ? d[f].split(w.old_str).join(w.new_str || '') : d[f].replace(w.old_str, () => w.new_str || ''); } }   /* a text that would grow past what a board holds is not grown (doubling it could end the process) */
   };
   for (const o of ops) { if (o.i.action === 'batch') for (const w of Array.isArray(o.i.writes) ? o.i.writes : []) one(w); else one(o.i); }
   return docs;
@@ -181,8 +182,8 @@ function sheetState(ops) {
   let budget = 400000; const spend = (n) => (budget -= n) > 0;   // one budget for the whole replay (cells written, formatted, moved, fitted, read): records made to be slow cost their own picture only
   const book = [], find = (n) => book.find((s) => s.name === n), mk = (name) => { const s = { name: String(name).slice(0, 100), cells: new Map(), fmt: new Map(), widths: new Map(), head: 0, maxR: 0, maxC: 0 }; book.push(s); return s; };
   let last = null; mk('Sheet1').phantom = true;   // a new Sheet starts with Sheet1; a Sheet made in another session is known only by the sheets its edits and reads name
-  const named = (n, make) => { if (typeof n !== 'string' || !n) return null; let s = find(n); if (!s && make) s = mk(n); if (s) s.phantom = false; return s; };
-  const shift = (s, at, n, rows) => { if (!spend(s.cells.size + s.fmt.size)) return; for (const m of [s.cells, s.fmt]) { const moved = new Map(); for (const [k, v] of m) { const [r, c] = k.split(',').map(Number), key = rows ? (r >= at ? (n < 0 && r < at - n ? null : `${r + n},${c}`) : k) : c >= at ? (n < 0 && c < at - n ? null : `${r},${c + n}`) : k; if (key) moved.set(key, v); } m.clear(); for (const [k, v] of moved) m.set(k, v); } };
+  const named = (n, make) => { if (typeof n !== 'string' || !n) return null; let s = find(n); if (!s && make && book.length < 200) s = mk(n);   /* a workbook has 200 sheets at most */ if (s) s.phantom = false; return s; };
+  const shift = (s, at, n, rows) => { if (!spend(s.cells.size + s.fmt.size)) return; for (const m of [s.cells, s.fmt]) { const moved = new Map(); for (const [k, v] of m) { const [r, c] = k.split(',').map(Number), key = rows ? (r >= at ? `${r + n},${c}` : n < 0 && r >= at + n ? null : k) : c >= at ? `${r},${c + n}` : n < 0 && c >= at + n ? null : k;   /* a delete: what lay in the deleted rows goes, what lay after moves up */ if (key) moved.set(key, v); } m.clear(); for (const [k, v] of moved) m.set(k, v); } };
   for (const o of ops) {
     if (o.op === 'read') { const v = o.value, rg = v && typeof v.range === 'string' ? addr(v.range.split(':')[0]) : null, s = rg && v.rows && typeof v.rows === 'object' ? named(v.sheet, true) : null; if (!s) continue;
       for (const [rn, row] of Object.entries(v.rows).slice(0, 5000)) if (Array.isArray(row) && +rn > 0 && spend(row.length)) row.slice(0, 200).forEach((cell, k) => { const key = `${+rn},${rg[1] + k}`, mine = s.cells.get(key); if (cell == null || !inGrid(+rn, rg[1] + k)) return;
@@ -192,9 +193,9 @@ function sheetState(ops) {
     for (const e of o.i.payload.edits.slice(0, 64)) {
       if (budget <= 0) break; if (!e || typeof e !== 'object') continue; const s = named(e.sheet, e.kind !== 'deleteSheet' && e.kind !== 'restoreSheet');
       if (e.kind === 'renameSheet' && s && typeof e.name === 'string') { s.name = e.name.slice(0, 100); last = s; }
-      else if (e.kind === 'addSheet' && typeof e.name === 'string' && !find(e.name)) last = named(e.name, true);
+      else if (e.kind === 'addSheet' && typeof e.name === 'string' && !find(e.name)) last = named(e.name, true) || last;
       else if (e.kind === 'deleteSheet' && s) { book.splice(book.indexOf(s), 1); if (last === s) last = null; }
-      else if (e.kind === 'restoreSheet' && typeof e.sheet === 'string' && !find(e.name || e.sheet)) last = named(e.name || e.sheet, true);
+      else if (e.kind === 'restoreSheet' && typeof e.sheet === 'string' && !find(e.name || e.sheet)) last = named(e.name || e.sheet, true) || last;
       else if (e.kind === 'writeCells' && s && Array.isArray(e.rows)) { const a = addr(e.topLeft); if (!a) continue; last = s;
         e.rows.slice(0, 5000).forEach((row, i) => Array.isArray(row) && spend(row.length) && row.slice(0, 200).forEach((v, k) => { const key = `${a[0] + i},${a[1] + k}`; if (!inGrid(a[0] + i, a[1] + k)) return; if (v == null) s.cells.delete(key); else { s.cells.set(key, v); s.maxR = Math.max(s.maxR, a[0] + i); s.maxC = Math.max(s.maxC, a[1] + k); } })); }
       else if (e.kind === 'formatCells' && s && Array.isArray(e.ranges) && e.format) { last = s; const f = e.format, look = {}; if (f.font && typeof f.font.bold === 'boolean') look.b = f.font.bold; if (f.font && typeof f.font.italic === 'boolean') look.i = f.font.italic; if (f.fillColor && HEX.test(f.fillColor.hex || '')) look.fill = f.fillColor.hex; if (f.fillColor && f.fillColor.kind === 'none') look.fill = '';
