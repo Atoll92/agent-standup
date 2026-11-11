@@ -10,8 +10,9 @@ const memo = new Map();
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const blocksOf = (r) => { const c = r && r.message && r.message.content; return Array.isArray(c) ? c : []; };
 const textOf = (c) => (typeof c === 'string' ? c : Array.isArray(c) ? c.map((x) => (x && typeof x.text === 'string' ? x.text : '')).join('\n') : '');
-const BOARD_WRITES = new Set(['set', 'update', 'delete', 'str_replace', 'batch']), BOARD_DOCS = /^(board|elements)$/;
-const onBoard = (i) => (i.action === 'batch' ? Array.isArray(i.writes) && i.writes.some((w) => w && BOARD_DOCS.test(String(w.collection || ''))) : BOARD_DOCS.test(String(i.collection || '')));   // a Whiteboard keeps its content in board/meta and elements/<id>: another page's own database (a tracker, a sign-up sheet) is not a board
+const BOARD_WRITES = new Set(['set', 'update', 'delete', 'str_replace', 'batch']);
+const boardDoc = (w) => !!w && (String(w.collection || '') === 'elements' || (String(w.collection || '') === 'board' && /^(meta|claim-[a-z0-9]{1,40})$/.test(String(w.doc_id || ''))));
+const onBoard = (i) => (i.action === 'batch' ? Array.isArray(i.writes) && i.writes.some(boardDoc) : boardDoc(i));   // a Whiteboard keeps its content in board/meta and elements/<id>: another page's own database (a tracker, a sign-up sheet) is not a board
 const docsTool = (name) => { const m = /^mcp__(.+?)__(update|read)$/.exec(name || ''); return m && /(^|_)Claude_Docs$/.test(m[1]) ? m[2] : ''; };
 
 // What a call does to a board or a Sheet, or null: { key, kind: 'board' | 'sheet', op: 'write' | 'read' }. key: the board's address, or the Sheet's project in Claude Docs.
@@ -77,12 +78,12 @@ function merge(into, data, depth = 0) {
 }
 function boardStore(ops) {
   const docs = new Map(), one = (w) => {
-    if (!BOARD_DOCS.test(String(w.collection || ''))) return;   // only the board's own documents
+    if (!boardDoc(w)) return;   // only the board's own documents
     const key = String(w.collection || '') + '/' + String(w.doc_id || ''), data = w.data && typeof w.data === 'object' ? w.data : null;
     if (w.op === 'delete' || w.action === 'delete') docs.delete(key);
     else if ((w.op || w.action) === 'set' && data) docs.set(key, clean(data));
     else if ((w.op || w.action) === 'update' && data) docs.set(key, merge(docs.get(key) || {}, clean(data)));
-    else if (w.action === 'str_replace' && docs.has(key) && !BAD_KEY.has(w.field)) { const d = docs.get(key), f = w.field; if (typeof d[f] === 'string' && typeof w.old_str === 'string') d[f] = w.replace_all ? d[f].split(w.old_str).join(w.new_str || '') : d[f].replace(w.old_str, () => w.new_str || ''); }
+    else if (w.action === 'str_replace' && docs.has(key) && !BAD_KEY.has(w.field)) { const d = docs.get(key), f = w.field; if (typeof d[f] === 'string' && typeof w.old_str === 'string' && w.old_str) { const n = w.replace_all ? d[f].split(w.old_str).length - 1 : 1, grows = String(w.new_str || '').length - w.old_str.length; if (d[f].length + n * grows <= 100000) d[f] = w.replace_all ? d[f].split(w.old_str).join(w.new_str || '') : d[f].replace(w.old_str, () => w.new_str || ''); } }   /* a text that would grow past what a board holds is not grown (doubling it could end the process) */
   };
   for (const o of ops) { if (o.i.action === 'batch') for (const w of Array.isArray(o.i.writes) ? o.i.writes : []) one(w); else one(o.i); }
   return docs;
@@ -170,34 +171,36 @@ const colName = (n) => { let s = ''; for (; n > 0; n = Math.floor((n - 1) / 26))
 const addr = (a) => { const m = /^([A-Z]{1,3})(\d{1,7})$/i.exec(String(a || '').trim()); return m ? [+m[2], colNum(m[1])] : null; };
 function rangeOf(rg, sh) {   // "A1:C4", "B2", "3:4", "B:C" → [r0, c0, r1, c1], bounded by what the sheet holds
   const s = String(rg || '').trim(), [p, q = p] = s.split(':'), MAXR = Math.max(sh.maxR, 1), MAXC = Math.max(sh.maxC, 1);
-  if (/^\d+$/.test(p) && /^\d+$/.test(q)) return [+p, 1, Math.min(+q, MAXR + 50, +p + 2000), Math.min(MAXC + 5, 60)];   /* whole rows, whole columns: as far as the sheet holds anything, not the million rows of the Sheet */
-  if (/^[A-Z]+$/i.test(p) && /^[A-Z]+$/i.test(q)) return [1, colNum(p), Math.min(Math.max(MAXR, 50), 2000), Math.min(colNum(q), MAXC + 5, colNum(p) + 60)];
+  if (/^\d+$/.test(p) && /^\d+$/.test(q)) return [+p, 1, Math.min(+q, +p + 2000, R_MAX), Math.min(Math.max(MAXC + 5, 40), C_MAX)];   /* whole rows, whole columns: as far as the sheet holds anything, not the million rows of the Sheet */
+  if (/^[A-Z]+$/i.test(p) && /^[A-Z]+$/i.test(q)) return [1, colNum(p), Math.min(Math.max(MAXR + 50, 400), R_MAX), Math.min(colNum(q), colNum(p) + 60, C_MAX)];
   const a = addr(p), b = addr(q) || a; if (!a) return null;
   return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(Math.max(a[0], b[0]), a[0] + 2000), Math.min(Math.max(a[1], b[1]), a[1] + 60)];
 }
+const R_MAX = 2400, C_MAX = 240, inGrid = (r, c) => r >= 1 && c >= 1 && r <= R_MAX && c <= C_MAX;   // the picture shows 400 rows and 40 columns: what lies far past them is not kept
 function sheetState(ops) {
+  let budget = 400000; const spend = (n) => (budget -= n) > 0;   // one budget for the whole replay (cells written, formatted, moved, fitted, read): records made to be slow cost their own picture only
   const book = [], find = (n) => book.find((s) => s.name === n), mk = (name) => { const s = { name: String(name).slice(0, 100), cells: new Map(), fmt: new Map(), widths: new Map(), head: 0, maxR: 0, maxC: 0 }; book.push(s); return s; };
   let last = null; mk('Sheet1').phantom = true;   // a new Sheet starts with Sheet1; a Sheet made in another session is known only by the sheets its edits and reads name
   const named = (n, make) => { if (typeof n !== 'string' || !n) return null; let s = find(n); if (!s && make) s = mk(n); if (s) s.phantom = false; return s; };
-  const shift = (s, at, n, rows) => { for (const m of [s.cells, s.fmt]) { const moved = new Map(); for (const [k, v] of m) { const [r, c] = k.split(',').map(Number), key = rows ? (r >= at ? (n < 0 && r < at - n ? null : `${r + n},${c}`) : k) : c >= at ? (n < 0 && c < at - n ? null : `${r},${c + n}`) : k; if (key) moved.set(key, v); } m.clear(); for (const [k, v] of moved) m.set(k, v); } };
+  const shift = (s, at, n, rows) => { if (!spend(s.cells.size + s.fmt.size)) return; for (const m of [s.cells, s.fmt]) { const moved = new Map(); for (const [k, v] of m) { const [r, c] = k.split(',').map(Number), key = rows ? (r >= at ? (n < 0 && r < at - n ? null : `${r + n},${c}`) : k) : c >= at ? (n < 0 && c < at - n ? null : `${r},${c + n}`) : k; if (key) moved.set(key, v); } m.clear(); for (const [k, v] of moved) m.set(k, v); } };
   for (const o of ops) {
     if (o.op === 'read') { const v = o.value, rg = v && typeof v.range === 'string' ? addr(v.range.split(':')[0]) : null, s = rg && v.rows && typeof v.rows === 'object' ? named(v.sheet, true) : null; if (!s) continue;
-      for (const [rn, row] of Object.entries(v.rows).slice(0, 5000)) if (Array.isArray(row) && +rn > 0) row.slice(0, 200).forEach((cell, k) => { const key = `${+rn},${rg[1] + k}`, mine = s.cells.get(key); if (cell == null) return;
+      for (const [rn, row] of Object.entries(v.rows).slice(0, 5000)) if (Array.isArray(row) && +rn > 0 && spend(row.length)) row.slice(0, 200).forEach((cell, k) => { const key = `${+rn},${rg[1] + k}`, mine = s.cells.get(key); if (cell == null || !inGrid(+rn, rg[1] + k)) return;
         if (!s.cells.has(key)) { s.cells.set(key, cell); s.maxR = Math.max(s.maxR, +rn); s.maxC = Math.max(s.maxC, rg[1] + k); }   /* what a read shows of cells this session did not write */
         else if (typeof cell === 'object' && 'formula' in cell && typeof mine === 'string' && mine.trim().toUpperCase() === String(cell.formula).trim().toUpperCase()) s.cells.set(key, { formula: mine, value: cell.value }); });
       continue; }
     for (const e of o.i.payload.edits.slice(0, 64)) {
-      if (!e || typeof e !== 'object') continue; const s = named(e.sheet, e.kind !== 'deleteSheet' && e.kind !== 'restoreSheet');
+      if (budget <= 0) break; if (!e || typeof e !== 'object') continue; const s = named(e.sheet, e.kind !== 'deleteSheet' && e.kind !== 'restoreSheet');
       if (e.kind === 'renameSheet' && s && typeof e.name === 'string') { s.name = e.name.slice(0, 100); last = s; }
       else if (e.kind === 'addSheet' && typeof e.name === 'string' && !find(e.name)) last = named(e.name, true);
       else if (e.kind === 'deleteSheet' && s) { book.splice(book.indexOf(s), 1); if (last === s) last = null; }
       else if (e.kind === 'restoreSheet' && typeof e.sheet === 'string' && !find(e.name || e.sheet)) last = named(e.name || e.sheet, true);
       else if (e.kind === 'writeCells' && s && Array.isArray(e.rows)) { const a = addr(e.topLeft); if (!a) continue; last = s;
-        e.rows.slice(0, 5000).forEach((row, i) => Array.isArray(row) && row.slice(0, 200).forEach((v, k) => { const key = `${a[0] + i},${a[1] + k}`; if (v == null) s.cells.delete(key); else { s.cells.set(key, v); s.maxR = Math.max(s.maxR, a[0] + i); s.maxC = Math.max(s.maxC, a[1] + k); } })); }
+        e.rows.slice(0, 5000).forEach((row, i) => Array.isArray(row) && spend(row.length) && row.slice(0, 200).forEach((v, k) => { const key = `${a[0] + i},${a[1] + k}`; if (!inGrid(a[0] + i, a[1] + k)) return; if (v == null) s.cells.delete(key); else { s.cells.set(key, v); s.maxR = Math.max(s.maxR, a[0] + i); s.maxC = Math.max(s.maxC, a[1] + k); } })); }
       else if (e.kind === 'formatCells' && s && Array.isArray(e.ranges) && e.format) { last = s; const f = e.format, look = {}; if (f.font && typeof f.font.bold === 'boolean') look.b = f.font.bold; if (f.font && typeof f.font.italic === 'boolean') look.i = f.font.italic; if (f.fillColor && HEX.test(f.fillColor.hex || '')) look.fill = f.fillColor.hex; if (f.fillColor && f.fillColor.kind === 'none') look.fill = '';
-        let budget = 200000; if (Object.keys(look).length) for (const rg of e.ranges.slice(0, 40)) { const R = rangeOf(rg, s); if (R) for (let r = R[0]; r <= R[2] && budget > 0; r++) for (let c = R[1]; c <= R[3] && budget-- > 0; c++) s.fmt.set(`${r},${c}`, { ...(s.fmt.get(`${r},${c}`) || {}), ...look }); } }
+        if (Object.keys(look).length) for (const rg of e.ranges.slice(0, 40)) { const R = rangeOf(rg, s); if (R) for (let r = R[0]; r <= Math.min(R[2], R_MAX) && budget > 0; r++) for (let c = R[1]; c <= Math.min(R[3], C_MAX) && budget-- > 0; c++) s.fmt.set(`${r},${c}`, { ...(s.fmt.get(`${r},${c}`) || {}), ...look }); } }
       else if (e.kind === 'setColumnWidths' && s && typeof e.columns === 'string') { const [p, q = p] = e.columns.split(':'); for (let c = colNum(p); c <= colNum(q) && c < colNum(p) + 200; c++) s.widths.set(c, Math.max(20, Math.min(800, num(e.widthInPixels, 104)))); }
-      else if (e.kind === 'fitColumns' && s && typeof e.columns === 'string') { const [p, q = p] = e.columns.split(':'); for (let c = colNum(p); c <= colNum(q) && c < colNum(p) + 200; c++) { let w = 40; for (let r = 1; r <= Math.min(s.maxR, 2000); r++) { const v = s.cells.get(`${r},${c}`); if (v != null && !(typeof v === 'string' && v.length > 60 && !s.cells.has(`${r},${c + 1}`))) w = Math.max(w, (typeof v === 'string' && v[0] === '=' ? 8 : cellText(v).t.length) * 7.4 + 18);   /* a formula: what it comes to, most often a short number */ } s.widths.set(c, Math.min(360, Math.round(w))); } }
+      else if (e.kind === 'fitColumns' && s && typeof e.columns === 'string') { const [p, q = p] = e.columns.split(':'); for (let c = colNum(p); c <= colNum(q) && c < colNum(p) + 200 && spend(s.maxR); c++) { let w = 40; for (let r = 1; r <= Math.min(s.maxR, 2000); r++) { const v = s.cells.get(`${r},${c}`); if (v != null && !(typeof v === 'string' && v.length > 60 && !s.cells.has(`${r},${c + 1}`))) w = Math.max(w, (typeof v === 'string' && v[0] === '=' ? 8 : cellText(v).t.length) * 7.4 + 18);   /* a formula: what it comes to, most often a short number */ } s.widths.set(c, Math.min(360, Math.round(w))); } }
       else if (e.kind === 'setCellTable' && s) s.head = e.cellTable && e.cellTable.headerRows ? +String(e.cellTable.headerRows).split(':').pop() || 0 : 0;
       else if ((e.kind === 'insertRows' || e.kind === 'insertColumns') && s) { const n = Math.min(1000, num(e.count, 1)), at = e.kind === 'insertRows' ? num(e.besideRow) + (e.side === 'below' ? 1 : 0) : colNum(e.besideColumn) + (e.side === 'right' ? 1 : 0); shift(s, at, n, e.kind === 'insertRows'); if (e.kind === 'insertRows') s.maxR += n; else s.maxC += n; last = s; }
       else if ((e.kind === 'deleteRows' || e.kind === 'deleteColumns') && s) { const [p, q = p] = String(e.rows || e.columns || '').split(':'), rows = e.kind === 'deleteRows', a = rows ? +p : colNum(p), b = rows ? +q : colNum(q); if (a > 0 && b >= a) { shift(s, b + 1, -(b - a + 1), rows); last = s; } }

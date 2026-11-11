@@ -89,6 +89,11 @@ test("what is not a board stays as it was, odd records cost their own picture on
     L(use('toolu_tdb', 'ArtifactData', { action: 'set', url: PAGE, collection: 'books', doc_id: 'b1', data: { title: 'Dune' } })), L(res('toolu_tdb', 'Set "books"/"b1" (version 1)')),
     `{"type":"assistant","timestamp":"${at()}","message":{"content":[{"type":"tool_use","id":"toolu_proto","name":"ArtifactData","input":{"action":"update","url":"${BOARD}","collection":"elements","doc_id":"e1","data":{"__proto__":{"is_error":true,"polluted":true},"type":"shape","x":0,"y":0,"w":200,"h":80,"text":"safe"}}}]}}`,
     L(res('toolu_proto', 'Updated "elements"/"e1" (version 2)')),
+    L(use('toolu_kb', 'ArtifactData', { action: 'set', url: PAGE, collection: 'board', doc_id: 'card-1', data: { title: 'A card' } })), L(res('toolu_kb', 'Set "board"/"card-1" (version 1)')),   // a kanban page's own collection named board
+    L(use('toolu_km', 'ArtifactData', { action: 'set', url: PAGE, collection: 'board', doc_id: 'meta', data: { v: 1 } })), L(res('toolu_km', 'Set "board"/"meta" (version 1)')),   // even its own board/meta: a page published from a file is that page
+    L(use('toolu_sr0', 'ArtifactData', { action: 'set', url: BOARD, collection: 'elements', doc_id: 'e9', data: { type: 'text', x: 0, y: 0, text: 'a' } })), L(res('toolu_sr0', 'Set (version 1)')),
+    ...Array.from({ length: 30 }, (_, n) => [L(use('toolu_sr' + (n + 1), 'ArtifactData', { action: 'str_replace', url: BOARD, collection: 'elements', doc_id: 'e9', field: 'text', old_str: 'a', new_str: 'aa', replace_all: true })), L(res('toolu_sr' + (n + 1), 'Replaced (version ' + (n + 2) + ')'))]).flat(),   // a text that doubles each time
+    L(use('toolu_bomb', DOCS + 'update', S({ kind: 'applyEdits', base: 1, edits: Array.from({ length: 64 }, (_, n) => ({ kind: 'formatCells', sheet: 'Day', ranges: ['A' + (1 + n * 2000) + ':BH' + (2000 + n * 2000)], format: { font: { bold: true } } })) }))), L(res('toolu_bomb', docs({ verdict: 'allow', rev: 3, data: { revision: 3 } }))),
     L(use('toolu_big', DOCS + 'update', S({ kind: 'applyEdits', base: 1, edits: [{ kind: 'writeCells', sheet: 'Day', topLeft: 'A1', rows: [['x']] }, { kind: 'formatCells', sheet: 'Day', ranges: ['1:1048576', 'A:XFD', 'A1:XFD1048576'], format: { font: { bold: true } } }] }))), L(res('toolu_big', docs({ verdict: 'allow', rev: 2, data: { revision: 2 } }))),
   ].join('\n') + '\n';
   const dir = path.join(tmp, 'projects', '-odd'); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, 'o1.jsonl'), raw);
@@ -106,6 +111,10 @@ test("what is not a board stays as it was, odd records cost their own picture on
     assert.match((await page('o1', 'toolu_tp')).body, /My reading tracker/, 'the published page is still what the call shows');
     const pr = await page('o1', 'toolu_proto'); assert.equal(pr.status, 200); assert.match(pr.body, /safe/);
     assert.equal(({}).is_error, undefined, 'a record cannot reach the prototype of every object'); assert.equal(({}).polluted, undefined);
+    for (const id of ['toolu_kb', 'toolu_km']) { assert.ok(!items.find((it) => it.id === id).art, id + ': no board version of a published page'); }
+    const t1 = Date.now(), sr = await page('o1', 'toolu_sr30'); assert.equal(sr.status, 200); assert.ok(Date.now() - t1 < 3000); assert.ok(sr.body.length < 200000, 'the doubling text stopped growing: ' + sr.body.length);
+    const t2 = Date.now(), bomb = await page('o1', 'toolu_bomb'); assert.ok(Date.now() - t2 < 3000, 'a write made to be slow costs its own picture only: ' + (Date.now() - t2) + ' ms'); assert.ok([200, 404].includes(bomb.status));
+    assert.equal((await get(port, '/api/health')).status, 200);
     const t0 = Date.now(), big = await page('o1', 'toolu_big'); assert.equal(big.status, 200); assert.ok(Date.now() - t0 < 2000, 'a range of a million rows is drawn as far as the sheet holds anything: ' + (Date.now() - t0) + ' ms');
     const ev2 = JSON.parse((await get(port, '/api/session?proj=-odd&id=o2')).body).events, it2 = ev2.filter((e) => e.kind === 'results').flatMap((e) => e.items);
     assert.equal((it2.find((it) => it.id === 'toolu_ew').art || {}).url, 'https://claude.ai/artifact/ElseElse1234', 'the read named the Sheet');

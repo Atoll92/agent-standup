@@ -88,10 +88,13 @@ function dayRange(d) {   // [start, end) of a local day
 }
 const TOOLS = { codex: 'Codex', vibe: 'Mistral Vibe', cowork: 'Cowork' }, projLabel = (p) => (path.isAbsolute(String(p)) ? String(p).split(/[\\/]+/).filter(Boolean).slice(-2).join('/') : p);   // a folder written whole (Codex, Vibe): its last two names, as Claude Code's projects read
 const CALLS = { cmd: 'commands', edit: 'edits', write: 'edits', read: 'reads', web: 'web', browser: 'browser', artifact: 'artifacts' };
-function report(day, dir, titles) {
-  const [from, to] = dayRange(day), live = new Map(server.boardRows().map((r) => [r.proj + '/' + r.id, r])), home = require('os').homedir(), short = (f) => (f.startsWith(home + path.sep) ? '~' + f.slice(home.length) : f), rows = [];
+async function report(day, dir, titles) {
+  const [from, to] = dayRange(day);
+  if (server.sessionsSince) { server.sessionsSince(from); for (let i = 0; i < 600 && server.codexPending && server.codexPending(); i++) await new Promise((r) => setTimeout(r, 100)); }   // Codex's compressed threads are read in the background: wait for them (a minute at most) before listing
+  const live = new Map(server.boardRows().map((r) => [r.proj + '/' + r.id, r])), home = require('os').homedir(), short = (f) => (f.startsWith(home + path.sep) ? '~' + f.slice(home.length) : f), rows = [];
   for (const r of (server.sessionsSince ? server.sessionsSince(from) : server.sessionRows())) {   // every session written since that day began, not only the most recent ones
     if (r.mtime < from) continue;
+    if (!r.source && r.proj !== '_demo') { try { const fs = require('fs'), fd = fs.openSync(server.transcriptFile(r.proj, r.id), 'r'), b = Buffer.alloc(32768), n = fs.readSync(fd, b, 0, b.length, 0); fs.closeSync(fd); const m = /"timestamp":"([^"]{10,40})"/.exec(b.toString('utf8', 0, n)), t0 = m ? Date.parse(m[1]) : NaN; if (t0 >= to) continue; } catch {} }   // a Claude Code session whose first record is after that day has nothing of it (its first record says when it began; a copied file's dates do not)
     const b = live.get(r.proj + '/' + r.id);
     if (dir && !(fold(r.proj) === fold(projKey(dir)) || (b && b.dir && fold(b.dir) === fold(projKey(dir))))) continue;
     let tl; try { tl = server.timeline(r.proj, r.id); } catch { continue; }   // a session that cannot be read costs that session only
@@ -105,7 +108,8 @@ function report(day, dir, titles) {
       if (e.kind === 'results') for (const it of e.items) if (it.art && it.art.url) arts.set(it.art.url, it.art.title || (arts.get(it.art.url) || ''));
       if (i) { const gap = ev[i].ts - ev[i - 1].ts; if (e.kind === 'user' || gap > GAP_WORK) wait += Math.min(gap, GAP_WAIT); else work += gap; }
     });
-    rows.push({ project: projLabel(r.project || r.proj), tool: TOOLS[r.source] || r.source || (r.project === 'Cowork' ? 'Cowork' : 'Claude Code'), id: r.id, state: b ? b.state : 'idle', start: hm(ev[0].ts), end: hm(ev[ev.length - 1].ts), t0: ev[0].ts,
+    const tool = TOOLS[r.source] || r.source || (r.project === 'Cowork' ? 'Cowork' : 'Claude Code');
+    rows.push({ project: projLabel(String(r.project || r.proj).replace(/^(Codex|Mistral Vibe|Vibe) · /, '')), tool, id: r.id, state: b ? b.state : 'idle', start: hm(ev[0].ts), end: hm(ev[ev.length - 1].ts), t0: ev[0].ts,
       workMin: Math.round(work / 60e3), waitMin: Math.round(wait / 60e3), turns, subAgents: subs.size, calls, filesChanged: files.size,
       ...(titles ? { title: clipT(r.title, 120), asked: clipT(asked, 240), said: clipT(said, 400), files: [...files].slice(0, 30), artifacts: [...arts].map(([url, title]) => ({ title: clipT(title, 120), url })) } : {}) });
   }
@@ -118,10 +122,12 @@ if (cmd === 'status') {
   if (flags.json) console.log(JSON.stringify({ needsYou: s.needsYou, working: s.working, yourTurn: s.yourTurn, idle: s.idle, sessions: s.rows.map((r) => ({ project: r.proj, id: r.id, state: r.state, tool: r.tool, ageMs: Math.round(r.ageMs), subAgentsActive: r.subActive, subAgents: r.subTotal, ...(r.since ? { since: r.since } : {}), ...(r.ran ? { ran: r.ran } : {}), ...(r.limit ? { limit: r.limit } : {}), ...(r.auth ? { auth: 1 } : {}), ...(flags.titles ? { title: r.title, ...(r.ask ? { ask: r.ask } : {}), ...(r.menu && r.menu.about ? { about: r.menu.about } : {}), ...(r.gave ? { gave: r.gave } : {}) } : {}) })) }, null, 2));   // since: when it started to wait, ran: how long it worked before · with --titles only, what the sessions say (it can hold a path, a command or a secret): ask, the question or command that waits for you, about, what that command is for, gave, the error it stopped on
   else console.log(line(s, false));
 } else if (cmd === 'report') {
-  const rep = report(flags.day, flags.here ? process.cwd() : '', flags.titles), callLine = (c) => Object.entries(c).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${n} ${n === 1 ? k.replace(/s$/, '') : k}`).join(' · ');
+  report(flags.day, flags.here ? process.cwd() : '', flags.titles).then((rep) => {
+  const callLine = (c) => Object.entries(c).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${n} ${n === 1 ? k.replace(/s$/, '') : k}`).join(' · ');
   const text = flags.json ? JSON.stringify(rep, null, 2) : [`${rep.day} · ${rep.sessions} session${rep.sessions === 1 ? '' : 's'} · ${dur(rep.workMin)} worked · ${dur(rep.waitMin)} waited for you`,
     ...rep.rows.map((r) => `  ${r.start}–${r.end}  ${(r.tool + ' · ' + r.project).padEnd(36).slice(0, 36)}  ${dur(r.workMin).padStart(5)} worked  ${dur(r.waitMin).padStart(5)} waited  ${callLine(r.calls)}${r.title ? '\n      ' + r.title : ''}`)].join('\n');
   process.stdout.write(text + '\n', () => process.exit(0));   // the timelines leave timers behind: once written, it is done
+  });
 } else if (cmd === 'statusline') {
   let raw = ''; const go = () => { let dir = ''; try { const j = JSON.parse(raw); dir = (j.workspace && j.workspace.current_dir) || j.cwd || ''; } catch {} console.log(line(snapshot(dir), true)); process.exit(0); };
   if (process.stdin.isTTY) go(); else { process.stdin.setEncoding('utf8'); process.stdin.on('data', (d) => (raw += d)); process.stdin.on('end', go); setTimeout(go, 800); }

@@ -388,4 +388,5 @@ function image(id, toolId, n, user, agent = 'main') {   // { type, buf } or null
   imgMemo.set(key, out); if (imgMemo.size > 12) imgMemo.delete(imgMemo.keys().next().value);
   return out;
 }
-module.exports = { PROJ, SOURCE, home, dirKey, sessions, row, fileOf, cwd, inProject, projectLabel, title, boardRow, subFiles, subCount, state, parser, image };
+const zPending = () => zBusy || zQueue.length > 0;   // compressed threads still being read in the background (the day report waits for them)
+module.exports = { zPending, PROJ, SOURCE, home, dirKey, sessions, row, fileOf, cwd, inProject, projectLabel, title, boardRow, subFiles, subCount, state, parser, image };
