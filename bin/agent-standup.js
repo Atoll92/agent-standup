@@ -4,6 +4,7 @@
 //   agent-standup status [--here] [--json] [--titles]  counts of working / needs you / your turn
 //   agent-standup statusline                        same, one short line; reads Claude Code's statusLine JSON on stdin
 //   agent-standup report [--day D] [--here] [--json] [--titles]  what each session did that day: time worked, time it waited for you, calls, files (the plugin's whiteboard and timesheet skills read it)
+//   agent-standup credits [--session ID] [--here] [--json]  a line for a pull request: who was on the call (the lead and its sub-agents, named as the call names them) and what they did (the plugin's credits skill)
 // Everything reads the local session files Claude Code already writes. Nothing is sent anywhere unless the call is in French, Spanish or Brazilian Portuguese or you turn on the jokes (they use your own Claude login or ANTHROPIC_API_KEY).
 const path = require('path'), { spawn } = require('child_process');
 const pkg = require('../package.json');
@@ -12,7 +13,7 @@ for (let i = 0; i < argv.length; i++) {
   const a = argv[i], val = () => argv[++i];
   if (a === '--port') flags.port = val(); else if (a === '--projects') flags.projects = val(); else if (a === '--codex') flags.codex = val(); else if (a === '--vibe') flags.vibe = val(); else if (a === '--cowork') flags.cowork = val(); else if (a === '--characters') flags.characters = val(); else if (a === '--config-dir') flags.config = val();
   else if (a === '--reply') flags.reply = /^(0|1|on|off|yes|no|true|false)$/i.test(argv[i + 1] || '') ? val() : 'on';   // alone or followed by on / off
-  else if (a === '--from') flags.from = val(); else if (a === '--open') flags.open = true; else if (a === '--here') flags.here = true; else if (a === '--json') flags.json = true; else if (a === '--titles') flags.titles = true; else if (a === '--config') flags.config = val(); else if (a === '--day') flags.day = val();
+  else if (a === '--from') flags.from = val(); else if (a === '--open') flags.open = true; else if (a === '--here') flags.here = true; else if (a === '--json') flags.json = true; else if (a === '--titles') flags.titles = true; else if (a === '--config') flags.config = val(); else if (a === '--day') flags.day = val(); else if (a === '--session') flags.session = val();
   else if (a === '-h' || a === '--help') flags.help = true; else if (a === '-v' || a === '--version') flags.version = true; else rest.push(a);
 }
 const cmd = rest[0] || 'serve';
@@ -23,6 +24,7 @@ Usage
   agent-standup status [--here] [--json]          what is going on right now (--here: only the current folder)
   agent-standup statusline                        one short line for a status bar (reads Claude Code's JSON on stdin)
   agent-standup report [--day D] [--json]         what each session did that day: time worked, waits for you, calls, files
+  agent-standup credits [--session ID] [--json]   a credits line for a pull request: the lead and sub-agents of a session, its time and calls
 
 Options
   --port N          port of the local server (default 4747)
@@ -43,6 +45,8 @@ Options
   --json            status, report: machine-readable output
   --day D           report: the day to tell, YYYY-MM-DD, today (the default) or yesterday, in local time
   --titles          include session titles, questions, commands and errors
+  --session ID      credits: the session to credit (default: the Claude Code session it runs in, $CLAUDE_CODE_SESSION_ID;
+                    with --here and no id, the current folder's latest session)
 `;
 if (flags.help || cmd === 'help') { process.stdout.write(HELP); process.exit(0); }
 if (flags.version || cmd === 'version') { console.log(pkg.version); process.exit(0); }
@@ -117,7 +121,62 @@ async function report(day, dir, titles) {
   return { day: ymd(from), sessions: rows.length, workMin: rows.reduce((n, r) => n + r.workMin, 0), waitMin: rows.reduce((n, r) => n + r.waitMin, 0), rows };
 }
 
-if (cmd === 'status') {
+// The cast of one session, named as the call names it: the lead (the editor's setting, this project's, the global one, or Margot), then each sub-agent in the order it was born, a fork after
+// the lead (Margot 2), a name of its own when the person turned those on, a tool's own name (Codex's nicknames) unless they gave a list, otherwise a name drawn from its id.
+// A copy of public/index.html (NAMES, hash, cleanLead, uniqueName, subName, twinOf): keep the two in step; test/cli-credits.test.js checks the list against the page's.
+const NAMES = ['Ada','Linus','Grace','Alan','Margaret','Dennis','Barbara','Ken','Radia','Tim','Hedy','Guido','Frances','Bjarne','Katherine','Brian','Sophie','Niklaus','Annie','Donald','Joan','Edsger','Lynn','Vint','Mae','Rob','Zoe','Ivan','Nina','Otto','Lena','Hugo','Ines','Théo','Maya','Jules','Alma','Remy','Cleo','Noah','Iris','Leo','Mira','Axel','Nora','Eli','Lou','Gaby'];
+const fnv = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
+const cleanName = (v) => Array.from(String(v == null ? '' : v).replace(/'/g, '’').replace(/[\u0000-\u001f\u007f-\u009f<>&"`\\]/g, '').replace(/\s+/g, ' ').trim()).slice(0, 24).join('').trim();
+function castOf(agents, prefs, key) {
+  prefs = prefs && typeof prefs === 'object' ? prefs : {};
+  const lead = cleanName(process.env.AGENT_STANDUP_LEAD_NAME) || (key && cleanName(prefs['leadName:' + key])) || cleanName(prefs.leadName) || 'Margot', low = (n) => String(n).toLocaleLowerCase();
+  const isLead = (n) => { const l = low(lead), s = low(n || ''); return !!n && (s === l || (s.startsWith(l + ' ') && /^\d+$/.test(s.slice(l.length + 1)))); };
+  const list = []; { const seen = new Set(); for (const v of (typeof prefs.subNames === 'string' ? prefs.subNames : '').split(/[,;\n]+/)) { const n = cleanName(v), k = low(n); if (n && !seen.has(k) && list.length < 200) { seen.add(k); list.push(n); } } }
+  const book = {}, names = {};
+  const unique = (id, h) => {
+    const taken = new Set(Object.values(book).map(low)); taken.add(low(lead));
+    const own = list.filter((n) => !isLead(n)), pool = own.length ? own : NAMES, at = own.length ? 0 : h;
+    for (let k = 0; k < pool.length; k++) { const n = pool[(at + k) % pool.length]; if (!taken.has(low(n))) return (book[id] = n); }
+    for (let r = 2; ; r++) for (let k = 0; k < pool.length; k++) { const b = pool[(at + k) % pool.length]; if (isLead(b)) continue; const n = b + ' ' + r; if (!taken.has(low(n))) return (book[id] = n); }
+  };
+  const ownFree = (a) => { const taken = new Set(Object.keys(book).filter((k) => k !== a.id).map((k) => low(book[k]))); let n = a.own; for (let r = 2; taken.has(low(n)); r++) n = a.own + ' ' + r; return n; };
+  let twins = 0;
+  const subs = (agents || []).filter((a) => a && a.id && a.id !== 'main' && a.id !== 'user').map((a, j) => ({ a, j })).sort((x, y) => (x.a.born || Infinity) - (y.a.born || Infinity) || x.j - y.j).map((x) => x.a);
+  for (const a of subs) {
+    const twinN = /^fork$/i.test(a.type || '') && !('given' in a) && !(a.own && prefs.ownNames) ? 2 + twins++ : 0, given = twinN ? lead + ' ' + twinN : 'given' in a ? a.given : a.name;
+    names[a.id] = a.own && prefs.ownNames && !isLead(a.own) ? (book[a.id] = ownFree(a)) : ((twinN || (!isLead(given) && !list.length)) && given) || unique(a.id, fnv(a.id));
+  }
+  return { lead, names };
+}
+const SITE = 'https://agent-standup.com';
+function credits(id, dir) {
+  const want = (r) => (id ? r.id === id : !dir || fold(r.proj) === fold(projKey(dir)));
+  let r = server.sessionRows().filter(want).sort((a, b) => b.mtime - a.mtime)[0];
+  if (!r && server.sessionsSince) r = server.sessionsSince(0).filter(want).sort((a, b) => b.mtime - a.mtime)[0];   // an older session than the recent list holds
+  if (!r) return null;
+  const tl = server.timeline(r.proj, r.id), ev = tl.events.slice().sort((x, y) => x.ts - y.ts), busy = new Set(), files = new Set(); let work = 0, commands = 0, edits = 0;
+  ev.forEach((e, i) => {
+    if (e.agent && e.agent !== 'main' && e.agent !== 'user') busy.add(e.agent);
+    if (e.kind === 'tools') for (const t of e.tools) { const k = t.d && t.d.kind; if (k === 'cmd') commands++; if (k === 'edit' || k === 'write') { edits++; if (typeof t.d.file === 'string' && t.d.file) files.add(t.d.file); } }
+    if (i && e.kind !== 'user') { const gap = e.ts - ev[i - 1].ts; if (gap <= GAP_WORK) work += gap; }   // as report counts it: the gaps within a turn, up to 10 minutes each
+  });
+  const cast = castOf(tl.agents, server.readPrefs ? server.readPrefs() : null, server.leadKey ? server.leadKey(r.proj, r.id) : ''), subs = (tl.agents || []).filter((a) => a && busy.has(a.id)).map((a) => cast.names[a.id]).filter(Boolean);
+  const shown = subs.length > 5 ? [...subs.slice(0, 4), `${subs.length - 4} others`] : subs, who = [cast.lead, ...shown].reduce((s, n, i, all) => (i ? s + (i === all.length - 1 ? ' and ' : ', ') : '') + n, '');
+  const workMin = Math.round(work / 60e3), plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const facts = [workMin ? `${dur(workMin)} of work` : '', commands ? plural(commands, 'command') : '', edits ? plural(edits, 'edit') + (files.size ? ` in ${plural(files.size, 'file')}` : '') : ''].filter(Boolean);
+  const md = (s) => s.replace(/[\\`*_[\]~|#<>]/g, '\\$&');   // names are the person's own words: plain text in the line
+  return { session: r.id, project: projLabel(String(r.project || r.proj)), lead: cast.lead, subAgents: subs, workMin, commands, edits, filesChanged: files.size,
+    markdown: `<sub><a href="${SITE}"><img src="${SITE}/brand/team-strip.svg" height="16" align="absmiddle" alt="The Agent Standup cast"></a>&nbsp; Built on an <a href="${SITE}">Agent Standup</a> call by ${md(who)}${facts.map((f) => ' · ' + f).join('')}</sub>`,
+    text: `Built on an Agent Standup call by ${who}${facts.map((f) => ' · ' + f).join('')} · ${SITE}` };
+}
+
+if (cmd === 'credits') {
+  const id = flags.session || (flags.here ? '' : process.env.CLAUDE_CODE_SESSION_ID || '');
+  if (!id && !flags.here) { console.error('No session to credit: run it from inside a Claude Code session, or pass --session <id> or --here (the current folder\'s latest session).'); process.exit(2); }
+  let c; try { c = credits(id, flags.here ? process.cwd() : ''); } catch (e) { console.error('Could not read that session: ' + (e && e.message)); process.exit(1); }
+  if (!c) { console.error(id ? `No session ${id} in the session files.` : 'No session in this folder.'); process.exit(1); }
+  process.stdout.write((flags.json ? JSON.stringify(c, null, 2) : c.markdown) + '\n', () => process.exit(0));
+} else if (cmd === 'status') {
   const s = snapshot(flags.here ? process.cwd() : '');
   if (flags.json) console.log(JSON.stringify({ needsYou: s.needsYou, working: s.working, yourTurn: s.yourTurn, idle: s.idle, sessions: s.rows.map((r) => ({ project: r.proj, id: r.id, state: r.state, tool: r.tool, ageMs: Math.round(r.ageMs), subAgentsActive: r.subActive, subAgents: r.subTotal, ...(r.since ? { since: r.since } : {}), ...(r.ran ? { ran: r.ran } : {}), ...(r.limit ? { limit: r.limit } : {}), ...(r.auth ? { auth: 1 } : {}), ...(flags.titles ? { title: r.title, ...(r.ask ? { ask: r.ask } : {}), ...(r.menu && r.menu.about ? { about: r.menu.about } : {}), ...(r.gave ? { gave: r.gave } : {}) } : {}) })) }, null, 2));   // since: when it started to wait, ran: how long it worked before · with --titles only, what the sessions say (it can hold a path, a command or a secret): ask, the question or command that waits for you, about, what that command is for, gave, the error it stopped on
   else console.log(line(s, false));

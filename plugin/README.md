@@ -23,6 +23,7 @@ In earlier versions, in two steps:
 - `/agent-standup:status` prints one line: how many sessions are working, how many need you, and whether it is your turn, or whether a session stopped on Claude's usage limit (with when it resets) or because Claude Code is logged out. You can also ask "is anything waiting for me?".
 - `/agent-standup:whiteboard` draws the day's standup on a Claude Whiteboard: one section per session, with what it was asked, what it did and what it waits on, and what needs you standing out. You can also ask "put today's standup on a whiteboard".
 - `/agent-standup:timesheet` fills a Claude Sheet with one row per session: start, end, project, time worked, time it waited for you, turns, commands, edits and files changed, with totals. You can also ask "make me a timesheet of my agents for this week".
+- `/agent-standup:credits` ends a pull request's description (or a commit message) with one small line: the cast's picture and "Built on an Agent Standup call by Margot, Remy and Iris · 1h12 of work · 48 commands · 12 edits in 9 files", the lead and sub-agents of this session named as your call names them. Only when you ask: "credit my agents on this PR".
 
 The whiteboard and the timesheet are artifacts on claude.ai: they need Claude Code signed in to claude.ai on a paid plan, and are private until you share them.
 
@@ -40,7 +41,7 @@ Every skill runs one command, pinned to an exact version of the app's npm packag
 
     npx -y @double_geste/agent-standup@1.46.0
 
-`npx` downloads that package from the npm registry the first time. The package has no dependencies. `open` starts a web server that listens on your own machine only (`127.0.0.1`); `status` and `report` (which the whiteboard and the timesheet read) start nothing and exit.
+`npx` downloads that package from the npm registry the first time. The package has no dependencies. `open` starts a web server that listens on your own machine only (`127.0.0.1`); `status`, `report` (which the whiteboard and the timesheet read) and `credits` start nothing and exit.
 
 ## Data
 
@@ -51,6 +52,7 @@ On your machine it keeps your settings in one small file, the list of sessions y
 Only these can leave your computer, each when you turn it on or start it yourself. The plugin turns none of them on.
 
 - **Whiteboard and timesheet:** when you ask for one, Claude puts on it what the day's report says of your sessions (their projects and titles, times and counts, and for the whiteboard a short summary of what each was asked and did, with file names), and creates it on claude.ai with your own Claude account. To do so Claude reads the day's report in your conversation, as it reads any command's output: for each session, its title, your first message of the day and the agent's last words. Nothing is sent until you ask, and only that one board or sheet.
+- **Credits:** when you ask, Claude adds the credits line to the pull request or commit you name: the lead's and sub-agents' names, the time worked and the counts of commands, edits and files, nothing else of the session. It is as public as that pull request. Its picture is the cast's, on agent-standup.com: whoever opens the pull request loads it from there (on GitHub, through GitHub's own image proxy).
 
 - **Translation and jokes:** with the interface in French, Spanish or Brazilian Portuguese (translation is on for those languages, and can be switched off for the last two), or with the jokes turned on, short lines of the session go to Anthropic through your own Claude Code login, or your own API key if you set one.
 - **Office radio:** a request for the audio stream, to Radio France.
