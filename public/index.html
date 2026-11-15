@@ -561,7 +561,7 @@ const FR = () => prefs.lang === 'fr';
 // the call is the session as it is, with the built-in lines in English.
 const CALL_LANG = { fr: 'fr', es: 'es', 'pt-BR': 'pt', de: 'de', da: 'da', ja: 'ja', ko: 'ko', 'zh-CN': 'zh', 'zh-TW': 'zh' };
 const NATURAL = new Set(['de', 'da', 'ja', 'ko', 'zh']);   // held in these only when the person said yes (prefs.callNew), asked once on the call: they were English calls until 1.47, and translating sends what the agents say. Their voices are natural or none: never a system voice, the babble until the natural ones are there
-let noTr = false;   // no Claude Code and no API key on this computer: nothing can be translated, and a Spanish or Portuguese call is not held (French goes on saying what is missing, as it always did)
+let noTr = false, healthKnown = false;   /* healthKnown: /api/health has answered, so noTr is known */   // no Claude Code and no API key on this computer: nothing can be translated, and a Spanish or Portuguese call is not held (French goes on saying what is missing, as it always did)
 const CALL = () => { const l = CALL_LANG[prefs.lang]; return l && (l === 'fr' || ((NATURAL.has(l) ? prefs.callNew === true : prefs.callTr) && !noTr)) ? l : 'en'; }, TRL = () => CALL() !== 'en';
 const TLANG = () => (CALL() === 'zh' && prefs.lang === 'zh-TW' ? 'zt' : CALL());   // what the call is written in: Chinese is one language for the voices (Mandarin) and two for the text, Simplified (zh) and Traditional as in Taiwan (zt)
 const FR_L = 'le|la|les|des|une|un|et|est|pour|dans|que|qui|pas|sur|avec|je|tu|nous|vous|ce|cette|ça|du|au|aux|mais|sont|été|fait|plus|ne|ont|il|elle|ils|elles|très|aussi|donc|bien|tout|voici|voilà|merci|oui|non|comme|où|déjà|encore', FR_W = new RegExp('\\b(' + FR_L + ')\\b', 'gi'), EN_W = /\b(the|and|is|are|to|of|in|that|with|for|this|it|on|you|we|not|have|has|was|be|will|can|from|your|at|as|but|all|now|also|done|here|there|which|what|then|just|so)\b/gi;
@@ -987,7 +987,7 @@ function spoken(ev) {
   if (ev.kind === 'report') return L('Terminé. ', 'Done. ') + t;
   return t;
 }
-async function loadHealth() { try { S.health = await (await fetch('/api/health')).json(); noTr = S.health.claude === null && !S.health.apiKey; } catch {} updateHint(); callNote(); }
+async function loadHealth() { try { S.health = await (await fetch('/api/health')).json(); noTr = S.health.claude === null && !S.health.apiKey; healthKnown = true; } catch {} updateHint(); callNote(); }
 function trProblem() {   // why translation can't work, with what to do about it
   const h = S.health || {};
   if (h.claude === null && !h.apiKey) return L('Claude Code est introuvable : installez-le (npm i -g @anthropic-ai/claude-code) ou indiquez son chemin dans le réglage « agentStandup.claudePath ».', 'Claude Code not found: install it (npm i -g @anthropic-ai/claude-code) or set its path in the “agentStandup.claudePath” setting.');
@@ -3701,7 +3701,7 @@ voiceOffer();
 // ---- on the call: the first time one is held in Spanish or Portuguese on this computer, a line says that it is translated, and with what. In German, Danish, Japanese and Korean the same line asks first (Yes / No thanks), and the call stays in English until the answer is yes. Nobody asked for it (it follows the interface language, as French
 // always did), and it sends what the agents say to Anthropic through the person's own Claude Code. Said once; "Turn off" is the switch of ⚙ → Language.
 function callNote() {
-  const ask = callNote.ask = NATURAL.has(CALL_LANG[prefs.lang]) && prefs.callNew === undefined && !noTr && !Q.get('demo') && $('#vOffer').style.display === 'none';   // German, Danish, Japanese, Korean: asked once, never on by itself; after the line that offers their voices, not beside it
+  const ask = callNote.ask = NATURAL.has(CALL_LANG[prefs.lang]) && prefs.callNew === undefined && healthKnown && !noTr && !Q.get('demo') && $('#vOffer').style.display === 'none';   // German, Danish, Japanese, Korean: asked once, never on by itself; after the line that offers their voices, not beside it
   const on = ask || (TRL() && !FR() && !NATURAL.has(CALL()) && !prefs.callTrSeen && !Q.get('demo')); $('#trNote').style.display = on ? '' : 'none'; if (!on) return;
   $('#trNoteT').textContent = ask ? L('Tenir l’appel dans cette langue ? Votre Claude Code traduit ce que disent les agents.', 'Hold the call in this language? Your Claude Code translates what the agents say.') : L('L’appel est maintenant traduit dans cette langue, avec votre Claude Code.', 'The call is now translated into this language, with your Claude Code.');
   $('#trNoteOk').textContent = ask ? L('Oui', 'Yes') : L('Garder', 'Keep'); $('#trNoteOff').textContent = ask ? L('Non merci', 'No thanks') : L('Désactiver', 'Turn off');
