@@ -70,6 +70,9 @@ nav a.shop { display: inline-flex; gap: 6px; color: var(--soft) }
 .with { border-block: 1px solid var(--line); background: var(--bg2) }
 .with .wrap { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; padding-block: 16px; font-size: 15px; color: var(--dim) }
 .chip { border: 1px solid var(--line); border-radius: 99px; padding: 3px 12px; color: var(--soft); background: var(--card); white-space: nowrap }
+.voices { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-left: auto }   /* the languages with natural voices, as flags at the end of the strip */
+.voices .flags { display: inline-flex; gap: 6px; font-size: 18px; line-height: 1 } .voices .flags span { cursor: default }
+@media (max-width: 920px) { .voices { margin-left: 0 } }
 
 section { padding: 84px 0 }
 @media (max-width: 700px) { section { padding: 56px 0 } }
