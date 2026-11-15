@@ -1,6 +1,6 @@
 # Privacy
 
-Last updated: 21 October 2026.
+Last updated: 15 November 2026.
 
 This page covers Agent Standup in all its forms (the VS Code extension, the `agent-standup` command, the desktop app, the Claude Code plugin) and its website. Agent Standup is published by Double Geste, an individual developer. It is an unofficial community project, not affiliated with Anthropic, OpenAI or Mistral AI.
 
