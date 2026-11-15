@@ -4,6 +4,7 @@
 // Sources: website/src/home.html, shop.html and style.css, website/locales/ (the languages other than English and French), website/static/ (fonts, recorded media), the logo files of the app, and PRIVACY.md and TRADEMARKS.md for two plain pages.
 // website/site.json: "url" is the address the site answers on (for the canonical link and the link preview); "waitlist" is the address of a form
 // that takes an email, and the "For teams" section stays out of the page while it is empty.
+// "stars": the GitHub star count shown when GitHub cannot be asked (a build outside the host, or GitHub not answering).
 const fs = require('fs'), path = require('path');
 const { LANGS, COPY, decode, load } = require('./site-locales.js');
 const supporters = require('./supporters.js');
@@ -55,6 +56,9 @@ const analytics = `<script>if (location.hostname === ${JSON.stringify(new URL(si
 // on the host, the people who bought a coffee are fetched again first (scripts/supporters.js), so a deployment shows the latest ones; here, the ones committed in website/supporters/
 if (process.env.VERCEL) require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'supporters.js')], { stdio: 'inherit' });
 const backers = supporters.read(), people = backers.length, coffees = backers.reduce((n, p) => n + p.coffees, 0);
+// the GitHub stars shown in the "They talk about it" section: asked of GitHub at build time on the host (never by the visitor's browser), else "stars" in website/site.json
+let stars = Number(conf.stars) || 0;
+if (process.env.VERCEL) try { const n = Number(require('child_process').execFileSync(process.execPath, ['-e', "fetch('https://api.github.com/repos/Atoll92/agent-standup', { headers: { 'user-agent': 'agent-standup-site' }, signal: AbortSignal.timeout(8000) }).then((r) => r.json()).then((j) => process.stdout.write(String(j.stargazers_count || 0))).catch(() => {})"], { timeout: 15000 }).toString()); if (n > stars) stars = n; } catch {}
 
 fs.rmSync(dist, { recursive: true, force: true });
 fs.cpSync(path.join(src, 'static'), dist, { recursive: true });
@@ -80,12 +84,13 @@ for (const [code, name, label, htmlLang, dir] of LANGS) {
   write(dir + slug + 'index.html', source
     .replace(/<([a-z0-9]+)((?:\s[^<>]*?)?)\sdata-en="([^"]*)"\sdata-fr="([^"]*)"([^<>]*)>[\s\S]*?<\/\1>/g, (m, tag, a, en, fr, b) => `<${tag}${a}${b}>${t(decode(en), decode(fr))}</${tag}>`)
     .replace(/\ssrc="[^"]*"\sdata-en-src="([^"]*)"\sdata-fr-src="([^"]*)"/g, (m, en, fr) => ` src="${code === 'fr' ? fr : en}"`)
+    .replace(/\shref="[^"]*"\sdata-en-href="([^"]*)"\sdata-fr-href="([^"]*)"/g, (m, en, fr) => ` href="${code === 'fr' ? fr : en}"`)   // a link with a French page of its own (IT-Connect's article)
     .replace(/\{\{([^{}]+)\}\}/g, (m, en) => esc(t(en)))
     .replace(/\b(href|src|poster)=(["'])(?!https?:|#|\/|mailto:|data:|\.\/["']|shop\/)/g, (m, attr, q) => (slug ? m : `${attr}=${q}${up}`))   // a language page is one folder down; its shop is beside it (/fr/shop/)
     .replace('<html lang="en">', `<html lang="${htmlLang}">`).replace(/__PAGE__/g, site + dir + slug).replace(/__HOME__/g, '/' + dir)
     .replace('<!--HREFLANG-->', alternates).replace('<!--REDIRECT-->\n', redirect ? redirect + '\n' : '').replace('<!--LANGS-->', menu)
     .replace('__COPY__', () => JSON.stringify(COPY.map(([en, fr]) => t(en, fr))))
-    .replace(/\{people\}/g, people).replace(/\{coffees\}/g, coffees));
+    .replace(/\{people\}/g, people).replace(/\{coffees\}/g, coffees).replace(/\{stars\}/g, stars));
 }
 }
 languages(home, '');

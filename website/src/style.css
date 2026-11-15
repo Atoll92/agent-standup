@@ -154,3 +154,28 @@ footer a { color: var(--soft) }
 .hw .frame { display: block; box-shadow: 0 0 0 3px #f58a1f, 0 24px 60px rgba(0, 0, 0, .45) }
 .hw .kicker { color: #f58a1f } .hw p a { color: #f8b26a }
 .hw .btn.primary { background: #f58a1f } .hw .btn.primary:hover { background: #f7a04a }
+
+/* the latest release, a band right under the hero: its Short stands upright beside the text */
+.yt.tall { aspect-ratio: 9 / 16; width: min(100%, 280px); justify-self: center }
+.yt.tall img { aspect-ratio: auto }
+.row p code { font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #0a1a1f; border: 1px solid var(--line); border-radius: 8px; padding: 1px 6px; color: var(--ink); white-space: nowrap }   /* a short command, kept whole on one line */
+.row p b { color: var(--ink) }
+/* what others said: their words in cards, then a line of facts, each a link to where it was said */
+#press { padding-top: 0 }
+/* the posts slide by in one row, like the supporters' cards; it stops under the mouse, and scrolls by hand without the script or for a visitor who asks for less motion */
+.wall { margin-top: 34px; overflow-x: auto; padding: 4px 0 14px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent) }
+.wall.moving { overflow: hidden }
+.wall .track { display: flex; width: max-content }
+.wall.moving .track { animation: backers calc(var(--n, 10) * 12s) linear infinite }
+.wall:hover .track, .wall:focus-within .track { animation-play-state: paused }
+.wall .group { display: flex; gap: 16px; padding: 0 16px 0 0 } .wall:not(.moving) .group { padding-left: 24px }
+.post { width: 340px; flex: none; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; color: var(--ink); text-decoration: none; transition: border-color .15s }
+.post:hover { border-color: var(--dim) } .post:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px }
+.post img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: top; border-bottom: 1px solid var(--line) }
+.post blockquote { flex: 1; margin: 0; padding: 16px 18px 0; font: 600 16.5px/1.45 Figtree, system-ui, sans-serif }
+.post .said { flex: 1; margin: 0; padding: 16px 18px 0; color: var(--soft); font-size: 16px }   /* a card with no words of its own to quote: what it is, in plain text */
+.post .who { padding: 12px 18px 16px; color: var(--dim); font-size: 14.5px } .post .who b { color: var(--soft); font-weight: 700 }
+@media (max-width: 700px) { .post { width: 280px } .post blockquote { font-size: 15.5px } .post .said { font-size: 15px } }
+.facts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px }
+.facts a { border: 1px solid var(--line); border-radius: 99px; padding: 5px 14px; background: var(--bg2); color: var(--soft); font-size: 15px; text-decoration: none } .facts a:hover { color: var(--ink); border-color: var(--dim) }
+.facts b { color: var(--gold) }

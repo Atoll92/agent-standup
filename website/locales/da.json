@@ -181,5 +181,19 @@
  "Eight characters drawn by hand by Fabien Coupas, each in its own room. From 2 €.": "Otte figurer tegnet i hånden af Fabien Coupas, hver i sit eget rum. Fra 2 €.",
  "The characters of the Halloween pack, drawn by hand, in a call": "Figurerne fra Halloween-pakken, tegnet i hånden, i et opkald",
  "The eight characters of the Halloween pack, each in its own room": "De otte figurer fra Halloween-pakken, hver i sit eget rum",
- "Purchase code": "Købskode"
+ "Purchase code": "Købskode",
+ "Your agents now speak five more languages": "Dine agenter taler nu fem sprog mere",
+ "Hold the call in German, Danish, Japanese, Korean or Chinese, with natural voices that run on your machine. The call asks once before it switches, and translates through your own Claude Code.": "Hold opkaldet på tysk, dansk, japansk, koreansk eller kinesisk, med naturlige stemmer, der kører på din maskine. Opkaldet spørger én gang, før det skifter sprog, og oversætter gennem din egen Claude Code.",
+ "<b>And they sign your pull requests.</b> In Claude Code, <code>/agent-standup:credits</code> adds one line to a pull request or a commit: the lead and the sub-agents, the time they worked, their commands and their edits.": "<b>Og de skriver under på dine pull requests.</b> I Claude Code tilføjer <code>/agent-standup:credits</code> én linje til en pull request eller et commit: lederen og underagenterne, den tid de har arbejdet, deres kommandoer og deres ændringer.",
+ "They talk about it": "Der bliver talt om det",
+ "Not just us saying it.": "Det er ikke kun os, der siger det.",
+ "<b>48 points</b> on Hacker News": "<b>48 point</b> på Hacker News",
+ "<b>{stars} stars</b> on GitHub": "<b>{stars} stjerner</b> på GitHub",
+ "Used live to teach a network lab on YouTube": "Brugt live til at undervise i et netværkslaboratorium på YouTube",
+ "Isn’t a video call a gimmick?": "Er et videoopkald ikke bare en gimmick?",
+ "It is meant to be fun, but the drawings sit on plain tools: counts in the status bar that turn red when a session waits for you, a board of every session, a replay that jumps to the first error, and a recap of each session. Mute it, keep it in a corner, and look up when someone calls you in.": "Det skal være sjovt, men under tegningerne ligger helt almindelige værktøjer: tal i statuslinjen, der bliver røde, når en session venter på dig, en tavle med alle sessioner, en genafspilning, der hopper til den første fejl, og et resumé af hver session. Slå lyden fra, lad det stå i et hjørne, og kig op, når nogen kalder på dig.",
+ "“The audio part is interesting because it lets you stay informed in real time about what is happening, without keeping an eye on the Claude Code session.”": "“The audio part is interesting because it lets you stay informed in real time about what is happening, without keeping an eye on the Claude Code session.”",
+ "X, translated from Korean": "X, oversat fra koreansk",
+ "X, translated from Japanese": "X, oversat fra japansk",
+ "In GitHub Trending Weekly #53, one of 35 trending open-source projects.": "I GitHub Trending Weekly #53, et af 35 populære open source-projekter."
 }

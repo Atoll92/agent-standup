@@ -181,5 +181,19 @@
  "Eight characters drawn by hand by Fabien Coupas, each in its own room. From 2 €.": "Fabien Coupas가 손으로 그린 캐릭터 8명, 저마다 자기 방이 있습니다. 2 €부터.",
  "The characters of the Halloween pack, drawn by hand, in a call": "손으로 그린 핼러윈 팩 캐릭터들이 통화하는 모습",
  "The eight characters of the Halloween pack, each in its own room": "핼러윈 팩의 캐릭터 8명, 저마다 자기 방에서",
- "Purchase code": "구매 코드"
+ "Purchase code": "구매 코드",
+ "Your agents now speak five more languages": "에이전트가 이제 다섯 가지 언어를 더 합니다",
+ "Hold the call in German, Danish, Japanese, Korean or Chinese, with natural voices that run on your machine. The call asks once before it switches, and translates through your own Claude Code.": "독일어, 덴마크어, 일본어, 한국어, 중국어로 통화하세요. 목소리는 당신의 컴퓨터에서 돌아가는 자연스러운 음성입니다. 언어를 바꾸기 전에 통화가 한 번만 묻고, 번역은 당신의 Claude Code를 통해 이루어집니다.",
+ "<b>And they sign your pull requests.</b> In Claude Code, <code>/agent-standup:credits</code> adds one line to a pull request or a commit: the lead and the sub-agents, the time they worked, their commands and their edits.": "<b>풀 리퀘스트에 서명도 합니다.</b> Claude Code에서 <code>/agent-standup:credits</code>를 쓰면 풀 리퀘스트나 커밋에 한 줄이 추가됩니다. 메인 에이전트와 서브에이전트, 작업한 시간, 실행한 명령과 수정 내역입니다.",
+ "They talk about it": "화제가 되고 있습니다",
+ "Not just us saying it.": "우리만 하는 말이 아닙니다.",
+ "<b>48 points</b> on Hacker News": "Hacker News에서 <b>48점</b>",
+ "<b>{stars} stars</b> on GitHub": "GitHub에서 <b>스타 {stars}개</b>",
+ "Used live to teach a network lab on YouTube": "YouTube 라이브에서 네트워크 실습 강의에 사용",
+ "Isn’t a video call a gimmick?": "화상 통화는 그냥 장난 아닌가요?",
+ "It is meant to be fun, but the drawings sit on plain tools: counts in the status bar that turn red when a session waits for you, a board of every session, a replay that jumps to the first error, and a recap of each session. Mute it, keep it in a corner, and look up when someone calls you in.": "재미를 위한 것도 맞지만, 그림 아래에는 실용적인 도구가 있습니다. 세션이 당신을 기다리면 빨갛게 바뀌는 상태 표시줄의 카운터, 모든 세션을 모은 보드, 첫 오류로 바로 이동하는 리플레이, 그리고 세션마다의 요약. 소리를 끄고 화면 구석에 두었다가, 누가 부를 때만 보면 됩니다.",
+ "“The audio part is interesting because it lets you stay informed in real time about what is happening, without keeping an eye on the Claude Code session.”": "“The audio part is interesting because it lets you stay informed in real time about what is happening, without keeping an eye on the Claude Code session.”",
+ "X, translated from Korean": "X, 한국어에서 번역",
+ "X, translated from Japanese": "X, 일본어에서 번역",
+ "In GitHub Trending Weekly #53, one of 35 trending open-source projects.": "GitHub Trending Weekly #53에 소개된 인기 오픈 소스 프로젝트 35개 중 하나."
 }

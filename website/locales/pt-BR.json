@@ -181,5 +181,19 @@
  "Eight characters drawn by hand by Fabien Coupas, each in its own room. From 2 €.": "Oito personagens desenhados à mão por Fabien Coupas, cada um em sua própria sala. A partir de 2 €.",
  "The characters of the Halloween pack, drawn by hand, in a call": "Os personagens do pacote de Halloween, desenhados à mão, em uma chamada",
  "The eight characters of the Halloween pack, each in its own room": "Os oito personagens do pacote de Halloween, cada um em sua própria sala",
- "Purchase code": "Código de compra"
+ "Purchase code": "Código de compra",
+ "Your agents now speak five more languages": "Seus agentes agora falam mais cinco idiomas",
+ "Hold the call in German, Danish, Japanese, Korean or Chinese, with natural voices that run on your machine. The call asks once before it switches, and translates through your own Claude Code.": "Faça a chamada em alemão, dinamarquês, japonês, coreano ou chinês, com vozes naturais que rodam na sua máquina. A chamada pergunta uma vez antes de mudar de idioma e traduz pelo seu próprio Claude Code.",
+ "<b>And they sign your pull requests.</b> In Claude Code, <code>/agent-standup:credits</code> adds one line to a pull request or a commit: the lead and the sub-agents, the time they worked, their commands and their edits.": "<b>E eles assinam seus pull requests.</b> No Claude Code, <code>/agent-standup:credits</code> adiciona uma linha a um pull request ou a um commit: o agente principal e os subagentes, o tempo que trabalharam, seus comandos e suas alterações.",
+ "They talk about it": "Falam dele",
+ "Not just us saying it.": "Não somos só nós que dizemos.",
+ "<b>48 points</b> on Hacker News": "<b>48 pontos</b> no Hacker News",
+ "<b>{stars} stars</b> on GitHub": "<b>{stars} estrelas</b> no GitHub",
+ "Used live to teach a network lab on YouTube": "Usado ao vivo para ensinar um laboratório de redes no YouTube",
+ "Isn’t a video call a gimmick?": "Uma videochamada não é só um truque?",
+ "It is meant to be fun, but the drawings sit on plain tools: counts in the status bar that turn red when a session waits for you, a board of every session, a replay that jumps to the first error, and a recap of each session. Mute it, keep it in a corner, and look up when someone calls you in.": "A ideia é ser divertido, mas por baixo dos desenhos há ferramentas de verdade: contadores na barra de status que ficam vermelhos quando uma sessão espera por você, um quadro com todas as sessões, um replay que pula para o primeiro erro e um resumo de cada sessão. Tire o som, deixe num canto e olhe quando alguém chamar você.",
+ "“The audio part is interesting because it lets you stay informed in real time about what is happening, without keeping an eye on the Claude Code session.”": "“The audio part is interesting because it lets you stay informed in real time about what is happening, without keeping an eye on the Claude Code session.”",
+ "X, translated from Korean": "X, traduzido do coreano",
+ "X, translated from Japanese": "X, traduzido do japonês",
+ "In GitHub Trending Weekly #53, one of 35 trending open-source projects.": "No GitHub Trending Weekly nº 53, um de 35 projetos open source em alta."
 }

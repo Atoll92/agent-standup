@@ -181,5 +181,19 @@
  "Eight characters drawn by hand by Fabien Coupas, each in its own room. From 2 €.": "由 Fabien Coupas 手绘的八个角色，各有自己的房间。2 € 起。",
  "The characters of the Halloween pack, drawn by hand, in a call": "万圣节角色包里手绘的角色们，正在通话",
  "The eight characters of the Halloween pack, each in its own room": "万圣节角色包的八个角色，各在自己的房间里",
- "Purchase code": "购买码"
+ "Purchase code": "购买码",
+ "Your agents now speak five more languages": "你的代理现在多会说五种语言",
+ "Hold the call in German, Danish, Japanese, Korean or Chinese, with natural voices that run on your machine. The call asks once before it switches, and translates through your own Claude Code.": "用德语、丹麦语、日语、韩语或中文开会，配上在你电脑上运行的自然语音。切换语言前，通话只问你一次，翻译则通过你自己的 Claude Code。",
+ "<b>And they sign your pull requests.</b> In Claude Code, <code>/agent-standup:credits</code> adds one line to a pull request or a commit: the lead and the sub-agents, the time they worked, their commands and their edits.": "<b>他们还会给你的 pull request 署名。</b>在 Claude Code 里，<code>/agent-standup:credits</code> 会在 pull request 或 commit 中加上一行：主代理和子代理、他们工作的时间、他们的命令和修改。",
+ "They talk about it": "大家怎么说",
+ "Not just us saying it.": "不只是我们自己说。",
+ "<b>48 points</b> on Hacker News": "Hacker News 上 <b>48 分</b>",
+ "<b>{stars} stars</b> on GitHub": "GitHub 上 <b>{stars} 颗星</b>",
+ "Used live to teach a network lab on YouTube": "在 YouTube 上被直播用来讲授网络实验",
+ "Isn’t a video call a gimmick?": "视频通话不就是个噱头吗？",
+ "It is meant to be fun, but the drawings sit on plain tools: counts in the status bar that turn red when a session waits for you, a board of every session, a replay that jumps to the first error, and a recap of each session. Mute it, keep it in a corner, and look up when someone calls you in.": "它确实是为了好玩，但画面底下是实用的工具：状态栏里的计数，有会话在等你时会变红；所有会话的看板；能直接跳到第一个错误的回放；以及每个会话的回顾。把声音关掉，放在角落，有人叫你时再抬头看。",
+ "“The audio part is interesting because it lets you stay informed in real time about what is happening, without keeping an eye on the Claude Code session.”": "“The audio part is interesting because it lets you stay informed in real time about what is happening, without keeping an eye on the Claude Code session.”",
+ "X, translated from Korean": "X，译自韩语",
+ "X, translated from Japanese": "X，译自日语",
+ "In GitHub Trending Weekly #53, one of 35 trending open-source projects.": "入选 GitHub Trending Weekly 第 53 期，35 个热门开源项目之一。"
 }
