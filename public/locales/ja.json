@@ -463,5 +463,8 @@
  "Agents you named yourself take these names too (switch below).": "自分で名前を付けたエージェントにもこれらの名前が付きます（下のスイッチ）。",
  "Zen: alerts only, no voices (M key)": "Zen：通知音のみ、声なし（Mキー）",
  "Sound: all, zen (alerts only), off": "サウンド：すべて、Zen（通知音のみ）、オフ",
- "Zen mode: alerts, no voices": "Zenモード：通知音のみ、声なし"
+ "Zen mode: alerts, no voices": "Zenモード：通知音のみ、声なし",
+ "Hold the call in this language? Your Claude Code translates what the agents say.": "通話をこの言語で行いますか？エージェントの発言はあなたの Claude Code が翻訳します。",
+ "Yes": "はい",
+ "Voices ready in English. This language has natural voices too: one more download.": "英語の音声は準備完了です。この言語にも自然な音声があります（追加のダウンロードが必要です）。"
 }

@@ -463,5 +463,8 @@
  "Agents you named yourself take these names too (switch below).": "Los agentes que nombraste tú también reciben estos nombres (interruptor de abajo).",
  "Zen: alerts only, no voices (M key)": "Zen: solo las alertas, sin voces (tecla M)",
  "Sound: all, zen (alerts only), off": "Sonido: todo, zen (solo alertas), silencio",
- "Zen mode: alerts, no voices": "Modo zen: alertas, sin voces"
+ "Zen mode: alerts, no voices": "Modo zen: alertas, sin voces",
+ "Hold the call in this language? Your Claude Code translates what the agents say.": "¿Hacer la llamada en este idioma? Tu Claude Code traduce lo que dicen los agentes.",
+ "Yes": "Sí",
+ "Voices ready in English. This language has natural voices too: one more download.": "Voces listas en inglés. Este idioma también tiene voces naturales: una descarga más."
 }

@@ -716,7 +716,7 @@ test('a session of the folder the call follows stays in the list however many se
   } finally { stop(); }
 });
 
-test('the call is translated into the language the page asks for: French when it says nothing, Spanish and Brazilian Portuguese by name', { skip: process.platform === 'win32' }, async () => {
+test('the call is translated into the language the page asks for: French when it says nothing, Spanish, Brazilian Portuguese, German, Danish, Japanese, Korean and both Chinese by name', { skip: process.platform === 'win32' }, async () => {
   const key = process.env.ANTHROPIC_API_KEY; delete process.env.ANTHROPIC_API_KEY;   // with a key the server would call the real API
   const srv = require('../server.js').start(0); await new Promise((r) => srv.once('listening', r)); const port = srv.address().port;
   const post = async (p, body) => JSON.parse((await get(port, p, {}, 'POST', JSON.stringify(body))).body), line = 'I fixed server.js.';
@@ -724,9 +724,10 @@ test('the call is translated into the language the page asks for: French when it
     assert.deepEqual(await post('/api/translate', { texts: [line], lang: 'es' }), { texts: ['Spanish|' + line], ok: true });
     assert.deepEqual(await post('/api/translate', { texts: [line], lang: 'pt' }), { texts: ['Brazilian Portuguese|' + line], ok: true }, 'the same line in another language is not taken from what was kept for Spanish, and the worker changes language');
     assert.deepEqual((await post('/api/translate', { texts: [line] })).texts, ['French|' + line], 'a page that names no language gets French, as before');
-    assert.deepEqual((await post('/api/translate', { texts: [line], lang: 'de' })).texts, ['French|' + line], 'a language the call cannot be held in is not passed to the prompt');
+    assert.deepEqual((await post('/api/translate', { texts: [line], lang: 'de' })).texts, ['German|' + line]); assert.deepEqual((await post('/api/translate', { texts: [line], lang: 'ko' })).texts, ['Korean|' + line]); assert.deepEqual((await post('/api/translate', { texts: [line], lang: 'zt' })).texts, ['Traditional Chinese|' + line]);
+    assert.deepEqual((await post('/api/translate', { texts: [line], lang: 'it' })).texts, ['French|' + line], 'a language the call cannot be held in is not passed to the prompt');
     const many = ['One.', 'Two.', 'Three.', 'Four.', line]; assert.deepEqual(await post('/api/translate', { texts: many, lang: 'es' }), { texts: many.map((t) => 'Spanish|' + t), ok: true }, 'more than three lines go in one batch, in the same language');
-    assert.deepEqual((await post('/api/quips', { texts: ['Report A.'], lang: 'pt' })).texts, ['Brazilian Portuguese|Report A.']); assert.deepEqual((await post('/api/quips', { texts: ['Report A.'], lang: 'ja' })).texts, ['English|Report A.']);
+    assert.deepEqual((await post('/api/quips', { texts: ['Report A.'], lang: 'pt' })).texts, ['Brazilian Portuguese|Report A.']); assert.deepEqual((await post('/api/quips', { texts: ['Report A.'], lang: 'ja' })).texts, ['Japanese|Report A.']); assert.deepEqual((await post('/api/quips', { texts: ['Report A.'], lang: 'it' })).texts, ['English|Report A.']);
   } finally { srv.close(); require('../server.js').shutdown(); if (key) process.env.ANTHROPIC_API_KEY = key; }
 });
 

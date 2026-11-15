@@ -100,6 +100,27 @@ test('French goes to the model as eSpeak phonemes, with the marks put back and t
   } finally { w.p.kill(); }
 });
 
+test('Chinese goes to its own model, loaded on the first Chinese line, as the phonemes of zh-g2p.js, an English word in it as eSpeak gives it', async () => {
+  const dir = install(true), read = (ext) => fs.readFileSync(path.join(dir, 'stub.log.' + ext), 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  for (const m of ['pinyin-pro', 'jieba-wasm', 'opencc-js']) fs.symlinkSync(path.join(__dirname, '..', 'node_modules', m), path.join(dir, 'node_modules', m), 'junction');   // as the Chinese voices install them
+  fs.mkdirSync(path.join(dir, 'zh-voices')); fs.writeFileSync(path.join(dir, 'zh-voices', 'zf_001.bin'), Buffer.from(new Float32Array(510 * 256).fill(5).buffer));
+  const w = run(dir), zh = { lang: 'zh', mix: [['zf_001', 1]] }, g2p = require('../zh-g2p.js').make(require('pinyin-pro'), require('jieba-wasm'), require('opencc-js').Converter({ from: 'tw', to: 'cn' }));
+  try {
+    await w.until(() => w.lines().some((l) => l.ready)); assert.equal(w.log().length, 1, 'only the English model at start');
+    const text = '你好，我改好了 server 里的错误。';
+    let r = await w.ask({ id: 1, text, speed: 1, out: path.join(dir, 'a.wav'), ...zh }); assert.equal(r.ok, true, r.error);
+    assert.equal(w.log().length, 2, 'the Chinese model loaded for the first Chinese line'); const m = read('model');
+    assert.equal(m[0].phonemes, await g2p(text, async (x) => x), 'the phonemes of zh-g2p.js, the English word through eSpeak');
+    assert.match(m[0].phonemes, /^ㄋㄧ2ㄏㄠ3, /); assert.ok(m[0].style.every((x) => x === 5), 'the Chinese voice, read from zh-voices');
+    assert.deepEqual(read('espeak').map((e) => e.lang), ['en-us'], 'eSpeak asked for the English word only');
+    r = await w.ask({ id: 2, text: '還有兩個測試沒通過。', speed: 1, out: path.join(dir, 'b.wav'), ...zh }); assert.equal(r.ok, true, r.error); assert.equal(w.log().length, 2, 'loaded once');
+    assert.equal(read('model')[1].phonemes, await g2p('还有两个测试没通过。'), 'Traditional is read as Simplified');
+    fs.writeFileSync(path.join(dir, 'stub.log.model'), ''); const long = '我检查了所有的文件，测试全部通过，没有发现新的问题。'.repeat(12);
+    r = await w.ask({ id: 3, text: long, speed: 1, out: path.join(dir, 'c.wav'), ...zh }); assert.equal(r.ok, true, r.error);
+    const parts = read('model'); assert.ok(parts.length > 1, 'a long Chinese line is cut at its own full stops, with no space after them');
+  } finally { w.p.kill(); }
+});
+
 test('the French voices are listed once the phonemizer is installed, and reach the worker with their language and mix', async () => {
   const dir = install(false); process.env.AGENT_STANDUP_KOKORO_DIR = dir; process.env.STUB_LOG = path.join(dir, 'stub.log'); fs.writeFileSync(process.env.STUB_LOG, '');
   const kokoro = require('../kokoro.js'), names = () => kokoro.voices().map((v) => v.name);

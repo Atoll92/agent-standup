@@ -22,6 +22,8 @@ jobs:
           node --check vibe.js
           node --check kokoro.js
           node --check kokoro-worker.js
+          node --check supertonic-worker.js
+          node --check zh-g2p.js
           node --check demo.js
           node --check desktop/main.js
           node --check extension.js

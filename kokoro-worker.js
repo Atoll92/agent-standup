@@ -3,6 +3,9 @@
 // writes a 16-bit WAV to `out` and answers { id, ok, seconds } or { id, ok: false, error }. Started by kokoro.js.
 const fs = require('fs'), path = require('path'), readline = require('readline'), { createRequire } = require('module'), { pathToFileURL } = require('url');
 const MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+// Chinese is another model of the same family, Kokoro-82M-v1.1-zh, in full precision: on an M1 Pro the 8-bit file was twice as slow, and the half-precision one returned silence (NaN) for most voices.
+// kokoro.js puts its files, checked, where transformers.js keeps what it downloads, so loading it here reads them from disk. Its phonemes come from zh-g2p.js, its voices from <dir>/zh-voices.
+const ZH_MODEL = 'onnx-community/Kokoro-82M-v1.1-zh-ONNX', ZH_DTYPE = 'fp32';
 const send = (o) => fs.writeSync(1, JSON.stringify(o) + '\n');
 const finite = (samples) => { for (let i = 0; i < samples.length; i++) if (samples[i] !== samples[i]) return false; return true; };   // a quantised model can return NaN for a whole line, which would be written as silence
 function wav(samples, rate) {   // Float32 in [-1, 1] → 16-bit mono WAV
@@ -15,7 +18,7 @@ const FILE = { q8: 'model_quantized', q4: 'model_q4', fp32: 'model', fp16: 'mode
 // The model takes 510 phonemes per call (about 480 letters of plain English, 300 when the line is full of numbers) and kokoro-js cuts the rest without a word:
 // a line that does not fit is made in parts and joined. LONG is what the tokenizer throws instead of cutting (see main).
 const LONG = new Error('too long for one call'), QUIET = 0.003;
-const CUTS = [[/[.!?…]+["'”’»)\]]*\s+(?![\sa-zà-ÿ])|\s*\n\s*/g, 0.45], [/[,;:—–]\s+/g, 0.2], [/\s+/g, 0.05]];   // where a line may be cut, best first, each with the pause it gets in seconds at speed 1: the end of a sentence, a comma, a space
+const CUTS = [[/[.!?…]+["'”’»)\]]*\s+(?![\sa-zà-ÿ])|\s*\n\s*|[。！？]+[”’」』）]*\s*/g, 0.45], [/[,;:—–]\s+|[，、；：]\s*/g, 0.2], [/\s+/g, 0.05]];   // where a line may be cut, best first, each with the pause it gets in seconds at speed 1: the end of a sentence, a comma, a space (Chinese marks need no space after them)
 function halve(s) {   // two parts at the cut nearest the middle, so no part is a stray word; a text with no space at all is cut in the middle
   for (const [re, gap] of CUTS) { let at = 0; for (const m of s.matchAll(re)) { const i = m.index + m[0].length; if (i < s.length && Math.abs(i - s.length / 2) < Math.abs(at - s.length / 2)) at = i; } if (at) return [s.slice(0, at), s.slice(at), gap]; }
   const at = Math.ceil(s.length / 2); return [s.slice(0, at), s.slice(at), 0];
@@ -59,13 +62,17 @@ async function main() {
     for (const ext of ['.onnx', '.onnx_data']) { try { fs.unlinkSync(path.join(onnx, name + ext)); dropped++; } catch {} }
     if (!dropped) throw e; console.error('kokoro: the ' + dtype + ' model could not be loaded (' + String((e && e.message) || e).slice(0, 80) + '); fetching it again'); tts = await load();
   }
-  const tok = tts.tokenizer;   // kokoro-js calls it with truncation on, which drops every phoneme past the model's limit and says nothing: count them all here and refuse instead
-  if (tok) tts.tokenizer = (t, o) => { const r = tok(t, { ...o, truncation: false }); if (r.input_ids.dims.at(-1) > (tok.model_max_length || 512)) throw LONG; return r; };
-  const packs = new Map(), pack = (n) => { if (!packs.has(n)) { const b = fs.readFileSync(path.join(dir, 'node_modules', 'kokoro-js', 'voices', n + '.bin')); packs.set(n, new Float32Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.length))); } return packs.get(n); };   // a voice: 510 styles of 256 numbers, one per length of line. All 54 come with kokoro-js
+  const strict = (m) => { const tok = m.tokenizer; if (tok) m.tokenizer = (t, o) => { const r = tok(t, { ...o, truncation: false }); if (r.input_ids.dims.at(-1) > (tok.model_max_length || 512)) throw LONG; return r; }; return m; };
+  strict(tts);   // kokoro-js calls the tokenizer with truncation on, which drops every phoneme past the model's limit and says nothing: count them all here and refuse instead
+  const packs = new Map(), pack = (n) => { if (!packs.has(n)) { const b = fs.readFileSync(/^z[fm]_/.test(n) ? path.join(dir, 'zh-voices', n + '.bin') : path.join(dir, 'node_modules', 'kokoro-js', 'voices', n + '.bin')); packs.set(n, new Float32Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.length))); } return packs.get(n); };   // a voice: 510 styles of 256 numbers, one per length of line. All 54 of v1.0 come with kokoro-js; the Chinese ones are fetched by kokoro.js
+  let zh = null;   // the Chinese model and its phonemizer, loaded on the first Chinese line: whoever never hears one never loads them
+  const zhLoad = async () => zh || (zh = { tts: strict(await KokoroTTS.from_pretrained(ZH_MODEL, { dtype: ZH_DTYPE, device: 'cpu' })), g2p: require(path.join(__dirname, 'zh-g2p.js')).make(req('pinyin-pro'), req('jieba-wasm'), req('opencc-js').Converter({ from: 'tw', to: 'cn' })) });
   const foreign = async (text, o) => {   // what kokoro-js' generate_from_ids does, with a style that can be a mix of several voices (o.mix: [[voice, share], …])
-    const { input_ids } = tts.tokenizer(await phonemes(dir, text, o.lang), { truncation: true }), at = 256 * Math.min(Math.max(input_ids.dims.at(-1) - 2, 0), 509), style = new Float32Array(256);
+    const z = o.lang === 'zh' ? await zhLoad() : null, m = z ? z.tts : tts;   // Chinese: its own model; an English word inside the line is said from its English phonemes
+    const ph = z ? await z.g2p(text, (w) => phonemes(dir, w, 'en-us')) : await phonemes(dir, text, o.lang);
+    const { input_ids } = m.tokenizer(ph, { truncation: true }), at = 256 * Math.min(Math.max(input_ids.dims.at(-1) - 2, 0), 509), style = new Float32Array(256);
     for (const [name, share] of o.mix) { const v = pack(name); for (let i = 0; i < 256; i++) style[i] += share * v[at + i]; }
-    const { waveform } = await tts.model({ input_ids, style: new tf.Tensor('float32', style, [1, 256]), speed: new tf.Tensor('float32', [o.speed], [1]) });
+    const { waveform } = await m.model({ input_ids, style: new tf.Tensor('float32', style, [1, 256]), speed: new tf.Tensor('float32', [o.speed], [1]) });
     return { audio: waveform.data, sampling_rate: 24000 };
   };
   const say = (text, o) => (o.lang ? foreign(text, o) : tts.generate(text, { voice: o.voice, speed: o.speed }));

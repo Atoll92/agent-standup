@@ -463,5 +463,8 @@
  "Agents you named yourself take these names too (switch below).": "你自己命名的代理也会使用这些名字（见下方开关）。",
  "Zen: alerts only, no voices (M key)": "禅模式：只有提示音，没有语音（M 键）",
  "Sound: all, zen (alerts only), off": "声音：全部、禅模式（仅提示音）、关闭",
- "Zen mode: alerts, no voices": "禅模式：提示音，无语音"
+ "Zen mode: alerts, no voices": "禅模式：提示音，无语音",
+ "Hold the call in this language? Your Claude Code translates what the agents say.": "用此语言进行通话吗？智能体说的话由你的 Claude Code 翻译。",
+ "Yes": "是",
+ "Voices ready in English. This language has natural voices too: one more download.": "英语语音已就绪。此语言也有自然语音：再下载一次即可。"
 }

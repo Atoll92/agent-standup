@@ -5,7 +5,7 @@
 //   agent-standup statusline                        same, one short line; reads Claude Code's statusLine JSON on stdin
 //   agent-standup report [--day D] [--here] [--json] [--titles]  what each session did that day: time worked, time it waited for you, calls, files (the plugin's whiteboard and timesheet skills read it)
 //   agent-standup credits [--session ID] [--here] [--json]  a line for a pull request: who was on the call (the lead and its sub-agents, named as the call names them) and what they did (the plugin's credits skill)
-// Everything reads the local session files Claude Code already writes. Nothing is sent anywhere unless the call is in French, Spanish or Brazilian Portuguese or you turn on the jokes (they use your own Claude login or ANTHROPIC_API_KEY).
+// Everything reads the local session files Claude Code already writes. Nothing is sent anywhere unless the call is in French, Spanish or Brazilian Portuguese (or German, Danish, Japanese, Korean or Chinese, once you say yes) or you turn on the jokes (they use your own Claude login or ANTHROPIC_API_KEY).
 const path = require('path'), { spawn } = require('child_process');
 const pkg = require('../package.json');
 const argv = process.argv.slice(2), flags = {}, rest = [];

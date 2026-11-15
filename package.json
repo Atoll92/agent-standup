@@ -36,6 +36,9 @@
     "test": "node --test test/*.test.js"
   },
   "devDependencies": {
+    "jieba-wasm": "2.4.0",
+    "opencc-js": "1.4.2",
+    "pinyin-pro": "3.29.5",
     "puppeteer-core": "^25.13.0"
   },
   "contributes": {

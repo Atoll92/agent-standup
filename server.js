@@ -1270,7 +1270,7 @@ const translate = (texts, lang) => translateFast(texts, lang);
 
 // Warm `claude` workers: after a slow first call each translation takes ~2-3 s (a cold `claude -p` costs ~6 s).
 // The languages a call can be held in besides English (the page asks for one with `lang`; French when it says nothing, as it always was).
-const TR_LANG = { fr: 'French', es: 'Spanish', pt: 'Brazilian Portuguese' }, trLang = (l) => (Object.hasOwn(TR_LANG, l) ? l : 'fr');
+const TR_LANG = { fr: 'French', es: 'Spanish', pt: 'Brazilian Portuguese', de: 'German', da: 'Danish', ja: 'Japanese', ko: 'Korean', zh: 'Simplified Chinese', zt: 'Traditional Chinese' }, trLang = (l) => (Object.hasOwn(TR_LANG, l) ? l : 'fr');
 const trInstr = (lang) => `Translate each string of this JSON array into natural spoken ${TR_LANG[lang]}, as a teammate would say it in a meeting. Keep code identifiers, file paths, library names and numbers unchanged.`;
 const trSys = (lang) => `You are a translation engine. Translate the user message into natural spoken ${TR_LANG[lang]}, as a colleague would say it in a meeting. Keep code identifiers, file paths, library names and numbers unchanged. Reply with ONLY the translation, nothing else.`;
 class TrWorker {
@@ -1365,7 +1365,7 @@ function tts(text, voice, rate, engine, fb) {
   if (ttsJobs.has(key)) return ttsJobs.get(key);
   fs.mkdirSync(ttsDir, { recursive: true });
   const tmp = file + '.part.wav';
-  const job = (kk ? kokoro.synth(text, voice, kokoro.speedFor(rate), tmp).catch((e) => { const vs = listVoices(), v = vs.voices.find((x) => x.name === fb) || vs.voices.find((x) => x.locale.startsWith(kokoro.localeOf(voice).slice(0, 3))); if (!v) throw e; return synthesize(v.name, rate, text, tmp); }) : synthesize(voice, rate, text, tmp))   // a line Kokoro cannot make goes to a system voice instead of being dropped: the one the page names (fb, its best system voice for this character), or else the first one of the same language
+  const job = (kk ? kokoro.synth(text, voice, kokoro.speedFor(rate), tmp).catch((e) => { if (kokoro.natural(voice)) throw e; const vs = listVoices(), v = vs.voices.find((x) => x.name === fb) || vs.voices.find((x) => x.locale.startsWith(kokoro.localeOf(voice).slice(0, 3))); if (!v) throw e; return synthesize(v.name, rate, text, tmp); }) : synthesize(voice, rate, text, tmp))   // a line Kokoro cannot make goes to a system voice instead of being dropped: the one the page names (fb, its best system voice for this character), or else the first one of the same language. Not for German, Danish, Japanese and Korean (natural): those are natural voices or none, and the page babbles the line
     .then(() => { fs.renameSync(tmp, file); return file; }).finally(() => ttsJobs.delete(key));
   ttsJobs.set(key, job); return job;
 }
@@ -1542,7 +1542,7 @@ function start(port = PORT) {
       if (url.searchParams.get('engine') === 'kokoro') { const st = kokoro.status(); if (st.installed && !st.gaveUp) kokoro.warm(); return json({ available: st.installed && !st.gaveUp, ready: st.ready, voices: kokoro.voices(), platform: process.platform, engine: 'kokoro' }); }
       return loadVoices().then((v) => json(v));
     }
-    if (url.pathname === '/api/kokoro/install' && req.method === 'POST') return json(kokoro.install()); if (url.pathname === '/api/usage' && req.method === 'POST') return json(usageWeek());
+    if (url.pathname === '/api/kokoro/install' && req.method === 'POST') return json(kokoro.install({ st: url.searchParams.get('st') === '1', zh: url.searchParams.get('zh') === '1' }));   /* st=1: the voices of German, Danish, Japanese and Korean as well; zh=1: the Chinese ones */ if (url.pathname === '/api/usage' && req.method === 'POST') return json(usageWeek());
     if (url.pathname === '/api/update') return updateInfo().then(json, () => json({ on: false, current: VERSION }));   /* a newer version, at most one request to npm a day (updateInfo) */
     if (url.pathname === '/api/kokoro') return json(kokoro.status());
     if (url.pathname === '/api/tts') {

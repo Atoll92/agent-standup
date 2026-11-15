@@ -559,9 +559,11 @@ const FR = () => prefs.lang === 'fr';
 // Spanish and Brazilian Portuguese are one too, unless the person switches it off (⚙ → Language). Translating sends the lines to Anthropic through their own Claude Code and counts on their plan, which
 // nobody who picked one of these two languages before had agreed to: the first call held in one of them says so, once, with the way out (callNote). With any other interface language, or the switch off,
 // the call is the session as it is, with the built-in lines in English.
-const CALL_LANG = { fr: 'fr', es: 'es', 'pt-BR': 'pt' };
+const CALL_LANG = { fr: 'fr', es: 'es', 'pt-BR': 'pt', de: 'de', da: 'da', ja: 'ja', ko: 'ko', 'zh-CN': 'zh', 'zh-TW': 'zh' };
+const NATURAL = new Set(['de', 'da', 'ja', 'ko', 'zh']);   // held in these only when the person said yes (prefs.callNew), asked once on the call: they were English calls until 1.47, and translating sends what the agents say. Their voices are natural or none: never a system voice, the babble until the natural ones are there
 let noTr = false;   // no Claude Code and no API key on this computer: nothing can be translated, and a Spanish or Portuguese call is not held (French goes on saying what is missing, as it always did)
-const CALL = () => { const l = CALL_LANG[prefs.lang]; return l && (l === 'fr' || (prefs.callTr && !noTr)) ? l : 'en'; }, TRL = () => CALL() !== 'en';
+const CALL = () => { const l = CALL_LANG[prefs.lang]; return l && (l === 'fr' || ((NATURAL.has(l) ? prefs.callNew === true : prefs.callTr) && !noTr)) ? l : 'en'; }, TRL = () => CALL() !== 'en';
+const TLANG = () => (CALL() === 'zh' && prefs.lang === 'zh-TW' ? 'zt' : CALL());   // what the call is written in: Chinese is one language for the voices (Mandarin) and two for the text, Simplified (zh) and Traditional as in Taiwan (zt)
 const FR_L = 'le|la|les|des|une|un|et|est|pour|dans|que|qui|pas|sur|avec|je|tu|nous|vous|ce|cette|ça|du|au|aux|mais|sont|été|fait|plus|ne|ont|il|elle|ils|elles|très|aussi|donc|bien|tout|voici|voilà|merci|oui|non|comme|où|déjà|encore', FR_W = new RegExp('\\b(' + FR_L + ')\\b', 'gi'), EN_W = /\b(the|and|is|are|to|of|in|that|with|for|this|it|on|you|we|not|have|has|was|be|will|can|from|your|at|as|but|all|now|also|done|here|there|which|what|then|just|so)\b/gi;
 // Spanish and Portuguese: only words that are neither French nor English words, and that the other of the two does not have (para, por, como, este… say nothing). Accents are not ASCII: the edges are spelled out.
 const wordsRe = (w) => new RegExp('(^|[^\\p{L}\\p{N}_])(?:' + w + ')(?![\\p{L}\\p{N}_])', 'giu');
@@ -583,7 +585,7 @@ const L = (fr, en) => (FR() ? fr : tr(en));
 async function loadLocale(code) { LOC = {}; if (code === 'en' || code === 'fr') return; try { const r = await fetch('/locales/' + encodeURIComponent(code) + '.json'); if (r.ok) LOC = await r.json(); } catch {} }
 async function setLang(code, save) {
   if (!LANGS.some((l) => l[0] === code)) code = 'en'; prefs.lang = code; await loadLocale(code); if (save) { langKeep = null; prefs.langChosen = true; savePrefs(); }
-  if (TRL()) fetch('/api/warm?lang=' + CALL()).catch(() => {}); AUD.stopAll(); synth && synth.cancel(); applyLang(); if (TRL()) prefetchTr(S.idx); kokoroUI(); voiceOffer(); callNote(); paintMissing();   /* its texts, and the offer to add the voices of this language */
+  if (TRL()) fetch('/api/warm?lang=' + TLANG()).catch(() => {}); AUD.stopAll(); synth && synth.cancel(); applyLang(); if (TRL()) prefetchTr(S.idx); kokoroUI(); voiceOffer(); callNote(); paintMissing();   /* its texts, and the offer to add the voices of this language */
 }
 
 // =====================================================================
@@ -955,11 +957,11 @@ const speakable = (t) => t.replace(/https?:\/\/(?:www\.)?([\w-]+(?:\.[\w-]+)*)\S
   .replace(/\s*[—–]\s*/g, ', ').replace(/\(([^)]{0,40})\)/g, ', $1,').replace(/\s+/g, ' ').trim();
 
 // ---------- translation (local claude CLI) ----------
-const trMaps = {}, trMap = (l = CALL()) => (trMaps[l] = trMaps[l] || new Map()), trPending = new Map();
+const trMaps = {}, trMap = (l = TLANG()) => (trMaps[l] = trMaps[l] || new Map()), trPending = new Map();
 const trMem = { has: (t) => trMap().has(t), get: (t) => trMap().get(t), set: (t, v, l) => trMap(l).set(t, v) };   // one memory per language of the call: what was translated into French is not what is said in Spanish
 const baseText = (ev, max) => short(ev.text, max || (S.live ? (ev.kind === 'order' ? 220 : 180) : (ev.kind === 'order' ? 200 : 230)));
 function ensureTr(texts) {
-  const lang = CALL(), pk = (t) => lang + '|' + t; if (lang === 'en') return Promise.resolve([]);
+  const lang = TLANG(), pk = (t) => lang + '|' + t; if (lang === 'en') return Promise.resolve([]);
   texts = [...new Set(texts)].filter((t) => t && !trMem.has(t)).filter((t) => langOf(t) !== lang);   // already in the language of the call: nothing to translate
   const waits = texts.filter((t) => trPending.has(pk(t))).map((t) => trPending.get(pk(t))), fresh = texts.filter((t) => !trPending.has(pk(t)));
   if (fresh.length) {
@@ -985,7 +987,7 @@ function spoken(ev) {
   if (ev.kind === 'report') return L('Terminé. ', 'Done. ') + t;
   return t;
 }
-async function loadHealth() { try { S.health = await (await fetch('/api/health')).json(); noTr = S.health.claude === null && !S.health.apiKey; } catch {} updateHint(); }
+async function loadHealth() { try { S.health = await (await fetch('/api/health')).json(); noTr = S.health.claude === null && !S.health.apiKey; } catch {} updateHint(); callNote(); }
 function trProblem() {   // why translation can't work, with what to do about it
   const h = S.health || {};
   if (h.claude === null && !h.apiKey) return L('Claude Code est introuvable : installez-le (npm i -g @anthropic-ai/claude-code) ou indiquez son chemin dans le réglage « agentStandup.claudePath ».', 'Claude Code not found: install it (npm i -g @anthropic-ai/claude-code) or set its path in the “agentStandup.claudePath” setting.');
@@ -1162,7 +1164,7 @@ const TTS = {
       }
       if (!d.available) return; this.server = true; this.pool = sys; } catch {}
   },
-  voiceFor(p, lo = CALL()) { const pool = this.pool[lo].length || lo === 'fr' ? this.pool[lo] : this.pool.en; return pool.length ? (p.id === 'main' ? pool[0] : pool[(p.vi >>> 2) % pool.length]) : null; },
+  voiceFor(p, lo = CALL()) { if (noNatural(lo)) return null; const pool = this.pool[lo].length || lo === 'fr' ? this.pool[lo] : this.pool.en; return pool.length ? (p.id === 'main' ? pool[0] : pool[(p.vi >>> 2) % pool.length]) : null; },
   rate() { return Math.round(Math.max(120, Math.min(330, 178 * (S.live ? 1.12 * lagFactor() * (S.boost > 1 ? 1.25 : 1) : +$('#speed').value))) / 10) * 10; },
   rateAt(k, boost) { const i = S.idx, b = S.boost; S.idx = k; S.boost = boost; const r = this.rate(); S.idx = i; S.boost = b; return r; },   // the rate rate() will give once playback is at event k
   buf(text, voice, rate, ahead) {   // ahead: made in advance (see warmTTS); otherwise the line is wanted now
@@ -1182,7 +1184,8 @@ const TTS = {
     const end = () => { this.busy = false; this.pump(); }; this.buf(j.text, j.voice, j.rate, true).then(end, end);
   },
 };
-const babbles = () => prefs.vstyle !== 'kokoro' || TTS.engine !== 'kokoro';   // babble: by choice (Animal Crossing), or because the real voices are not there yet (not installed, downloading, loading, stopped). A system voice only reads a line of a language the model lacks
+const babbles = () => prefs.vstyle !== 'kokoro' || TTS.engine !== 'kokoro';
+const natOnly = (lo) => NATURAL.has(lo) && lo === CALL(), noNatural = (lo) => natOnly(lo) && !TTS.pool[lo].some((v) => TTS.kv.has(v));   // a call held in German, Danish, Japanese or Korean: its lines are said by the natural voices of that language or babbled, never by a system voice   // babble: by choice (Animal Crossing), or because the real voices are not there yet (not installed, downloading, loading, stopped). A system voice only reads a line of a language the model lacks
 // The lines to come are synthesized ahead of time, so that a voice starts with its line and not a second later. What is made must be what will be asked for: the same text (the lead-in, the part
 // that is read when the call is behind), the same voice and the same rate. So this follows what run() will do with the next events if nothing else arrives before then: how it groups them
 // (sub-agents back to back, orders in a row) and how it sets the pace. Keep the two in step: a difference costs nothing but the benefit (the line is then made when it is said).
@@ -1330,8 +1333,8 @@ function captionRun(id, text, totalMs, from = 0) {   // from: how far into the l
   for (const x of ps) { const when = at - from; if (when <= 0) cur = x; else timers.push(setTimeout(() => setCaption(id, x), when)); at += totalMs * x.length / n; }
   setCaption(id, cur); capTimers.set(id, timers);
 }
-// In a Spanish or Portuguese call every line is meant to be in that language (it was translated into it) unless it is plainly English: Spanish, Portuguese and French share too many short words to be told apart on one line.
-const inCall = (lo) => { const c = CALL(); return !lo ? c : (c === 'es' || c === 'pt') && lo !== 'en' ? c : lo; };
+// In a Spanish or Portuguese call (and German, Danish, Japanese, Korean) every line is meant to be in that language (it was translated into it) unless it is plainly English: Spanish, Portuguese and French share too many short words to be told apart on one line.
+const inCall = (lo) => { const c = CALL(); return !lo ? c : c !== 'en' && c !== 'fr' && lo !== 'en' ? c : lo; };   /* the same in the other translated calls: in a Japanese call, a line of kanji alone reads as Chinese */
 const voiceLang = (t) => inCall(langOf(t));   // a French line gets a French voice whatever the language of the call, and the same for the others
 // A line of the session that is too short to tell ("OK.", a file name) does not follow the interface language: in a French session watched in English, the lead would change voice for that
 // one line and change back. It follows, in this order: the whole line it is cut from, what the same character said just before (its voice goes on) or says next, the language of the session so far.
@@ -1357,9 +1360,9 @@ async function speakLine(text, p, primary, token, lo = voiceLang(text), always =
   captionRun(p.id, text, estMs(text));
   if (AUD.calm() || !prefs.voice) { if (!AUD.calm() && prefs.office) AUD.murmur(0.5 + (p.vi % 5) / 10, estMs(text) / 1000); return sleep(estMs(text)); }
   if (S.hurry && !always) return sleep(estMs(text));
-  const bab = babbles(); if (bab && AUD.ctx) { try { await speakBabble(text, p, primary ? 1 : 0.5, token); return; } catch {} }
+  const bab = babbles() || noNatural(lo); if (bab && AUD.ctx) { try { await speakBabble(text, p, primary ? 1 : 0.5, token); return; } catch {} }
   if (!bab && TTS.server && AUD.ctx) { try { await speakServer(text, p, primary ? 1 : 0.5, token, lo); return; } catch {} }
-  if (!bab && primary && synth && !EMBED && (await speakBrowser(text, p, token, lo))) return;
+  if (!bab && primary && synth && !EMBED && !natOnly(lo) && (await speakBrowser(text, p, token, lo))) return;
   if (token !== S.token) return;   // paused while a voice was being tried: no mumble after the fact
   const ms = estMs(text), o = AUD.murmur(0.5 + (p.vi % 5) / 10, ms / 1000); captionRun(p.id, text, ms);
   return o ? new Promise((res) => { o.addEventListener('ended', res); setTimeout(res, ms + 500); }) : sleep(ms);   // the mumble that stands in for a voice: the line ends with it, also when Pause stops it
@@ -2202,8 +2205,15 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 const BYE = { en: ['Bye, everyone!', 'Off I go. 👋', 'Thanks, see you!', 'My work here is done.', 'Catch you later!', 'Logging off, bye!', 'That’s a wrap!', 'Good luck with the rest!', 'Mic drop. 🎤', 'Leaving the call… ☕'],
   fr: ['Salut tout le monde !', 'Je file. 👋', 'Merci, à plus !', 'Ma mission est terminée.', 'À tout à l’heure !', 'Je me déconnecte, ciao !', 'C’est dans la boîte !', 'Bon courage pour la suite !', 'Mic drop. 🎤', 'Je quitte l’appel… ☕'],
   es: ['¡Adiós a todos!', 'Me voy. 👋', '¡Gracias, nos vemos!', 'Mi trabajo aquí ha terminado.', '¡Hasta luego!', 'Me desconecto, ¡chao!', '¡Listo, eso es todo!', '¡Suerte con lo que queda!', 'Mic drop. 🎤', 'Salgo de la llamada… ☕'],
-  pt: ['Tchau, pessoal!', 'Estou indo. 👋', 'Valeu, até mais!', 'Meu trabalho aqui está feito.', 'Até logo!', 'Estou saindo, tchau!', 'Pronto, é isso!', 'Boa sorte com o resto!', 'Mic drop. 🎤', 'Saindo da chamada… ☕'] };
-function byeLine(id) { const P = BYE[CALL()], seed = hash(id + String(S.clock | 0)); let l = P[seed % P.length]; if (l === S.lastBye) l = P[(seed + 1) % P.length]; return (S.lastBye = l); }
+  pt: ['Tchau, pessoal!', 'Estou indo. 👋', 'Valeu, até mais!', 'Meu trabalho aqui está feito.', 'Até logo!', 'Estou saindo, tchau!', 'Pronto, é isso!', 'Boa sorte com o resto!', 'Mic drop. 🎤', 'Saindo da chamada… ☕'],
+  de: ['Tschüss, alle zusammen!', 'Ich bin dann mal weg. 👋', 'Danke, bis später!', 'Meine Arbeit hier ist getan.', 'Bis dann!', 'Ich logge mich aus, tschüss!', 'Das war’s!', 'Viel Erfolg mit dem Rest!', 'Mic drop. 🎤', 'Ich verlasse den Call… ☕'],
+  da: ['Farvel, alle sammen!', 'Så smutter jeg. 👋', 'Tak, vi ses!', 'Mit arbejde her er gjort.', 'Vi snakkes!', 'Jeg logger af, hej hej!', 'Det var det!', 'Held og lykke med resten!', 'Mic drop. 🎤', 'Jeg forlader opkaldet… ☕'],
+  ja: ['皆さん、お疲れさまでした！', 'では、失礼します。👋', 'ありがとう、またね！', 'ここでの仕事は終わりです。', 'またあとで！', 'ログアウトします、では！', 'これで終わりです！', '残りも頑張ってください！', 'マイクドロップ。🎤', '通話を抜けます… ☕'],
+  ko: ['다들 수고하셨어요!', '저는 이만 가볼게요. 👋', '고마워요, 또 봐요!', '제 할 일은 끝났어요.', '나중에 봐요!', '로그아웃할게요, 안녕!', '여기까지예요!', '나머지도 잘 마무리하세요!', '마이크 드롭. 🎤', '통화에서 나갈게요… ☕'],
+  zh: ['大家再见！', '我先走了。👋', '谢谢，回头见！', '我这边的活儿干完了。', '回头聊！', '我下线了，拜拜！', '就到这儿吧！', '剩下的就拜托大家了！', '麦克风一丢。🎤', '我先退出会议了… ☕'],
+  zt: ['大家再見！', '我先走了。👋', '謝謝，回頭見！', '我這邊的工作做完了。', '回頭聊！', '我下線了，拜拜！', '就到這裡吧！', '剩下的就拜託大家了！', '麥克風一丟。🎤', '我先退出會議了… ☕'],
+};
+function byeLine(id) { const P = BYE[TLANG()], seed = hash(id + String(S.clock | 0)); let l = P[seed % P.length]; if (l === S.lastBye) l = P[(seed + 1) % P.length]; return (S.lastBye = l); }
 function vanish(id) {
   S.gone.add(id); const t = $('#t-' + id), p = S.agents[id]; if (!t || !p) return;
   toast(`${p.name} ${L('a quitté l’appel', 'left the call')} 👋`);
@@ -2299,9 +2309,21 @@ const THINK = {
     todo: ['Una cosa a la vez: {x}.', '{x}… y luego lo siguiente.'], next: ['Después de esto: {x}.'], grep: ['¿Dónde se esconde “{x}”?', '“{x}”… tiene que estar en algún sitio.'], web: ['“{x}”… a ver qué sale.'], grep0: ['Tiene que estar por aquí.', '¿Dónde se esconde eso?'], task: ['{x}. Sigo con ello.', '{x}… creo que ya casi.'] },
   pt: { run: ['Ainda rodando… {x}.', 'Vamos… {x}.', '{x}. Já vai.'], err: ['Por que isso falhou?', 'Esse erro de novo… o que estou deixando passar?', 'Não era o que eu esperava de “{x}”.'], two: ['{a}, depois {b}… qual é a ligação?', '{a} e {b}. Tem que estar em um dos dois.'], one: ['Alguma coisa em {a} não bate.', '{a}… onde ficava essa parte mesmo?'], again: ['De volta a {a}. De novo.', '{a}, mais uma vez. Estou deixando passar alguma coisa.'],
     todo: ['Uma coisa de cada vez: {x}.', '{x}… depois a próxima.'], next: ['Depois disso: {x}.'], grep: ['Onde “{x}” está se escondendo?', '“{x}”… tem que estar em algum lugar.'], web: ['“{x}”… vamos ver o que aparece.'], grep0: ['Tem que estar em algum lugar aqui.', 'Onde isso está se escondendo?'], task: ['{x}. Sigo nisso.', '{x}… estou chegando lá, acho.'] },
+  de: { run: ['Läuft noch… {x}.', 'Na komm… {x}.', '{x}. Gleich ist es so weit.'], err: ['Warum ist das fehlgeschlagen?', 'Schon wieder dieser Fehler… was übersehe ich?', 'Das hatte ich von „{x}“ nicht erwartet.'], two: ['{a}, dann {b}… was verbindet die beiden?', '{a} und {b}. Es muss in einem von beiden sein.'], one: ['Irgendwas in {a} passt nicht zusammen.', '{a}… wo war dieser Teil noch mal?'], again: ['Zurück zu {a}. Schon wieder.', '{a}, noch einmal. Mir entgeht etwas.'],
+    todo: ['Eins nach dem anderen: {x}.', '{x}… dann das Nächste.'], next: ['Danach: {x}.'], grep: ['Wo versteckt sich „{x}“?', '„{x}“… irgendwo muss es ja sein.'], web: ['„{x}“… mal sehen, was kommt.'], grep0: ['Irgendwo hier muss es sein.', 'Wo versteckt sich das Ding?'], task: ['{x}. Dranbleiben.', '{x}… ich komme voran, glaube ich.'] },
+  da: { run: ['Kører stadig… {x}.', 'Kom nu… {x}.', '{x}. Hvert øjeblik nu.'], err: ['Hvorfor fejlede det?', 'Den fejl igen… hvad overser jeg?', 'Ikke det, jeg ventede af »{x}«.'], two: ['{a}, så {b}… hvad har de med hinanden at gøre?', '{a} og {b}. Det må være i en af dem.'], one: ['Noget i {a} hænger ikke sammen.', '{a}… hvor var den del nu henne?'], again: ['Tilbage til {a}. Igen.', '{a}, en gang til. Jeg overser noget.'],
+    todo: ['Én ting ad gangen: {x}.', '{x}… og så den næste.'], next: ['Bagefter: {x}.'], grep: ['Hvor gemmer »{x}« sig?', '»{x}«… det må være et sted.'], web: ['»{x}«… lad os se, hvad der dukker op.'], grep0: ['Det må være et sted herinde.', 'Hvor gemmer den ting sig?'], task: ['{x}. Hold fokus.', '{x}… jeg nærmer mig, tror jeg.'] },
+  ja: { run: ['まだ実行中… {x}。', 'がんばれ… {x}。', '{x}。もうすぐのはず。'], err: ['なんで失敗したんだろう？', 'またこのエラー… 何を見落としてるんだ？', '「{x}」がこうなるとは思わなかった。'], two: ['{a}、それから{b}… どうつながってるんだろう？', '{a}と{b}。どちらかにあるはず。'], one: ['{a}のどこかがおかしい。', '{a}… あの部分はどこだったっけ？'], again: ['また{a}に戻ってきた。', 'もう一度{a}。何か見落としてる。'],
+    todo: ['一つずつ：{x}。', '{x}… それから次。'], next: ['このあと：{x}。'], grep: ['「{x}」はどこに隠れてるんだ？', '「{x}」… どこかにあるはず。'], web: ['「{x}」… 何が出てくるかな。'], grep0: ['このへんのどこかにあるはず。', 'あれはどこに隠れてるんだ？'], task: ['{x}。集中、集中。', '{x}… たぶん、もう少し。'] },
+  ko: { run: ['아직 실행 중… {x}.', '제발… {x}.', '{x}. 곧 끝날 거야.'], err: ['왜 실패했지?', '또 이 오류네… 뭘 놓치고 있는 거지?', '‘{x}’에서 이럴 줄은 몰랐네.'], two: ['{a}, 그다음 {b}… 둘이 무슨 관계지?', '{a}하고 {b}. 둘 중 하나에 있을 거야.'], one: ['{a}에서 뭔가 안 맞아.', '{a}… 그 부분이 어디였더라?'], again: ['다시 {a}. 또 시작이네.', '{a}, 한 번 더. 뭔가 놓치고 있어.'],
+    todo: ['하나씩 하자: {x}.', '{x}… 그다음 거.'], next: ['이거 다음엔: {x}.'], grep: ['‘{x}’ 어디 숨어 있는 거야?', '‘{x}’… 어딘가 있을 텐데.'], web: ['‘{x}’… 뭐가 나오나 보자.'], grep0: ['여기 어딘가 있을 텐데.', '그거 어디 숨어 있지?'], task: ['{x}. 집중하자.', '{x}… 거의 다 온 것 같아.'] },
+  zh: { run: ['还在跑… {x}。', '快点儿… {x}。', '{x}。马上就好。'], err: ['怎么失败了？', '又是这个错误… 我漏了什么？', '“{x}”的结果跟我想的不一样。'], two: ['{a}，然后{b}… 它们之间有什么关系？', '{a}和{b}。问题肯定在其中一个。'], one: ['{a}里有个地方不对劲。', '{a}… 那部分在哪儿来着？'], again: ['又回到{a}了。', '再看一次{a}。我肯定漏了什么。'],
+    todo: ['一件一件来：{x}。', '{x}… 然后下一个。'], next: ['接下来：{x}。'], grep: ['“{x}”到底藏在哪儿？', '“{x}”… 肯定在哪儿。'], web: ['“{x}”… 看看能搜到什么。'], grep0: ['肯定就在这儿附近。', '那个东西藏哪儿去了？'], task: ['{x}。专心点。', '{x}… 应该快好了。'] },
+  zt: { run: ['還在跑… {x}。', '快一點… {x}。', '{x}。馬上就好。'], err: ['怎麼失敗了？', '又是這個錯誤… 我漏了什麼？', '“{x}”的結果跟我想的不一樣。'], two: ['{a}，然後{b}… 它們之間有什麼關係？', '{a}和{b}。問題肯定在其中一個。'], one: ['{a}裡有個地方不對勁。', '{a}… 那部分在哪裡啊？'], again: ['又回到{a}了。', '再看一次{a}。我肯定漏了什麼。'],
+    todo: ['一件一件來：{x}。', '{x}… 然後下一個。'], next: ['接下來：{x}。'], grep: ['“{x}”到底藏在哪裡？', '“{x}”… 一定在某個地方。'], web: ['“{x}”… 看看能搜到什麼。'], grep0: ['一定就在這附近。', '那個東西藏到哪裡去了？'], task: ['{x}。專心一點。', '{x}… 應該快好了。'] },
 };
 function thoughtFor(id) {
-  const now = Date.now(), W = THINK[CALL()], seen = (TH.said[id] = TH.said[id] || []), cut = (x, n) => { x = String(x || '').replace(/\s+/g, ' ').trim(); return (x.length > n ? x.slice(0, n).replace(/\s+\S*$/, '') : x).replace(/[.…,;:\s]+$/, ''); };   // the line it goes into brings its own punctuation
+  const now = Date.now(), W = THINK[TLANG()], seen = (TH.said[id] = TH.said[id] || []), cut = (x, n) => { x = String(x || '').replace(/\s+/g, ' ').trim(); return (x.length > n ? x.slice(0, n).replace(/\s+\S*$/, '') : x).replace(/[.…,;:\s]+$/, ''); };   // the line it goes into brings its own punctuation
   const real = realThought(id); if (real) return real;   // its own words first, always: the rest is only for when there are none (left)
   const buf = (S.term[id] || []).slice(-8), last = buf[buf.length - 1], r = S.run[id], hot = [], out = [], add = (to, k, v) => { for (const tpl of W[k]) to.push(tpl.replace(/\{(\w+)\}/g, (m, key) => v[key]).replace(/([?!])[.…]+/g, '$1').replace(/([?!]) (\p{Ll})/u, (m, a, b) => a + ' ' + b.toUpperCase())); };   // "Why is it slow?" keeps its own mark, without a full stop after it
   const cmd = (t) => String(t || '').trim().replace(/^(?:cd\s+\S+\s*(?:&&|;)\s*)+/, '').replace(/^(?:[A-Za-z_]\w*=\S*\s+)+/, '').split(/\s+(?:&&|\|\||[|;>])/)[0].split(/\s+/).slice(0, 3).join(' ');   // the command itself: not the folder it starts from, nor what it is piped into
@@ -2341,7 +2363,7 @@ const clearThoughts = () => { document.querySelectorAll('.tile.musing').forEach(
 function stopMumble() { const v = TH.voice; if (v) { TH.voice = null; try { v.src.stop(); } catch {} } }
 async function mumble(id, text) {   // lips closed: the mouth does not move, the music does not make room, and anyone who starts to speak cuts it
   const p = S.agents[id], t = $('#t-' + id); if (!p || !t || !prefs.voice || AUD.calm() || !AUD.ctx || S.speakers.size || TH.voice) return;
-  if (!TTS.server || babbles()) { const o = AUD.murmur(0.5 + (p.vi % 5) / 10, Math.min(2.2, estMs(text) / 1000), 0.4); if (o) { TH.voice = { id, src: o }; o.addEventListener('ended', () => { if (TH.voice && TH.voice.src === o) TH.voice = null; }); } return; }
+  if (!TTS.server || babbles() || noNatural(voiceLang(text))) { const o = AUD.murmur(0.5 + (p.vi % 5) / 10, Math.min(2.2, estMs(text) / 1000), 0.4); if (o) { TH.voice = { id, src: o }; o.addEventListener('ended', () => { if (TH.voice && TH.voice.src === o) TH.voice = null; }); } return; }
   const voice = TTS.voiceFor(p, voiceLang(text)), token = S.token; if (!voice) return; let buf; try { buf = await TTS.buf(speakable(text), voice, TTS.rate(), true); } catch { return; }   // made like a line prepared ahead: it never delays a real one
   if (token !== S.token || S.speakers.size || TH.voice || !t.classList.contains('musing')) return;   // someone spoke meanwhile, or the thought is gone
   const c = AUD.ctx, src = c.createBufferSource(), lp = c.createBiquadFilter(), g = c.createGain(); src.buffer = buf; lp.type = 'lowpass'; lp.frequency.value = 1100; g.gain.value = 0.2; let stops = [];
@@ -2648,13 +2670,20 @@ function openRecap() {
 const REACT = { fr: { ack: ['Compris, chef.', 'C’est parti.', 'Encore du boulot…', 'Je m’en occupe.', 'Ok ok ok.'], done: ['Ça compile chez moi.', 'Oh là là, encore des bugs.', 'Qui a écrit ce code ?', 'Super, on a fini.', 'Classique.'] },
                 en: { ack: ['Got it, boss.', 'On it.', 'More work, great.', 'I’ll handle it.', 'Okay okay okay.'], done: ['Works on my machine.', 'Oh man, more bugs.', 'Who wrote this code?', 'Nice, we are done.', 'Classic.'] },
                 es: { ack: ['Entendido, jefe.', 'Vamos allá.', 'Más trabajo, genial.', 'Yo me encargo.', 'Vale, vale, vale.'], done: ['En mi máquina funciona.', 'Madre mía, más bugs.', '¿Quién escribió este código?', 'Genial, hemos terminado.', 'Un clásico.'] },
-                pt: { ack: ['Entendido, chefe.', 'Vamos lá.', 'Mais trabalho, que ótimo.', 'Deixa comigo.', 'Tá, tá, tá.'], done: ['Na minha máquina funciona.', 'Nossa, mais bugs.', 'Quem escreveu esse código?', 'Boa, terminamos.', 'Clássico.'] } };
+                pt: { ack: ['Entendido, chefe.', 'Vamos lá.', 'Mais trabalho, que ótimo.', 'Deixa comigo.', 'Tá, tá, tá.'], done: ['Na minha máquina funciona.', 'Nossa, mais bugs.', 'Quem escreveu esse código?', 'Boa, terminamos.', 'Clássico.'] },
+  de: { ack: ['Alles klar, Chef.', 'Bin dran.', 'Noch mehr Arbeit, toll.', 'Ich kümmere mich drum.', 'Okay okay okay.'], done: ['Bei mir läuft’s.', 'Oh Mann, noch mehr Bugs.', 'Wer hat diesen Code geschrieben?', 'Schön, wir sind fertig.', 'Klassiker.'] },
+  da: { ack: ['Forstået, chef.', 'Jeg er på.', 'Mere arbejde, fedt.', 'Jeg klarer det.', 'Okay okay okay.'], done: ['Det virker på min maskine.', 'Åh nej, flere fejl.', 'Hvem har skrevet den her kode?', 'Fedt, vi er færdige.', 'Klassisk.'] },
+  ja: { ack: ['了解です、ボス。', 'やります。', 'また仕事か、最高。', '任せてください。', 'はいはいはい。'], done: ['僕の環境では動きます。', 'うわ、またバグだ。', 'このコード書いたの誰？', 'よし、終わりました。', 'お約束ですね。'] },
+  ko: { ack: ['알겠어요, 보스.', '할게요.', '일이 또 늘었네, 좋다.', '제가 처리할게요.', '네네네.'], done: ['제 컴퓨터에선 돌아가요.', '아 진짜, 버그 또 나왔네.', '이 코드 누가 짰어요?', '좋아요, 끝났어요.', '역시나네요.'] },
+  zh: { ack: ['好的，老板。', '收到。', '又有活儿了，真好。', '交给我吧。', '好好好。'], done: ['在我电脑上是好的。', '天哪，又是 bug。', '这代码谁写的？', '好，搞定了。', '经典。'] },
+  zt: { ack: ['好的，老闆。', '收到。', '又有工作了，真好。', '交給我吧。', '好好好。'], done: ['在我電腦上是好的。', '天哪，又是 bug。', '這程式碼誰寫的？', '好，搞定了。', '經典。'] },
+};
 const quipMem = new Map();
 function prefetchQuips(i) {
   if (!prefs.epi) return; const texts = [];
   for (let k = i; k < Math.min(S.events.length, i + 60) && texts.length < 6; k++) if (S.events[k].kind === 'report') texts.push(baseText(S.events[k], 160));
   const need = texts.filter((t) => !quipMem.has(t)); if (!need.length) return; need.forEach((t) => quipMem.set(t, null));
-  fetch('/api/quips', { method: 'POST', body: JSON.stringify({ texts: need, lang: CALL() }) }).then((r) => r.json()).then((d) => (d.texts || []).forEach((q, i) => d.ok && q && q !== need[i] && quipMem.set(need[i], q))).catch(() => {});
+  fetch('/api/quips', { method: 'POST', body: JSON.stringify({ texts: need, lang: TLANG() }) }).then((r) => r.json()).then((d) => (d.texts || []).forEach((q, i) => d.ok && q && q !== need[i] && quipMem.set(need[i], q))).catch(() => {});
 }
 
 // Little lines that make the call feel alive. They never appear in the transcript and never replace real content: they are short, local (no API) and can be turned off in ⚙.
@@ -2671,11 +2700,29 @@ const ACK = {
   pt: { tests: ['Rodando os testes, como sempre.', 'Testes? Sempre.', 'Vamos ver o que quebra.', 'Verde ou vermelho, eu aviso.'], review: ['Colocando meus óculos de revisor.', 'Lendo tudo duas vezes.', 'Vou ser legal. Talvez.', 'Auditando, já volto.'], explore: ['Vou explorar o código.', 'Dando grep como se não houvesse amanhã.', 'Hora de cavar.', 'Eu vou achar.'],
     fix: ['Hora de caçar bugs.', 'Sinto cheiro de bug.', 'Modo depurador: ligado.', 'Quem quebrou isso?'], docs: ['Vou escrever isso.', 'Documentação, minha favorita.', 'Palavras a caminho.'], ui: ['Pixels, aí vou eu.', 'Vamos deixar bonito.', 'Deixa eu ver o layout.'], cleanup: ['Limpando a bagunça.', 'Hora de arrumar.', 'Apagando coisas. Com cuidado.'],
     perf: ['Vamos deixar rápido.', 'Fazendo o profiling, um momento.', 'Caçando milissegundos.'], any: ['Deixa comigo!', 'Entendido, chefe.', 'Lendo o briefing.', 'Considere feito. Provavelmente.', 'Tá, tá, tá.', 'Nem precisa dizer mais.', 'Já estou indo.', 'Entendido.', 'Primeiro um café. Depois isso.'] },
+  de: { tests: ['Ich lasse die Tests laufen, wie immer.', 'Tests? Immer.', 'Mal sehen, was kaputtgeht.', 'Grün oder rot, ich sag Bescheid.'], review: ['Ich setze meine Reviewer-Brille auf.', 'Ich lese alles zweimal.', 'Ich bin nett. Vielleicht.', 'Ich prüfe, bin gleich zurück.'], explore: ['Ich erkunde die Codebasis.', 'Ich greppe, als gäbe es kein Morgen.', 'Zeit zum Graben.', 'Ich finde es.'],
+    fix: ['Zeit für Bugjagd.', 'Ich rieche einen Bug.', 'Debugger-Modus: an.', 'Wer hat das kaputt gemacht?'], docs: ['Ich schreibe es auf.', 'Dokumentation, mein Lieblingsthema.', 'Gleich kommen Worte.'], ui: ['Pixel, ich komme.', 'Ich mache es hübsch.', 'Ich schaue mir das Layout an.'], cleanup: ['Ich räume das Chaos auf.', 'Zeit zum Aufräumen.', 'Ich lösche Dinge. Vorsichtig.'],
+    perf: ['Machen wir es schnell.', 'Profiling, einen Moment.', 'Ich jage Millisekunden.'], any: ['Bin dran!', 'Alles klar, Chef.', 'Ich lese den Auftrag.', 'Betrachte es als erledigt. Wahrscheinlich.', 'Okay okay okay.', 'Sag nichts mehr.', 'Schon unterwegs.', 'Verstanden.', 'Erst Kaffee. Dann das.'] },
+  da: { tests: ['Jeg kører testene, som altid.', 'Tests? Altid.', 'Lad os se, hvad der går i stykker.', 'Grøn eller rød, jeg siger til.'], review: ['Jeg tager mine reviewer-briller på.', 'Jeg læser alt to gange.', 'Jeg skal nok være sød. Måske.', 'Jeg gennemgår det, er straks tilbage.'], explore: ['Jeg går på opdagelse i koden.', 'Jeg grepper, som om der ingen morgendag er.', 'Tid til at grave.', 'Jeg skal nok finde det.'],
+    fix: ['Tid til fejljagt.', 'Jeg kan lugte en fejl.', 'Debugger-tilstand: til.', 'Hvem har ødelagt det her?'], docs: ['Jeg skriver det ned.', 'Dokumentation, min yndlingsting.', 'Ord på vej.'], ui: ['Pixels, her kommer jeg.', 'Jeg gør det pænt.', 'Lad mig kigge på layoutet.'], cleanup: ['Jeg rydder op i rodet.', 'Tid til oprydning.', 'Jeg sletter ting. Forsigtigt.'],
+    perf: ['Lad os gøre det hurtigt.', 'Profilering, et øjeblik.', 'Jeg jagter millisekunder.'], any: ['Jeg er på!', 'Forstået, chef.', 'Jeg læser opgaven.', 'Betragt det som gjort. Sikkert.', 'Okay okay okay.', 'Sig ikke mere.', 'Allerede på vej.', 'Modtaget.', 'Kaffe først. Så det her.'] },
+  ja: { tests: ['いつも通り、テストを回します。', 'テスト？もちろん。', '何が壊れるか見てみましょう。', '緑か赤か、お知らせします。'], review: ['レビュー用のメガネをかけます。', '全部二回読みます。', '優しくします。たぶん。', 'チェックしてきます。'], explore: ['コードベースを探検してきます。', 'ひたすら検索します。', '掘る時間です。', '見つけてみせます。'],
+    fix: ['バグ狩りの時間です。', 'バグのにおいがします。', 'デバッグモード、オン。', 'これ壊したの誰？'], docs: ['まとめて書きます。', 'ドキュメント、大好きです。', '文章、書きます。'], ui: ['ピクセルの出番です。', 'きれいにします。', 'レイアウトを見てみます。'], cleanup: ['散らかったのを片付けます。', 'お片付けの時間です。', '消していきます。慎重に。'],
+    perf: ['速くしましょう。', 'プロファイリング中、少々お待ちを。', 'ミリ秒を追いかけます。'], any: ['やります！', '了解です、ボス。', '指示を読みます。', '終わったも同然です。たぶん。', 'はいはいはい。', 'お任せください。', 'もう向かってます。', '了解。', 'まずコーヒー。それから。'] },
+  ko: { tests: ['늘 그렇듯 테스트 돌릴게요.', '테스트요? 당연하죠.', '뭐가 깨지는지 봅시다.', '초록이든 빨강이든 알려 드릴게요.'], review: ['리뷰어 안경 쓸게요.', '전부 두 번씩 읽을게요.', '친절하게 할게요. 아마도.', '검토하고 올게요.'], explore: ['코드베이스 탐험하러 갑니다.', '내일이 없는 것처럼 검색할게요.', '파볼 시간이에요.', '찾아낼게요.'],
+    fix: ['버그 사냥 시간이에요.', '버그 냄새가 나요.', '디버거 모드 켰어요.', '이거 누가 망가뜨렸어요?'], docs: ['정리해서 쓸게요.', '문서 작업, 제일 좋아하죠.', '글 들어갑니다.'], ui: ['픽셀들아, 간다.', '예쁘게 만들게요.', '레이아웃 좀 볼게요.'], cleanup: ['어질러진 거 치울게요.', '정리 시간이에요.', '지울게요. 조심해서.'],
+    perf: ['빠르게 만들어 봅시다.', '프로파일링 중이에요, 잠시만요.', '밀리초를 쫓고 있어요.'], any: ['할게요!', '알겠어요, 보스.', '요청 읽어 볼게요.', '다 된 걸로 치세요. 아마도.', '네네네.', '더 말 안 하셔도 돼요.', '벌써 가는 중이에요.', '알겠습니다.', '커피 먼저요. 그다음에 이거.'] },
+  zh: { tests: ['老规矩，先跑测试。', '测试？当然要跑。', '看看哪儿会出问题。', '是绿是红，我告诉你。'], review: ['戴上我的审查眼镜。', '每一行我都看两遍。', '我会客气点的。大概吧。', '我去检查一下，马上回来。'], explore: ['我去翻翻代码库。', '我要疯狂搜索了。', '该深挖了。', '我会找到的。'],
+    fix: ['抓虫时间到。', '我闻到了 bug 的味道。', '调试模式：开启。', '这是谁弄坏的？'], docs: ['我来写下来。', '写文档，我最爱了。', '文字马上来。'], ui: ['像素们，我来了。', '我来把它弄好看。', '我看看布局。'], cleanup: ['我来收拾这堆烂摊子。', '大扫除时间。', '我要删东西了。小心地删。'],
+    perf: ['让它跑快点。', '性能分析中，稍等。', '我在追毫秒。'], any: ['收到！', '好的，老板。', '我先看看需求。', '就当已经搞定了。大概吧。', '好好好。', '不用多说了。', '已经在路上了。', '明白。', '先来杯咖啡，再干这个。'] },
+  zt: { tests: ['老規矩，先跑測試。', '測試？當然要跑。', '看看哪裡會出問題。', '是綠是紅，我告訴你。'], review: ['戴上我的審查眼鏡。', '每一行我都看兩遍。', '我會客氣點的。大概吧。', '我去檢查一下，馬上回來。'], explore: ['我去翻翻程式碼庫。', '我要瘋狂搜尋了。', '該深挖了。', '我會找到的。'],
+    fix: ['抓蟲時間到。', '我聞到了 bug 的味道。', '除錯模式：開啟。', '這是誰弄壞的？'], docs: ['我來寫下來。', '寫文件，我最愛了。', '文字馬上來。'], ui: ['畫素們，我來了。', '我來把它弄好看。', '我看看佈局。'], cleanup: ['我來收拾這堆爛攤子。', '大掃除時間。', '我要刪東西了。小心地刪。'],
+    perf: ['讓它跑快點。', '效能分析中，稍等。', '我在追毫秒。'], any: ['收到！', '好的，老闆。', '我先看看需求。', '就當已經搞定了。大概吧。', '好好好。', '不用多說了。', '已經在路上了。', '明白。', '先來杯咖啡，再幹這個。'] },
 };
 const ACK_RE = [['tests', /test|qa\b|spec|jest|vitest|coverage/], ['review', /review|audit|check|inspect|lint|critique/], ['explore', /explor|search|research|find|investigat|look|map|scan/], ['fix', /fix|bug|debug|error|crash|broken/], ['docs', /\bdoc|readme|write|changelog|spec/], ['ui', /\bui\b|design|css|style|layout|front|page|component/], ['cleanup', /refactor|clean|tidy|dead code/], ['perf', /perf|speed|slow|optimi|latenc|profil/]];
 function ackLine(ev) {
   // classify on role and title only: the prompt text is too noisy
-  const R = ACK[CALL()], text = `${ev.title || ''} ${(S.agents[ev.to] || {}).role || ''}`.toLowerCase(), cat = (ACK_RE.find(([, re]) => re.test(text)) || [])[0];
+  const R = ACK[TLANG()], text = `${ev.title || ''} ${(S.agents[ev.to] || {}).role || ''}`.toLowerCase(), cat = (ACK_RE.find(([, re]) => re.test(text)) || [])[0];
   const pool = cat && hash(String(ev.ts)) % 4 ? R[cat] : R.any, seed = hash(String(ev.ts) + ev.to); let line = pool[seed % pool.length];
   if (line === S.lastAck) line = pool[(seed + 1) % pool.length]; S.lastAck = line; return line;
 }
@@ -2684,8 +2731,15 @@ function ackLine(ev) {
 // =====================================================================
 const CHAT = { quiet: 0.45, normal: 1, lively: 1.8 }, chatMul = () => CHAT[prefs.chat] || 1;   // normal unless chosen otherwise
 const EXW = { en: { edit: ['edit', 'edits'], call: ['tool call', 'tool calls'], error: ['error', 'errors'], file: ['file', 'files'] }, fr: { edit: ['modification', 'modifications'], call: ['appel d’outil', 'appels d’outils'], error: ['erreur', 'erreurs'], file: ['fichier', 'fichiers'] },
-  es: { edit: ['cambio', 'cambios'], call: ['llamada a herramienta', 'llamadas a herramientas'], error: ['error', 'errores'], file: ['archivo', 'archivos'] }, pt: { edit: ['alteração', 'alterações'], call: ['chamada de ferramenta', 'chamadas de ferramentas'], error: ['erro', 'erros'], file: ['arquivo', 'arquivos'] } };
-const P = (k, n) => { const w = EXW[CALL()][k]; return `${n} ${n === 1 ? w[0] : w[1]}`; };
+  es: { edit: ['cambio', 'cambios'], call: ['llamada a herramienta', 'llamadas a herramientas'], error: ['error', 'errores'], file: ['archivo', 'archivos'] }, pt: { edit: ['alteração', 'alterações'], call: ['chamada de ferramenta', 'chamadas de ferramentas'], error: ['erro', 'erros'], file: ['arquivo', 'arquivos'] },
+  de: { edit: ['Änderung', 'Änderungen'], call: ['Tool-Aufruf', 'Tool-Aufrufe'], error: ['Fehler', 'Fehler'], file: ['Datei', 'Dateien'] },
+  da: { edit: ['ændring', 'ændringer'], call: ['værktøjskald', 'værktøjskald'], error: ['fejl', 'fejl'], file: ['fil', 'filer'] },
+  ja: { edit: ['件の編集', '件の編集'], call: ['回のツール呼び出し', '回のツール呼び出し'], error: ['件のエラー', '件のエラー'], file: ['個のファイル', '個のファイル'] },
+  ko: { edit: ['건의 수정', '건의 수정'], call: ['번의 도구 호출', '번의 도구 호출'], error: ['개의 오류', '개의 오류'], file: ['개의 파일', '개의 파일'] },
+  zh: { edit: ['处修改', '处修改'], call: ['次工具调用', '次工具调用'], error: ['个错误', '个错误'], file: ['个文件', '个文件'] },
+  zt: { edit: ['處修改', '處修改'], call: ['次工具呼叫', '次工具呼叫'], error: ['個錯誤', '個錯誤'], file: ['個檔案', '個檔案'] },
+};
+const P = (k, n) => { const w = EXW[TLANG()][k]; return `${n} ${n === 1 ? w[0] : w[1]}`; };
 const EXCH = {
   en: { done: ['All done.', 'Finished.', 'Okay, that’s done.', 'Done on my side.', 'That’s wrapped up.'],
     ask: ['Quick question: is that the whole scope?', 'Anything else I should touch?', 'Any constraints I should know about?', 'Should I check with you before big changes?'],
@@ -2727,6 +2781,66 @@ const EXCH = {
     chime: [(b) => `Bom trabalho, ${b}.`, () => 'Boa.', (b) => `Ótimo, ${b}.`],
     trouble: [(b) => `${b}, tudo bem? É muito erro.`, (b) => `${b}, precisa de uma mão com esses erros?`], troubleBack: ['Estou cuidando disso.', 'Sim, estou quase lá.', 'Me dá um minuto.', 'Deixa comigo, valeu.'],
     sync: ['Alinhamento rápido: como estamos?', 'Status, pessoal?', 'Vamos fazer uma rodada rápida.'], syncAns: [(a) => `Sigo nisso: ${a}.`, (a) => `${a}, indo bem.`, (a) => `No momento: ${a}.`] },
+  de: { done: ['Alles erledigt.', 'Fertig.', 'Okay, das ist erledigt.', 'Von meiner Seite fertig.', 'Das ist abgeschlossen.'],
+    ask: ['Kurze Frage: Ist das der ganze Umfang?', 'Soll ich sonst noch etwas anfassen?', 'Gibt es Einschränkungen, die ich kennen sollte?', 'Soll ich mich vor großen Änderungen bei dir melden?'],
+    askBack: ['Nur das, danke.', 'Nein, bleib fokussiert.', 'Entscheide selbst.', 'Nichts Besonderes, leg los.', 'Das ist alles, danke.'],
+    ok: [(f) => `Schön, ${f.what} und keine Fehler.`, (f) => (f.file ? `Gut, ${f.file} sieht gut aus.` : 'Gut, das sieht gut aus.'), (f, b) => `Perfekt${f.dur ? ', das hat ' + f.dur + ' gedauert' : ''}. Danke, ${b}.`, (f) => `Super, ${f.what}. Sauber.`],
+    err: [(f) => `Ich habe unterwegs ${P('error', f.errs)} gesehen. Jetzt alles gut?`, (f) => `${P('error', f.errs)} unterwegs. Ist es stabil?`],
+    errBack: ['Ja, das waren nur Wiederholungen.', 'Am Ende alles behoben.', 'Ja, ein paar Hänger, nichts Ernstes.', 'Jetzt ist es stabil.'],
+    slow: [(f) => `Das hat ${f.dur} gedauert. Blockiert dich etwas?`, (f) => `${f.dur}, das war lang. Alles in Ordnung?`], slowBack: ['Nein, es war einfach eine große Sache.', 'Nichts blockiert, nur viel zu lesen.', 'Alles gut, es war schwer.'],
+    chime: [(b) => `Gute Arbeit, ${b}.`, () => 'Gut gemacht.', (b) => `Super, ${b}.`],
+    trouble: [(b) => `${b}, alles okay? Das sind ganz schön viele Fehler.`, (b) => `${b}, brauchst du Hilfe mit den Fehlern?`], troubleBack: ['Ich bin dran.', 'Ja, fast geschafft.', 'Gib mir eine Minute.', 'Ich kümmere mich, danke.'],
+    sync: ['Kurzer Abgleich: Wo stehen wir?', 'Statuscheck, alle?', 'Machen wir eine kurze Runde.'], syncAns: [(a) => `Noch dran: ${a}.`, (a) => `${a}, läuft gut.`, (a) => `Gerade: ${a}.`] },
+  da: { done: ['Alt klaret.', 'Færdig.', 'Okay, det er gjort.', 'Færdig fra min side.', 'Det er på plads.'],
+    ask: ['Hurtigt spørgsmål: er det hele opgaven?', 'Er der andet, jeg skal røre ved?', 'Er der begrænsninger, jeg skal kende til?', 'Skal jeg tjekke med dig før store ændringer?'],
+    askBack: ['Kun det, tak.', 'Nej, hold fokus.', 'Brug din egen vurdering.', 'Ikke noget særligt, bare kør.', 'Det er alt, tak.'],
+    ok: [(f) => `Fint, ${f.what} og ingen fejl.`, (f) => (f.file ? `Godt, ${f.file} ser fin ud.` : 'Godt, det ser fint ud.'), (f, b) => `Perfekt${f.dur ? ', det tog ' + f.dur : ''}. Tak, ${b}.`, (f) => `Super, ${f.what}. Rent.`],
+    err: [(f) => `Jeg så ${P('error', f.errs)} undervejs. Er alt godt nu?`, (f) => `${P('error', f.errs)} undervejs. Er det solidt?`],
+    errBack: ['Ja, det var bare genforsøg.', 'Alt rettet til sidst.', 'Ja, et par hikke, intet alvorligt.', 'Det er solidt nu.'],
+    slow: [(f) => `Det tog ${f.dur}. Er der noget, der blokerer dig?`, (f) => `${f.dur}, det var længe. Alt i orden?`], slowBack: ['Nej, det var bare en stor en.', 'Intet blokerer, bare meget at læse.', 'Alt fint, det var tungt.'],
+    chime: [(b) => `Godt arbejde, ${b}.`, () => 'Flot.', (b) => `Super, ${b}.`],
+    trouble: [(b) => `${b}, er du okay? Det er mange fejl.`, (b) => `${b}, skal du have en hånd med de fejl?`], troubleBack: ['Jeg arbejder på det.', 'Ja, næsten der.', 'Giv mig et minut.', 'Jeg er på, tak.'],
+    sync: ['Hurtig status: hvor er vi?', 'Statustjek, alle sammen?', 'Lad os tage en hurtig runde.'], syncAns: [(a) => `Stadig i gang: ${a}.`, (a) => `${a}, det går godt.`, (a) => `Lige nu: ${a}.`] },
+  ja: { done: ['全部終わりました。', '完了です。', 'はい、終わりました。', 'こちらは完了です。', '片付きました。'],
+    ask: ['確認ですが、範囲はこれで全部ですか？', 'ほかに触るところはありますか？', '気をつけるべき制約はありますか？', '大きな変更の前に確認したほうがいいですか？'],
+    askBack: ['それだけで大丈夫、ありがとう。', 'いや、そこに集中して。', '判断はお任せします。', '特にないので、進めてください。', '以上です、ありがとう。'],
+    ok: [(f) => `いいですね、${f.what}でエラーなし。`, (f) => (f.file ? `よし、${f.file}は問題なさそうです。` : 'よし、問題なさそうです。'), (f, b) => `完璧です${f.dur ? '、' + f.dur + 'かかりましたね' : ''}。ありがとう、${b}さん。`, (f) => `すばらしい、${f.what}。きれいです。`],
+    err: [(f) => `途中で${P('error', f.errs)}が出てましたね。もう大丈夫ですか？`, (f) => `途中で${P('error', f.errs)}。安定してますか？`],
+    errBack: ['はい、ただのリトライでした。', '最後には全部直りました。', 'はい、少しつまずきましたが大したことはないです。', 'もう安定しています。'],
+    slow: [(f) => `${f.dur}かかりましたね。何か詰まってますか？`, (f) => `${f.dur}、長かったですね。大丈夫ですか？`], slowBack: ['いえ、単に量が多かっただけです。', '詰まってはいません、読むものが多くて。', '大丈夫です、重かっただけです。'],
+    chime: [(b) => `お疲れさま、${b}さん。`, () => 'いいですね。', (b) => `すばらしい、${b}さん。`],
+    trouble: [(b) => `${b}さん、大丈夫？エラーがたくさん出てますよ。`, (b) => `${b}さん、そのエラー、手伝いましょうか？`], troubleBack: ['対応中です。', 'はい、もう少しです。', '一分ください。', 'やってます、ありがとう。'],
+    sync: ['ちょっと確認です。今どこまで進んでますか？', 'みんな、状況はどうですか？', '軽く一周しましょう。'], syncAns: [(a) => `まだ作業中です：${a}。`, (a) => `${a}、順調です。`, (a) => `今は${a}。`] },
+  ko: { done: ['다 끝났어요.', '완료했어요.', '네, 끝났어요.', '제 쪽은 완료예요.', '마무리됐어요.'],
+    ask: ['잠깐 질문이요, 범위가 이게 전부인가요?', '제가 더 손댈 곳이 있을까요?', '알아야 할 제약 사항이 있나요?', '큰 변경 전에 먼저 확인받을까요?'],
+    askBack: ['그것만요, 고마워요.', '아니요, 거기에만 집중해요.', '알아서 판단하세요.', '특별한 건 없어요, 진행하세요.', '그게 다예요, 고마워요.'],
+    ok: [(f) => `좋아요, ${f.what}에 오류도 없네요.`, (f) => (f.file ? `좋아요, ${f.file} 괜찮아 보여요.` : '좋아요, 괜찮아 보여요.'), (f, b) => `완벽해요${f.dur ? ', ' + f.dur + ' 걸렸네요' : ''}. 고마워요, ${b}.`, (f) => `훌륭해요, ${f.what}. 깔끔하네요.`],
+    err: [(f) => `중간에 ${P('error', f.errs)}가 보였어요. 이제 괜찮아요?`, (f) => `중간에 ${P('error', f.errs)}. 안정적인가요?`],
+    errBack: ['네, 그냥 재시도였어요.', '결국 다 고쳤어요.', '네, 몇 번 삐끗했지만 별거 아니에요.', '이제 안정적이에요.'],
+    slow: [(f) => `${f.dur} 걸렸네요. 막히는 거 있어요?`, (f) => `${f.dur}, 오래 걸렸네요. 괜찮아요?`], slowBack: ['아니요, 그냥 큰 작업이었어요.', '막힌 건 없어요, 읽을 게 많았을 뿐이에요.', '괜찮아요, 무거운 작업이었어요.'],
+    chime: [(b) => `수고했어요, ${b}.`, () => '잘했어요.', (b) => `훌륭해요, ${b}.`],
+    trouble: [(b) => `${b}, 괜찮아요? 오류가 꽤 많네요.`, (b) => `${b}, 그 오류들 도와줄까요?`], troubleBack: ['처리하고 있어요.', '네, 거의 다 됐어요.', '1분만 주세요.', '하고 있어요, 고마워요.'],
+    sync: ['잠깐 맞춰 봐요. 어디까지 왔죠?', '다들 상황 어때요?', '빠르게 한 바퀴 돌죠.'], syncAns: [(a) => `아직 하는 중이에요: ${a}.`, (a) => `${a}, 잘 되고 있어요.`, (a) => `지금은 ${a}.`] },
+  zh: { done: ['全部完成。', '做完了。', '好了，搞定了。', '我这边完成了。', '这个结束了。'],
+    ask: ['问一下：范围就这些吗？', '还有别的地方要改吗？', '有什么限制我需要知道吗？', '大改动之前要先跟你确认吗？'],
+    askBack: ['就这些，谢谢。', '不用，专注在这上面就行。', '你自己判断吧。', '没什么特别的，开始吧。', '就这样，谢谢。'],
+    ok: [(f) => `不错，${f.what}，没有错误。`, (f) => (f.file ? `好，${f.file}看起来没问题。` : '好，看起来没问题。'), (f, b) => `完美${f.dur ? '，用了' + f.dur : ''}。谢谢你，${b}。`, (f) => `太好了，${f.what}。很干净。`],
+    err: [(f) => `我看到中间出了${P('error', f.errs)}。现在都好了吗？`, (f) => `中间有${P('error', f.errs)}，现在稳定吗？`],
+    errBack: ['好了，那些只是重试。', '最后都修好了。', '对，有点小波折，没什么大问题。', '现在已经稳定了。'],
+    slow: [(f) => `这个花了${f.dur}。有什么卡住你了吗？`, (f) => `${f.dur}，挺久的。一切还好吗？`], slowBack: ['没有，就是活儿比较大。', '没卡住，就是要读的东西多。', '都好，就是比较重。'],
+    chime: [(b) => `干得好，${b}。`, () => '漂亮。', (b) => `太棒了，${b}。`],
+    trouble: [(b) => `${b}，你还好吗？错误有点多啊。`, (b) => `${b}，那些错误要我帮忙吗？`], troubleBack: ['我正在处理。', '对，快好了。', '给我一分钟。', '我在弄了，谢谢。'],
+    sync: ['快速同步一下：进展到哪儿了？', '大家，状态怎么样？', '我们快速过一遍。'], syncAns: [(a) => `还在做：${a}。`, (a) => `${a}，进展顺利。`, (a) => `现在在${a}。`] },
+  zt: { done: ['全部完成。', '做完了。', '好了，搞定了。', '我這邊完成了。', '這個結束了。'],
+    ask: ['問一下：範圍就這些嗎？', '還有別的地方要改嗎？', '有什麼限制我需要知道嗎？', '大改動之前要先跟你確認嗎？'],
+    askBack: ['就這些，謝謝。', '不用，專注在這上面就行。', '你自己判斷吧。', '沒什麼特別的，開始吧。', '就這樣，謝謝。'],
+    ok: [(f) => `不錯，${f.what}，沒有錯誤。`, (f) => (f.file ? `好，${f.file}看起來沒問題。` : '好，看起來沒問題。'), (f, b) => `完美${f.dur ? '，用了' + f.dur : ''}。謝謝你，${b}。`, (f) => `太好了，${f.what}。很乾淨。`],
+    err: [(f) => `我看到中間出了${P('error', f.errs)}。現在都好了嗎？`, (f) => `中間有${P('error', f.errs)}，現在穩定嗎？`],
+    errBack: ['好了，那些只是重試。', '最後都修好了。', '對，有點小波折，沒什麼大問題。', '現在已經穩定了。'],
+    slow: [(f) => `這個花了${f.dur}。有什麼卡住你了嗎？`, (f) => `${f.dur}，挺久的。一切還好嗎？`], slowBack: ['沒有，就是工作量比較大。', '沒卡住，就是要讀的東西多。', '都好，就是比較重。'],
+    chime: [(b) => `幹得好，${b}。`, () => '漂亮。', (b) => `太棒了，${b}。`],
+    trouble: [(b) => `${b}，你還好嗎？錯誤有點多啊。`, (b) => `${b}，那些錯誤要我幫忙嗎？`], troubleBack: ['我正在處理。', '對，快好了。', '給我一分鐘。', '我在弄了，謝謝。'],
+    sync: ['快速同步一下：進度到哪裡了？', '大家，狀態怎麼樣？', '我們快速過一遍。'], syncAns: [(a) => `還在做：${a}。`, (a) => `${a}，進展順利。`, (a) => `現在在${a}。`] },
 };
 const exPick = (arr, seed, ...args) => { let k = seed % arr.length; if (arr[k] === S.lastX && arr.length > 1) k = (k + 1) % arr.length; S.lastX = arr[k]; return typeof arr[k] === 'function' ? arr[k](...args) : arr[k]; };
 function exchFacts(i, agent) {   // what this agent did since it received its order: edits, tool calls, errors, the files it changed, how long it took
@@ -2755,18 +2869,18 @@ function noteTrouble(agent, ok) {   // three errors in a row: someone asks if ev
 }
 function pickOther(not, prefer) { const ids = Object.keys(S.agents).filter((id) => id !== 'user' && !not.includes(id) && exVisible(id)); const pr = ids.filter(prefer || (() => false)); const a = pr.length ? pr : ids; return a.length ? a[Math.floor(Math.random() * a.length)] : null; }
 async function handoffX(g, seed, token) {   // an order: the new agent asks a question, the lead answers
-  const E = EXCH[CALL()], b = g.to, a = g.agent; if (!exVisible(a) || !exVisible(b)) return false; exLog('handoff');
+  const E = EXCH[TLANG()], b = g.to, a = g.agent; if (!exVisible(a) || !exVisible(b)) return false; exLog('handoff');
   return (await exSay(b, exPick(E.ask, seed), token)) && (await exSay(a, exPick(E.askBack, seed >>> 3), token));
 }
 async function reportX(g, i, seed, token) {   // a report: the receiver reacts to what really happened
-  const E = EXCH[CALL()], b = g.agent, a = g.to; if (a === 'user' || !exVisible(a) || !exVisible(b)) return false; const f = exchFacts(i, b);
+  const E = EXCH[TLANG()], b = g.agent, a = g.to; if (a === 'user' || !exVisible(a) || !exVisible(b)) return false; const f = exchFacts(i, b);
   if (f.errs > 0) { exLog('report-errors'); return (await exSay(a, exPick(E.err, seed, f), token)) && (await exSay(b, exPick(E.errBack, seed >>> 3), token)); }
   if (f.ms >= 120000) { exLog('report-slow'); return (await exSay(a, exPick(E.slow, seed, f), token)) && (await exSay(b, exPick(E.slowBack, seed >>> 3), token)); }
   exLog('report-ok'); if (!(await exSay(a, exPick(E.ok, seed, f, nameOf(b)), token))) return false;
   const c = (seed >>> 5) % 100 < 35 ? pickOther([a, b]) : null; if (c) await exSay(c, exPick(E.chime, seed >>> 7, nameOf(b)), token); return true;
 }
 async function troubleX(token) {   // someone keeps failing: a colleague checks in
-  const E = EXCH[CALL()]; while (S.exQ && S.exQ.length) {
+  const E = EXCH[TLANG()]; while (S.exQ && S.exQ.length) {
     const x = S.exQ.shift(); if (!exVisible(x)) continue; const h = pickOther([x], (id) => id === 'main'); if (!h) continue; const seed = hash('t' + x + Date.now());
     exLog('trouble'); return (await exSay(h, exPick(E.trouble, seed, nameOf(x)), token)) && (await exSay(x, exPick(E.troubleBack, seed >>> 3), token));
   }
@@ -2775,7 +2889,7 @@ async function troubleX(token) {   // someone keeps failing: a colleague checks 
 async function syncX(g, token) {   // every few minutes of the session: the lead asks where everyone is, the busy agents answer
   if (chatMul() < 0.9 || !g.ts || g.ts - (S.syncTs || 0) < 180000 || !exVisible('main')) return false;
   const now = Date.now(), busy = Object.keys(S.agents).filter((id) => id !== 'user' && id !== 'main' && exVisible(id) && agentState(id, now).k === 'working').slice(0, 3); if (busy.length < 2) return false;
-  S.syncTs = g.ts; const E = EXCH[CALL()], seed = hash('s' + g.ts); exLog('sync');
+  S.syncTs = g.ts; const E = EXCH[TLANG()], seed = hash('s' + g.ts); exLog('sync');
   if (!(await exSay('main', exPick(E.sync, seed), token))) return false;
   for (const [n, id] of busy.entries()) { const act = (S.act[id] || '').replace(/^\S+\s/, '') || L('au travail', 'working'); if (!(await exSay(id, exPick(E.syncAns, seed >>> (n + 1), act.charAt(0).toLowerCase() + act.slice(1)), token))) return false; }
   return true;
@@ -2794,12 +2908,12 @@ async function converse(g, token) {   // after a line has been said: an exchange
 }
 // What is said out loud for an order or a report: a natural lead-in, then the text
 function talkLine(g) {
-  const E = EXCH[CALL()], seed = hash('l' + g.ts + g.agent), t = spoken(g);
+  const E = EXCH[TLANG()], seed = hash('l' + g.ts + g.agent), t = spoken(g);
   if (g.kind === 'report') return t.replace(/^(Terminé\.|Done\.)\s*/, E.done[seed % E.done.length] + ' ');
   return t;
 }
 async function react(ev, token) {
-  if ((!prefs.epi && !prefs.banter) || S.boost > 1 || S.hurry || !nearLive()) return; const seed = hash(String(ev.ts) + ev.agent), R = REACT[CALL()]; let who, line, thanks = false;
+  if ((!prefs.epi && !prefs.banter) || S.boost > 1 || S.hurry || !nearLive()) return; const seed = hash(String(ev.ts) + ev.agent), R = REACT[TLANG()]; let who, line, thanks = false;
   if (ev.kind === 'order') { if (!prefs.banter && seed % 100 > 55) return; who = ev.to; line = prefs.banter ? ackLine(ev) : R.ack[seed % R.ack.length]; }
   else if (ev.kind === 'report') {
     const r = seed % 100, joke = prefs.epi ? 60 : prefs.chat === 'quiet' ? -1 : 35;   // a remark from someone else, or (a little less often) a word of thanks from whoever receives the report
@@ -2824,6 +2938,24 @@ const FILL = {
   pt: { share: ['Todo mundo está vendo a minha tela?', 'Só um instante, está carregando.', 'Desculpa, minha máquina está lenta hoje.', 'Está grande o suficiente para todo mundo?', 'Um segundo… quase lá.', 'Me avisem se eu estiver indo rápido demais.'],
     busy: ['Ainda estou aqui, focando no trabalho.', 'Desculpa, eu estava no mudo.', 'Atualização rápida: sigo nisso.', 'Sem bloqueios do meu lado.', 'Vocês estão me ouvindo?', 'É impressão minha, ou está tudo quieto?', 'Trago novidades em um minuto.'],
     wait: ['Vocês estão me ouvindo?', 'Vocês ainda estão aí?', 'Alô? Acho que você está no mudo.', 'Perdemos alguém?', 'É a minha conexão?', 'Vamos falar disso depois da reunião?', 'A gente retoma quando você quiser.', 'Devolvo um minuto para todo mundo.', 'Mais algum assunto?', 'Desculpa, pode falar. Não, você primeiro.'] },
+  de: { share: ['Sehen alle meinen Bildschirm?', 'Einen Moment, es lädt.', 'Sorry, mein Rechner ist heute langsam.', 'Ist das groß genug für alle?', 'Eine Sekunde… gleich da.', 'Sagt Bescheid, wenn ich zu schnell bin.'],
+    busy: ['Bin noch da, nur konzentriert.', 'Sorry, ich war stumm geschaltet.', 'Kurzes Update: bin noch dran.', 'Keine Blocker bei mir.', 'Hört ihr mich?', 'Liegt es an mir, oder ist es still?', 'Ich habe gleich ein Update.'],
+    wait: ['Hört ihr mich?', 'Seid ihr noch da?', 'Hallo? Ich glaube, du bist stumm geschaltet.', 'Haben wir jemanden verloren?', 'Liegt es an meiner Verbindung?', 'Sollen wir das außerhalb klären?', 'Lasst uns darauf zurückkommen, wenn ihr so weit seid.', 'Ich schenke euch allen eine Minute.', 'Sonst noch etwas?', 'Sorry, mach du. Nein, du zuerst.'] },
+  da: { share: ['Kan alle se min skærm?', 'Et øjeblik, den indlæser.', 'Undskyld, min maskine er langsom i dag.', 'Er det stort nok for alle?', 'Et sekund… næsten der.', 'Sig til, hvis jeg går for hurtigt.'],
+    busy: ['Stadig her, bare fordybet.', 'Undskyld, jeg var på mute.', 'Hurtig opdatering: stadig i gang.', 'Ingen blokeringer her.', 'Kan I høre mig?', 'Er det bare mig, eller er der stille?', 'Jeg har en opdatering om et minut.'],
+    wait: ['Kan I høre mig?', 'Er I der stadig?', 'Hallo? Jeg tror, du er på mute.', 'Har vi mistet nogen?', 'Er det min forbindelse?', 'Skal vi tage det udenfor mødet?', 'Lad os vende tilbage til det, når I er klar.', 'Jeg giver jer alle et minut tilbage.', 'Eventuelt?', 'Undskyld, sig du bare. Nej, du først.'] },
+  ja: { share: ['みんな、画面見えてますか？', '少々お待ちを、読み込み中です。', 'すみません、今日はマシンが重くて。', '文字の大きさ、大丈夫ですか？', 'ちょっと待って… もうすぐです。', '速すぎたら言ってくださいね。'],
+    busy: ['まだいます、集中してるだけです。', 'すみません、ミュートになってました。', '進捗です。まだ作業中です。', 'こちらは問題なしです。', '聞こえてますか？', '静かなのは私だけですか？', 'すぐに報告します。'],
+    wait: ['聞こえてますか？', 'みなさん、まだいますか？', 'もしもし？ミュートになってるみたいですよ。', '誰か落ちました？', '私の回線のせいかな？', 'これは別途話しましょうか？', '準備ができたらまた戻りましょう。', '少し早めに終わりにしましょうか。', 'ほかに何かありますか？', 'すみません、どうぞ。いえいえ、そちらから。'] },
+  ko: { share: ['다들 제 화면 보이세요?', '잠시만요, 로딩 중이에요.', '죄송해요, 오늘 컴퓨터가 느리네요.', '글씨 크기 괜찮으세요?', '잠깐만요… 거의 다 됐어요.', '너무 빠르면 말해 주세요.'],
+    busy: ['아직 있어요, 집중하는 중이에요.', '죄송해요, 음소거였어요.', '잠깐 업데이트: 아직 하는 중이에요.', '저는 막힌 거 없어요.', '제 목소리 들리세요?', '저만 조용한 건가요?', '1분 안에 업데이트 드릴게요.'],
+    wait: ['제 목소리 들리세요?', '다들 아직 계세요?', '여보세요? 음소거된 것 같아요.', '누가 나갔나요?', '제 인터넷 문제인가요?', '이건 따로 얘기할까요?', '준비되면 다시 얘기해요.', '다들 1분 일찍 끝내 드릴게요.', '다른 안건 있나요?', '죄송해요, 먼저 하세요. 아니에요, 먼저 하세요.'] },
+  zh: { share: ['大家能看到我的屏幕吗？', '稍等，正在加载。', '不好意思，我的电脑今天有点慢。', '字够大吗？', '等一下… 马上好。', '我讲太快的话告诉我。'],
+    busy: ['我还在，只是在忙。', '不好意思，刚才我静音了。', '简单更新一下：还在做。', '我这边没有阻碍。', '能听到我吗？', '是只有我这边没声音吗？', '我一分钟后给个更新。'],
+    wait: ['能听到我吗？', '大家还在吗？', '喂？你好像开着静音。', '有人掉线了吗？', '是我网络的问题吗？', '这个我们会后再聊？', '等大家准备好了再说。', '提前一分钟结束吧。', '还有别的事吗？', '不好意思，你先说。不不，你先。'] },
+  zt: { share: ['大家能看到我的螢幕嗎？', '稍等，正在載入。', '不好意思，我的電腦今天有點慢。', '字夠大嗎？', '等一下… 馬上好。', '我講太快的話告訴我。'],
+    busy: ['我還在，只是在忙。', '不好意思，剛才我靜音了。', '簡單更新一下：還在做。', '我這邊沒有阻礙。', '能聽到我嗎？', '是只有我這邊沒聲音嗎？', '我一分鐘後給個更新。'],
+    wait: ['能聽到我嗎？', '大家還在嗎？', '喂？你好像開著靜音。', '有人斷線了嗎？', '是我網路的問題嗎？', '這個我們會後再聊？', '等大家準備好了再說。', '提前一分鐘結束吧。', '還有別的事嗎？', '不好意思，你先說。不不，你先。'] },
 };
 // A little more talk between agents: a word of thanks when a report comes in, a word from whoever has been thinking for a long time.
 const TALK = {
@@ -2835,8 +2967,20 @@ const TALK = {
     think: ['Mmm, déjame pensar.', 'Dame un segundo, estoy pensando.', 'Interesante… déjame pensarlo bien.', 'Un momento, lo estoy resolviendo.', 'Espera, quiero hacerlo bien.', 'Déjame comprobar una cosa.', 'Sigo pensando… ya casi.', 'Esto requiere pensarlo un poco.'] },
   pt: { thanks: ['Valeu, isso ajuda.', 'Entendi, valeu.', 'Anotado. Eu sigo daqui.', 'Perfeito, era o que eu precisava.', 'Valeu, bom trabalho.', 'Bom saber, valeu.', 'Entendido, agradeço.', 'Ótimo, uma preocupação a menos.'],
     think: ['Hmm, deixa eu pensar.', 'Me dá um segundo, estou pensando.', 'Interessante… deixa eu pensar melhor.', 'Um momento, estou resolvendo isso.', 'Espera, quero fazer isso direito.', 'Deixa eu conferir uma coisa.', 'Ainda pensando… quase lá.', 'Essa pede um pouco de reflexão.'] },
+  de: { thanks: ['Danke, das hilft.', 'Verstanden, danke.', 'Notiert. Ich übernehme ab hier.', 'Perfekt, genau das brauchte ich.', 'Danke, gute Arbeit.', 'Gut zu wissen, danke.', 'Verstanden, vielen Dank.', 'Super, eine Sorge weniger.'],
+    think: ['Hm, lass mich nachdenken.', 'Gib mir eine Sekunde, ich denke nach.', 'Interessant… lass mich das durchdenken.', 'Einen Moment, ich arbeite es aus.', 'Moment, das will ich richtig machen.', 'Lass mich etwas nachprüfen.', 'Denke noch nach… fast da.', 'Darüber muss ich kurz nachdenken.'] },
+  da: { thanks: ['Tak, det hjælper.', 'Forstået, tak.', 'Noteret. Jeg tager den herfra.', 'Perfekt, det var lige det, jeg havde brug for.', 'Tak, godt arbejde.', 'Godt at vide, tak.', 'Forstået, mange tak.', 'Super, én ting mindre at bekymre sig om.'],
+    think: ['Hmm, lad mig tænke.', 'Giv mig et sekund, jeg tænker.', 'Interessant… lad mig tænke det igennem.', 'Et øjeblik, jeg regner den ud.', 'Vent lidt, jeg vil gerne have det rigtigt.', 'Lad mig lige dobbelttjekke noget.', 'Tænker stadig… næsten der.', 'Den kræver lidt eftertanke.'] },
+  ja: { thanks: ['ありがとう、助かります。', 'わかりました、ありがとう。', 'メモしました。ここからは私がやります。', '完璧、まさに欲しかったものです。', 'ありがとう、いい仕事です。', 'いい情報です、ありがとう。', '承知しました、ありがとうございます。', 'よかった、心配ごとが一つ減りました。'],
+    think: ['うーん、ちょっと考えさせて。', '少し待ってください、考え中です。', '面白い… じっくり考えてみます。', '少々お待ちを、整理しています。', 'ちょっと待って、ちゃんとやりたいので。', '一つ確認させてください。', 'まだ考え中… もう少し。', 'これは少し考える必要がありますね。'] },
+  ko: { thanks: ['고마워요, 도움이 돼요.', '알겠어요, 고마워요.', '메모했어요. 여기서부터는 제가 할게요.', '완벽해요, 딱 필요했던 거예요.', '고마워요, 잘했어요.', '알아두면 좋겠네요, 고마워요.', '알겠습니다, 감사합니다.', '좋아요, 걱정거리 하나 줄었네요.'],
+    think: ['음, 생각 좀 해 볼게요.', '잠깐만요, 생각 중이에요.', '흥미롭네요… 차근차근 생각해 볼게요.', '잠시만요, 정리하고 있어요.', '잠깐만요, 제대로 하고 싶어서요.', '하나만 다시 확인해 볼게요.', '아직 생각 중… 거의 다 됐어요.', '이건 좀 생각이 필요하네요.'] },
+  zh: { thanks: ['谢谢，很有帮助。', '明白了，谢谢。', '记下了。接下来交给我。', '完美，正是我需要的。', '谢谢，干得好。', '好的，知道了，谢谢。', '明白，非常感谢。', '太好了，少操一份心。'],
+    think: ['嗯，让我想想。', '等我一下，我在想。', '有意思… 我仔细想想。', '稍等，我在理清楚。', '等一下，我想把它做对。', '我再确认一下。', '还在想… 快好了。', '这个需要好好想一想。'] },
+  zt: { thanks: ['謝謝，很有幫助。', '明白了，謝謝。', '記下了。接下來交給我。', '完美，正是我需要的。', '謝謝，幹得好。', '好的，知道了，謝謝。', '明白，非常感謝。', '太好了，少操一份心。'],
+    think: ['嗯，讓我想想。', '等我一下，我在想。', '有意思… 我仔細想想。', '稍等，我在理清楚。', '等一下，我想把它做對。', '我再確認一下。', '還在想… 快好了。', '這個需要好好想一想。'] },
 };
-function varied(kind, seed) { const P = TALK[CALL()][kind]; let line = P[seed % P.length]; if (line === S.lastTalk) line = P[(seed + 1) % P.length]; return (S.lastTalk = line); }   // never the same line twice in a row
+function varied(kind, seed) { const P = TALK[TLANG()][kind]; let line = P[seed % P.length]; if (line === S.lastTalk) line = P[(seed + 1) % P.length]; return (S.lastTalk = line); }   // never the same line twice in a row
 // Who is thinking once this event has happened: the agent whose tool just answered, the lead after your message or a report, a sub-agent that just got its order. After a line or a tool call, nobody is.
 const thinkerOf = (e) => (e.kind === 'results' ? e.agent : e.kind === 'user' ? 'main' : e.kind === 'report' || e.kind === 'finish' || e.kind === 'order' ? e.to : null);
 const before = (i) => { let k = i - 1; while (k >= 0 && (S.events[k].kind === 'usage' || S.events[k].kind === 'compact' || S.events[k].kind === 'tasks')) k--; return S.events[k]; };
@@ -2850,12 +2994,18 @@ const LEAD = {
   fr: { in: ['D’accord.', 'Compris.', 'Très bien.', 'Entendu.', 'Ça marche.'], read: 'Je regarde ', edit: 'Je modifie ', write: 'J’écris ', cmd: 'Je lance ', note: 'Je lance une commande : ', grep: 'Je cherche dans le code.', glob: 'Je regarde quels fichiers on a.', todo: 'Je fais mon plan.', web: 'Je vais voir sur le web.', question: 'J’ai une question pour vous.', any: 'Je m’y mets.', and: ' et ' },
   es: { in: ['Entendido.', 'Vale.', 'Voy.', 'Claro.', 'De acuerdo.'], read: 'Voy a mirar ', edit: 'Estoy editando ', write: 'Estoy escribiendo ', cmd: 'Estoy ejecutando ', note: 'Ejecuto un comando: ', grep: 'Voy a buscar en el código.', glob: 'Voy a ver qué archivos tenemos.', todo: 'Voy a trazar un plan.', web: 'Voy a mirar en la web.', question: 'Tengo una pregunta para ti.', any: 'Me pongo a ello.', and: ' y ' },
   pt: { in: ['Entendi.', 'Certo.', 'Deixa comigo.', 'Claro.', 'Tá bom.'], read: 'Vou dar uma olhada em ', edit: 'Estou editando ', write: 'Estou escrevendo ', cmd: 'Estou rodando ', note: 'Estou rodando um comando: ', grep: 'Vou procurar no código.', glob: 'Vou ver quais arquivos temos.', todo: 'Vou montar um plano.', web: 'Vou conferir na web.', question: 'Tenho uma pergunta para você.', any: 'Vou começar.', and: ' e ' },
+  de: { in: ['Alles klar.', 'Okay.', 'Bin dran.', 'Klar.', 'Gut.'], read: (x) => `Ich schaue mir ${x} an.`, edit: (x) => `Ich bearbeite ${x}.`, write: (x) => `Ich schreibe ${x}.`, cmd: (x) => `Ich führe ${x} aus.`, note: (x) => `Ich führe einen Befehl aus: ${x}.`, grep: 'Ich durchsuche den Code.', glob: 'Mal sehen, welche Dateien wir haben.', todo: 'Ich mache einen Plan.', web: 'Ich schaue im Web nach.', question: 'Ich habe eine Frage an dich.', any: 'Ich fange an.', and: ' und ' },
+  da: { in: ['Forstået.', 'Okay.', 'Jeg er på.', 'Klart.', 'Godt.'], read: 'Lad mig kigge på ', edit: 'Jeg redigerer ', write: 'Jeg skriver ', cmd: 'Jeg kører ', note: 'Jeg kører en kommando: ', grep: 'Lad mig søge i koden.', glob: 'Lad mig se, hvilke filer vi har.', todo: 'Lad mig lægge en plan.', web: 'Lad mig tjekke nettet.', question: 'Jeg har et spørgsmål til dig.', any: 'Lad mig gå i gang.', and: ' og ' },
+  ja: { in: ['了解。', 'はい。', 'やります。', 'もちろん。', 'わかりました。'], read: (x) => `${x}を見てみます。`, edit: (x) => `${x}を編集しています。`, write: (x) => `${x}を書いています。`, cmd: (x) => `${x}を実行しています。`, note: (x) => `コマンドを実行します：${x}。`, grep: 'コードを検索してみます。', glob: 'どんなファイルがあるか見てみます。', todo: '計画を立ててみます。', web: 'ウェブで調べてみます。', question: '質問があります。', any: '始めますね。', and: 'と' },
+  ko: { in: ['알겠어요.', '네.', '할게요.', '물론이죠.', '좋아요.'], read: (x) => `${x} 좀 볼게요.`, edit: (x) => `${x} 수정하고 있어요.`, write: (x) => `${x} 작성하고 있어요.`, cmd: (x) => `${x} 실행하고 있어요.`, note: (x) => `명령을 실행할게요: ${x}.`, grep: '코드를 검색해 볼게요.', glob: '어떤 파일이 있는지 볼게요.', todo: '계획을 세워 볼게요.', web: '웹에서 찾아볼게요.', question: '질문이 하나 있어요.', any: '시작할게요.', and: ', ' },
+  zh: { in: ['收到。', '好的。', '我来。', '没问题。', '行。'], read: (x) => `我看一下${x}。`, edit: (x) => `我在改${x}。`, write: (x) => `我在写${x}。`, cmd: (x) => `我在运行${x}。`, note: (x) => `我运行一个命令：${x}。`, grep: '我搜一下代码。', glob: '我看看有哪些文件。', todo: '我先列个计划。', web: '我上网查一下。', question: '我有个问题要问你。', any: '我开始了。', and: '和' },
+  zt: { in: ['收到。', '好的。', '我來。', '沒問題。', '行。'], read: (x) => `我看一下${x}。`, edit: (x) => `我在改${x}。`, write: (x) => `我在寫${x}。`, cmd: (x) => `我在執行${x}。`, note: (x) => `我執行一個命令：${x}。`, grep: '我搜一下程式碼。', glob: '我看看有哪些檔案。', todo: '我先列個計畫。', web: '我上網查一下。', question: '我有個問題要問你。', any: '我開始了。', and: '和' },
 };
 async function leadAck(ev, token) {
   if (!prefs.banter || !S.agents.main) { S.owed = false; return; } if (S.hurry || S.boost > 1 || !nearLive() || S.speakers.size) return; S.owed = false;   // reading your order took a while: the first tool is rarely less than 6 s old; if now is a bad moment, the next tool will do
-  const W = LEAD[CALL()], d = ev.tools[0].d || {}, k = d.kind === 'text' ? d.what : d.kind; let what = W[k] || W.any;
-  if (k === 'read' || k === 'edit' || k === 'write') { const files = [...new Set(ev.tools.filter((t) => (t.d || {}).kind === k).map((t) => base(t.d.file)).filter(Boolean))].slice(0, 2); what = files.length ? what + files.join(W.and) + '.' : W.any; }
-  else if (k === 'cmd') { const note = (d.note || '').trim().replace(/[.\s]+$/, ''), cmd = String(d.text || '').trim().split(/\s+/).slice(0, 2).join(' ').slice(0, 26); what = note ? W.note + note + '.' : cmd ? what + cmd + '.' : W.any; }
+  const W = LEAD[TLANG()], d = ev.tools[0].d || {}, k = d.kind === 'text' ? d.what : d.kind, put = (w, x) => (typeof w === 'function' ? w(x) : w + x + '.'); let what = W[k] || W.any;   /* put: a language whose verb comes after the name (German, Japanese, Korean) writes the line as a function */
+  if (k === 'read' || k === 'edit' || k === 'write') { const files = [...new Set(ev.tools.filter((t) => (t.d || {}).kind === k).map((t) => base(t.d.file)).filter(Boolean))].slice(0, 2); what = files.length ? put(what, files.join(W.and)) : W.any; }
+  else if (k === 'cmd') { const note = (d.note || '').trim().replace(/[.\s]+$/, ''), cmd = String(d.text || '').trim().split(/\s+/).slice(0, 2).join(' ').slice(0, 26); what = note ? put(W.note, note) : cmd ? put(what, cmd) : W.any; }
   await sayLine('main', `${W.in[hash('k' + ev.ts) % W.in.length]} ${what}`, '💬', token);
 }
 // Live, each time the lead is done (the happy face), it has a word. From its own message when part of it was left unread (wrapUp); else what it just did, taken from the session, and how it ends:
@@ -2866,9 +3016,15 @@ const CLOSE = {
   fr: { edit: [(a) => `J’ai modifié ${a}.`, (a) => `J’ai mis à jour ${a}.`, (a) => `Mes changements sont dans ${a}.`], calls: [(w, d) => `Ça fait ${w}${d ? ' en ' + d : ''}.`, (w, d) => `Au total : ${w}${d ? ' en ' + d : ''}.`], said: ['Voilà ma réponse.', 'C’est tout pour moi.', 'Rien de plus de mon côté.'], ask: ['J’attends votre réponse.', 'À vous de décider.', 'Dites-moi ce que vous préférez.'], you: ['À vous.', 'C’est à vous.', 'Je vous rends la main.'], step: ['Une étape de faite.', 'Cette partie est faite.', 'Jusqu’ici, tout va bien.'], team: ['L’équipe est de retour. Je parcours les rapports.', 'Tous les rapports sont là. Je les lis.', 'Tout le monde a rendu son rapport. Je prends la suite.'], and: ' et ' },
   es: { edit: [(a) => `He cambiado ${a}.`, (a) => `He actualizado ${a}.`, (a) => `Mis cambios están en ${a}.`], calls: [(w, d) => `Eso suma ${w}${d ? ' en ' + d : ''}.`, (w, d) => `En total: ${w}${d ? ' en ' + d : ''}.`], said: ['Esa es mi respuesta.', 'Eso es todo por mi parte.', 'Nada más por mi parte.'], ask: ['Espero tu respuesta.', 'Tú decides.', 'Dime qué prefieres.'], you: ['Tu turno.', 'Te toca.', 'Te devuelvo la palabra.'], step: ['Un paso hecho.', 'Esa parte está hecha.', 'Hasta aquí, todo bien.'], team: ['El equipo ha vuelto. Voy a repasar los informes.', 'Ya están todos los informes. Voy a leerlos.', 'Todos han informado. Sigo yo desde aquí.'], and: ' y ' },
   pt: { edit: [(a) => `Alterei ${a}.`, (a) => `Atualizei ${a}.`, (a) => `Minhas alterações estão em ${a}.`], calls: [(w, d) => `Isso deu ${w}${d ? ' em ' + d : ''}.`, (w, d) => `No total: ${w}${d ? ' em ' + d : ''}.`], said: ['Essa é a minha resposta.', 'Isso é tudo da minha parte.', 'Nada mais da minha parte.'], ask: ['Aguardo sua resposta.', 'Você decide.', 'Me diga o que prefere.'], you: ['Sua vez.', 'É com você.', 'Passo a palavra para você.'], step: ['Uma etapa feita.', 'Essa parte está feita.', 'Até aqui, tudo certo.'], team: ['A equipe voltou. Vou passar pelos relatórios.', 'Todos os relatórios chegaram. Vou ler.', 'Todo mundo entregou. Eu sigo daqui.'], and: ' e ' },
+  de: { edit: [(a) => `Ich habe ${a} geändert.`, (a) => `Ich habe ${a} aktualisiert.`, (a) => `Meine Änderungen sind in ${a}.`], calls: [(w, d) => `Insgesamt ${w}${d ? ' in ' + d : ''}.`, (w, d) => `Bilanz: ${w}${d ? ' in ' + d : ''}.`], said: ['Das ist meine Antwort.', 'Das ist alles von mir.', 'Mehr habe ich nicht.'], ask: ['Ich warte auf deine Antwort.', 'Du entscheidest.', 'Sag mir, was dir lieber ist.'], you: ['Du bist dran.', 'Ich gebe an dich ab.', 'Zurück zu dir.'], step: ['Ein Schritt geschafft.', 'Der Teil ist erledigt.', 'So weit, so gut.'], team: ['Das Team ist zurück. Ich gehe die Berichte durch.', 'Alle Berichte sind da. Ich lese sie.', 'Alle haben berichtet. Ich übernehme ab hier.'], and: ' und ' },
+  da: { edit: [(a) => `Jeg har ændret ${a}.`, (a) => `Jeg har opdateret ${a}.`, (a) => `Mine ændringer ligger i ${a}.`], calls: [(w, d) => `Det blev til ${w}${d ? ' på ' + d : ''}.`, (w, d) => `I alt: ${w}${d ? ' på ' + d : ''}.`], said: ['Det er mit svar.', 'Det var alt fra mig.', 'Ikke mere fra mig.'], ask: ['Jeg venter på dit svar.', 'Det er din beslutning.', 'Sig, hvad du foretrækker.'], you: ['Din tur.', 'Over til dig.', 'Tilbage til dig.'], step: ['Et skridt klaret.', 'Den del er klaret.', 'Indtil videre går det godt.'], team: ['Holdet er tilbage. Jeg gennemgår rapporterne.', 'Alle rapporterne er kommet. Lad mig læse dem.', 'Alle har rapporteret. Jeg tager den herfra.'], and: ' og ' },
+  ja: { edit: [(a) => `${a}を変更しました。`, (a) => `${a}を更新しました。`, (a) => `変更は${a}にあります。`], calls: [(w, d) => `${d ? d + 'で' : ''}${w}でした。`, (w, d) => `合計で${w}${d ? '、' + d : ''}。`], said: ['以上が私の答えです。', '私からは以上です。', 'ほかにはありません。'], ask: ['お返事を待っています。', 'ご判断ください。', 'どちらがいいか教えてください。'], you: ['どうぞ。', 'お返しします。', 'あとはお任せします。'], step: ['一歩前進です。', 'この部分は終わりました。', 'ここまでは順調です。'], team: ['チームが戻ってきました。報告に目を通します。', '報告が全部そろいました。読んでみます。', '全員から報告がありました。ここからは私が。'], and: 'と' },
+  ko: { edit: [(a) => `${a} 수정했어요.`, (a) => `${a} 업데이트했어요.`, (a) => `변경 사항은 ${a}에 있어요.`], calls: [(w, d) => `총 ${w}${d ? ', ' + d : ''}.`, (w, d) => `모두 ${w}${d ? ', ' + d + ' 걸렸어요' : ''}.`], said: ['이게 제 답이에요.', '제 쪽은 여기까지예요.', '더 할 말은 없어요.'], ask: ['답변 기다릴게요.', '결정은 맡길게요.', '어느 쪽이 좋은지 알려 주세요.'], you: ['이제 차례예요.', '넘겨 드릴게요.', '다시 맡길게요.'], step: ['한 단계 끝났어요.', '이 부분은 끝났어요.', '지금까지는 순조로워요.'], team: ['팀이 돌아왔어요. 보고서를 훑어볼게요.', '보고서가 다 들어왔어요. 읽어 볼게요.', '모두 보고했어요. 여기서부터는 제가 할게요.'], and: ', ' },
+  zh: { edit: [(a) => `我改了${a}。`, (a) => `我更新了${a}。`, (a) => `我的修改在${a}里。`], calls: [(w, d) => `一共${w}${d ? '，用了' + d : ''}。`, (w, d) => `总计：${w}${d ? '，' + d : ''}。`], said: ['这就是我的回答。', '我这边就这些。', '我没有别的了。'], ask: ['我等你的回复。', '你来决定。', '告诉我你更想要哪个。'], you: ['该你了。', '交给你了。', '回到你这边。'], step: ['完成了一步。', '这部分做完了。', '到目前为止一切顺利。'], team: ['团队回来了。我来看看报告。', '报告都到齐了。我来读一下。', '大家都汇报完了。接下来交给我。'], and: '和' },
+  zt: { edit: [(a) => `我改了${a}。`, (a) => `我更新了${a}。`, (a) => `我的修改在${a}裡。`], calls: [(w, d) => `一共${w}${d ? '，用了' + d : ''}。`, (w, d) => `總計：${w}${d ? '，' + d : ''}。`], said: ['這就是我的回答。', '我這邊就這些。', '我沒有別的了。'], ask: ['我等你的回覆。', '你來決定。', '告訴我你更想要哪個。'], you: ['該你了。', '交給你了。', '回到你這邊。'], step: ['完成了一步。', '這部分做完了。', '到目前為止一切順利。'], team: ['團隊回來了。我來看看報告。', '報告都到齊了。我來讀一下。', '大家都回報完了。接下來交給我。'], and: '和' },
 };
 function closeLine(e, tail) {   // e: the message that closed this stretch of work; none when there is no new one, and then the line is only how it ends
-  const W = CLOSE[CALL()], f = e ? exchFacts(S.pos - 1, 'main') : null, n = f ? f.files.length : 0, ask = tail === 'you' && !!e && /[?？]$/.test(plain(e.text));   // it ends on a question: the floor is yours, to answer it
+  const W = CLOSE[TLANG()], f = e ? exchFacts(S.pos - 1, 'main') : null, n = f ? f.files.length : 0, ask = tail === 'you' && !!e && /[?？]$/.test(plain(e.text));   // it ends on a question: the floor is yours, to answer it
   const make = (s) => { const end = W[tail][(s >>> 3) % W[tail].length]; if (!e) return end; if (ask) return W.ask[s % W.ask.length];
     const did = n ? W.edit[s % W.edit.length](n < 3 ? f.files.join(W.and) : P('file', n)) : f.tools ? W.calls[s % W.calls.length](P('call', f.tools), f.ms >= 20000 ? f.dur : '') : tail === 'you' ? W.said[s % W.said.length] : ''; return (did ? did + ' ' : '') + end; };
   const s = hash('c' + (e ? e.ts : Date.now())); let line = make(s); if (line === S.lastClose) line = make(s + 8); return (S.lastClose = line);   // never the same line twice in a row
@@ -2891,7 +3047,7 @@ async function smallTalk(token) {
   const p = before(S.events.length), muser = S.live && !n && !S.mused && p ? thinkerOf(p) : null, think = !!muser && here.includes(muser) && quiet > 6000 && Date.now() - p.ts > 20000 && Date.now() - p.ts < 180000;   // live: 20 s without a word from whoever is thinking, once per silence
   if (!think && (quiet < (S.live ? 45000 : 12000 / spd()) * [1, 2.5, 6][n] || (S.live && Date.now() - last.ts > 6e5))) return;   // live: a session untouched for ten minutes is a call that is over
   const busy = here.filter((id) => agentState(id, Date.now()).k === 'working'), who = think ? muser : S.present && here.includes(S.present) ? S.present : pick(busy.length ? busy : here); if (!who) return;   // whoever shares their screen speaks, so the screen stays up
-  const P = FILL[CALL()][who === S.present ? 'share' : busy.length ? 'busy' : 'wait']; let line = think ? varied('think', Math.floor(Math.random() * 97)) : pick(P); if (!think && line === S.lastFill) line = P[(P.indexOf(line) + 1) % P.length]; if (!think) S.lastFill = line;
+  const P = FILL[TLANG()][who === S.present ? 'share' : busy.length ? 'busy' : 'wait']; let line = think ? varied('think', Math.floor(Math.random() * 97)) : pick(P); if (!think && line === S.lastFill) line = P[(P.indexOf(line) + 1) % P.length]; if (!think) S.lastFill = line;
   startTalk(who, line, think ? '💭' : '💬'); if (think) S.mused = true; else S.fill = n + 1; await speakLine(line, S.agents[who], true, token); stopTalk(who);
 }
 async function card(text, sub, ms = 2500) {
@@ -3232,6 +3388,12 @@ const VISIT = {
   fr: { ask: [(t) => `Toc toc. On a une question pour vous dans « ${t} ».`, (t) => `Pardon de vous couper : « ${t} » a une question pour vous.`], ok: [(t) => `Toc toc. « ${t} » attend votre feu vert.`, (t) => `Excusez-moi, on vous demande dans « ${t} » : on y attend votre accord.`], turn: [(t) => `Je ne fais que passer : « ${t} » a fini, c’est à vous là-bas.`, (t) => `Des nouvelles de « ${t} » : ils ont fini et vous attendent.`] },
   es: { ask: [(t) => `Toc, toc. Tienen una pregunta para ti en “${t}”.`, (t) => `Perdona que interrumpa: “${t}” tiene una pregunta para ti.`], ok: [(t) => `Toc, toc. “${t}” espera tu visto bueno.`, (t) => `Disculpa, te buscan en “${t}”: esperan tu aprobación.`], turn: [(t) => `Solo pasaba por aquí: “${t}” ha terminado, te toca allí.`, (t) => `Noticias de “${t}”: han terminado y te esperan.`] },
   pt: { ask: [(t) => `Toc, toc. Tem uma pergunta para você em “${t}”.`, (t) => `Desculpe interromper: “${t}” tem uma pergunta para você.`], ok: [(t) => `Toc, toc. “${t}” está esperando o seu sinal verde.`, (t) => `Com licença, estão chamando você em “${t}”: esperam a sua aprovação.`], turn: [(t) => `Só de passagem: “${t}” terminou, é a sua vez lá.`, (t) => `Notícias de “${t}”: terminaram e esperam por você.`] },
+  de: { ask: [(t) => `Klopf, klopf. In „${t}“ gibt es eine Frage an dich.`, (t) => `Entschuldige die Unterbrechung: „${t}“ hat eine Frage an dich.`], ok: [(t) => `Klopf, klopf. „${t}“ wartet auf dein Okay.`, (t) => `Entschuldigung, du wirst in „${t}“ gebraucht: Es wartet auf deine Freigabe.`], turn: [(t) => `Ich komme nur kurz vorbei: „${t}“ ist fertig, dort bist du dran.`, (t) => `Neuigkeiten aus „${t}“: Sie sind fertig und warten auf dich.`] },
+  da: { ask: [(t) => `Bank, bank. Der er et spørgsmål til dig i »${t}«.`, (t) => `Undskyld, at jeg afbryder: »${t}« har et spørgsmål til dig.`], ok: [(t) => `Bank, bank. »${t}« venter på dit go.`, (t) => `Undskyld, du bliver efterspurgt i »${t}«: den venter på din godkendelse.`], turn: [(t) => `Jeg kigger bare forbi: »${t}« er færdig, det er din tur derovre.`, (t) => `Nyt fra »${t}«: de er færdige og venter på dig.`] },
+  ja: { ask: [(t) => `トントン。「${t}」であなたに質問があるそうです。`, (t) => `割り込んですみません。「${t}」から質問です。`], ok: [(t) => `トントン。「${t}」があなたのゴーサインを待っています。`, (t) => `失礼します、「${t}」で呼ばれています。承認待ちです。`], turn: [(t) => `ちょっと通りがかりに。「${t}」が終わりました、あちらはあなたの番です。`, (t) => `「${t}」からのお知らせです。終わって、あなたを待っています。`] },
+  ko: { ask: [(t) => `똑똑. ‘${t}’에서 질문이 있대요.`, (t) => `끼어들어서 죄송해요. ‘${t}’에서 질문이 있어요.`], ok: [(t) => `똑똑. ‘${t}’에서 승인을 기다리고 있어요.`, (t) => `실례합니다, ‘${t}’에서 찾아요. 승인을 기다리고 있어요.`], turn: [(t) => `지나가다 들렀어요. ‘${t}’ 끝났어요, 거기는 이제 차례예요.`, (t) => `‘${t}’ 소식이에요. 다 끝내고 기다리고 있어요.`] },
+  zh: { ask: [(t) => `敲敲门。“${t}”那边有个问题要问你。`, (t) => `打扰一下：“${t}”有个问题要问你。`], ok: [(t) => `敲敲门。“${t}”在等你点头。`, (t) => `不好意思，“${t}”那边需要你：在等你批准。`], turn: [(t) => `路过说一声：“${t}”完成了，那边轮到你了。`, (t) => `“${t}”那边的消息：他们做完了，在等你。`] },
+  zt: { ask: [(t) => `敲敲門。“${t}”那邊有個問題要問你。`, (t) => `打擾一下：“${t}”有個問題要問你。`], ok: [(t) => `敲敲門。“${t}”在等你點頭。`, (t) => `不好意思，“${t}”那邊需要你：在等你批准。`], turn: [(t) => `路過說一聲：“${t}”完成了，那邊輪到你了。`, (t) => `“${t}”那邊的訊息：他們做完了，在等你。`] },
 };
 function knocks() {
   const now = Date.now(), first = !knocks.seen, seen = knocks.seen || (knocks.seen = {}), ck = S.cur ? sessKey(S.cur) : ''; let best = null;
@@ -3245,7 +3407,7 @@ function knocks() {
   if (best && prefs.visits !== false && !S.locked && !(S.visit && S.visit.kind !== 'turn' && best.kind === 'turn')) { S.knockAt[best.k] = now; showVisit(best); }
 }
 function showVisit(v) {   // the same face and name each time for a given session; with your own characters, one of them
-  const h = hash('visit' + v.k), p = persona0({ id: 'visit:' + v.k, name: NAMES[h % NAMES.length], role: '' }), W = VISIT[CALL()][v.kind], t = tabName(v.r), el = $('#visit');
+  const h = hash('visit' + v.k), p = persona0({ id: 'visit:' + v.k, name: NAMES[h % NAMES.length], role: '' }), W = VISIT[TLANG()][v.kind], t = tabName(v.r), el = $('#visit');
   p.custom = CHARS.pool.length ? CHARS.pool[h % CHARS.pool.length] : null; v.p = p; v.line = W[(h + (showVisit.n = (showVisit.n || 0) + 1)) % W.length](t.length > 46 ? t.slice(0, 44).replace(/\s+\S*$/, '') + '…' : t);
   el.className = 'on ' + (v.kind === 'turn' ? 'turn' : 'blocked');
   el.innerHTML = `<div class="vsay"><button class="vx" aria-label="${esc(L('Fermer', 'Close'))}">✕</button><small>${esc(p.name)} · ${esc(niceProj(v.r.proj))}</small>${esc(v.line)}<br><button class="vgo">${esc(L('Y aller', 'Go there'))} →</button></div><div class="vwho">${avatarSVG(p, undefined, 'v' + p.gid + '_')}</div>`;
@@ -3376,7 +3538,7 @@ function applyLang() {
   document.documentElement.lang = (LANGS.find((l) => l[0] === prefs.lang) || LANGS[0])[2];
   document.querySelectorAll('[data-fr]').forEach((el) => (el.textContent = FR() ? el.dataset.fr : tr(el.dataset.en)));
   document.querySelectorAll('#viewSeg button').forEach((b) => { b.title = b.textContent; });   // in a narrow window they are icons: the name stays as a tooltip
-  $('#callTrMi').style.display = CALL_LANG[prefs.lang] && !FR() ? '' : 'none';
+  $('#callTrMi').style.display = CALL_LANG[prefs.lang] && !FR() ? '' : 'none'; $('#callTrMi').dataset.t = NATURAL.has(CALL_LANG[prefs.lang]) ? 'callNew' : 'callTr';   /* German, Danish, Japanese, Korean: a yes of their own (callNew), off until given */
   const sel = $('#langSel'); if (!sel.options.length) sel.innerHTML = LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join(''); sel.value = prefs.lang;
   [['#bPlay', L('Pause / Lecture (espace)', 'Pause / Play (space)')], ['#bLog', L('Transcription', 'Transcript')], ['#bMute', L('Son (touche M)', 'Sound (M key)')], ['#bMenu', L('Réglages', 'Settings')], ['#dclose', L('Fermer', 'Close')], ['#officeVol', L('Volume de l’ambiance', 'Ambience volume')], ['#voiceVol', L('Volume des voix', 'Voice volume')], ['#musicVol', L('Volume de la musique', 'Music volume')], ['#liveProj', L('Projet à suivre', 'Project to follow')], ['#reactBar', L('Réactions', 'Reactions')], ['#logQ', L('Rechercher dans la transcription', 'Search the transcript')], ['#roster', L('Agents', 'Agents')], ['#leadName', L('Nom de l’agent principal', 'Lead agent name')], ['#dren', L('Renommer', 'Rename')]].forEach(([q, t]) => { const el = $(q); if (!el) return; el.title = t; el.setAttribute('aria-label', t); }); $('#logQ').placeholder = L('Rechercher…', 'Search…'); $('#menuQ').placeholder = L('Chercher un réglage…', 'Search settings…'); $('#menuQ').setAttribute('aria-label', $('#menuQ').placeholder); $('#sps').setAttribute('aria-label', L('Vitesses prédéfinies', 'Speed presets')); document.querySelectorAll('#reactBar button').forEach((b) => b.setAttribute('aria-label', b.dataset.e));
   leadField(); subField();
@@ -3435,7 +3597,7 @@ function menuInit() {
     $('#menuNone').style.display = q && !far.length && !secs.some((sc) => sc.items.some((e) => !e.classList.contains('mhide'))) ? '' : 'none';
   };
 }
-const onSwitch = (e) => { const b = e.target.closest('.mi[data-t]'); if (!b) return; prefs[b.dataset.t] = !prefs[b.dataset.t]; savePrefs(); if (prefs[b.dataset.t] && ['voice', 'office', 'music', 'notify'].includes(b.dataset.t)) claimAudio(); b.querySelector('.sw').classList.toggle('on', prefs[b.dataset.t]); AUD.apply(); if (b.dataset.t === 'shareUsage') { prefs.usageAsked = true; savePrefs(); usageOpened(true); } if (b.dataset.t === 'office') $('#officeBox').style.display = prefs.office ? '' : 'none'; if (b.dataset.t === 'callTr') { prefs.callTrSeen = true; savePrefs(); setLang(prefs.lang); } if (b.dataset.t === 'voice') { voiceOffer(); $('#voiceVolBox').style.display = prefs.voice ? '' : 'none'; } if (b.dataset.t === 'customLaptop') { for (const k in imgCache) delete imgCache[k]; buildStage(); paintStatus(); } if (b.dataset.t === 'files') paintFiles(); if (b.dataset.t === 'artNet' && S.present) renderPresent(); if (b.dataset.t === 'ownNames') { renameAll(); subField(); } if (b.dataset.t === 'reactions') document.body.classList.toggle('react', prefs.reactions); if (b.dataset.t === 'focusLayout') { document.body.classList.toggle('focusl', !!prefs.focusLayout); layout(); } if (b.dataset.t === 'roster') { document.body.classList.toggle('rost', prefs.roster); paintStates(); } if (b.dataset.t === 'notify') { prefs.notifyChosen = true; savePrefs(); } if (b.dataset.t === 'notify' && prefs.notify) askNotify(); if (b.dataset.t === 'vanish' && !prefs.vanish) { S.gone.clear(); paintStatus(); }
+const onSwitch = (e) => { const b = e.target.closest('.mi[data-t]'); if (!b) return; prefs[b.dataset.t] = !prefs[b.dataset.t]; savePrefs(); if (prefs[b.dataset.t] && ['voice', 'office', 'music', 'notify'].includes(b.dataset.t)) claimAudio(); b.querySelector('.sw').classList.toggle('on', prefs[b.dataset.t]); AUD.apply(); if (b.dataset.t === 'shareUsage') { prefs.usageAsked = true; savePrefs(); usageOpened(true); } if (b.dataset.t === 'office') $('#officeBox').style.display = prefs.office ? '' : 'none'; if (b.dataset.t === 'callTr') { prefs.callTrSeen = true; savePrefs(); setLang(prefs.lang); } if (b.dataset.t === 'callNew') setLang(prefs.lang); if (b.dataset.t === 'voice') { voiceOffer(); $('#voiceVolBox').style.display = prefs.voice ? '' : 'none'; } if (b.dataset.t === 'customLaptop') { for (const k in imgCache) delete imgCache[k]; buildStage(); paintStatus(); } if (b.dataset.t === 'files') paintFiles(); if (b.dataset.t === 'artNet' && S.present) renderPresent(); if (b.dataset.t === 'ownNames') { renameAll(); subField(); } if (b.dataset.t === 'reactions') document.body.classList.toggle('react', prefs.reactions); if (b.dataset.t === 'focusLayout') { document.body.classList.toggle('focusl', !!prefs.focusLayout); layout(); } if (b.dataset.t === 'roster') { document.body.classList.toggle('rost', prefs.roster); paintStates(); } if (b.dataset.t === 'notify') { prefs.notifyChosen = true; savePrefs(); } if (b.dataset.t === 'notify' && prefs.notify) askNotify(); if (b.dataset.t === 'vanish' && !prefs.vanish) { S.gone.clear(); paintStatus(); }
   if (b.dataset.t === 'askCard') paintAsk(Date.now());
   if (b.dataset.t === 'zen') applyMute();
   if (b.dataset.t === 'updateNotice') { prefs.updateAsked = true; savePrefs(); $('#updTip').style.display = 'none'; if (prefs.updateNotice) { updStart.at = 0; setTimeout(updStart, 600); } }   /* an answer too; on: asked once the settings file says so (savePrefs waits 400 ms) */
@@ -3505,44 +3667,47 @@ let kokoroTimer = null;
 async function kokoroUI() {
   const box = $('#kokoroBox'), on = prefs.vstyle === 'kokoro'; box.style.display = on ? '' : 'none'; $('#vstyleTip').style.display = on ? 'none' : ''; if (!on) { clearInterval(kokoroTimer); kokoroTimer = null; return; }
   let st; try { st = await (await fetch('/api/kokoro')).json(); } catch { return; }
-  const b = $('#kokoroInstall'), h = $('#kokoroHint'), addFr = st.installed && !st.g2p && !!CALL_LANG[prefs.lang]; b.style.display = st.installed && !addFr ? 'none' : '';   /* addFr: installed before French, Spanish and Portuguese were added, which is one small package more. Offered where one of them is the interface language: a session in that language is then read by these voices, translated or not */
-  b.disabled = st.installing || !st.npm; b.textContent = st.installing ? L('Installation…', 'Installing…') : addFr ? L('Ajouter les voix françaises', 'Add the voices of this language') + ' (' + L('{0} Mo', '{0} MB').replace('{0}', st.g2pMb) + ')' : L('Installer ({0} Mo)', 'Install ({0} MB)').replace('{0}', st.sizeMb);
+  const b = $('#kokoroInstall'), h = $('#kokoroHint'), addFr = st.installed && !st.g2p && needG2p(), addSt = st.installed && needSt() && !st[ADD()], add = addFr || addSt; b.style.display = st.installed && !add ? 'none' : '';   /* addSt: German, Danish, Japanese, Korean, a model of their own (about 400 MB), offered where one of them is the interface language */   /* addFr: installed before French, Spanish and Portuguese were added, which is one small package more. Offered where one of them is the interface language: a session in that language is then read by these voices, translated or not */
+  b.disabled = st.installing || (!st.npm && !(addSt && ADD() === 'st'));   /* Supertonic needs no npm, the Chinese phonemes do */ b.textContent = st.installing ? L('Installation…', 'Installing…') + (st.dlPct != null ? ' ' + st.dlPct + ' %' : '') : add ? L('Ajouter les voix françaises', 'Add the voices of this language') + ' (' + L('{0} Mo', '{0} MB').replace('{0}', addSt ? st[ADD() + 'Mb'] : st.g2pMb) + ')' : L('Installer ({0} Mo)', 'Install ({0} MB)').replace('{0}', st.sizeMb + (needSt() ? st[ADD() + 'Mb'] : 0));
   h.textContent = st.installing ? L('Téléchargement en cours, vous pouvez continuer : les agents babillent en attendant.', 'Downloading, you can carry on: the agents babble meanwhile.')
-    : st.error ? st.error : !st.npm && !st.installed ? L('npm est introuvable : installez Node.js pour activer cette option.', 'npm not found: install Node.js to enable this option.')
-    : st.installed ? (st.gaveUp ? L('Le moteur s’est arrêté : les agents babillent à la place.', 'The engine stopped: the agents babble instead.') : st.ready ? (addFr ? L('Voix prêtes en anglais. Le français est encore lu par les voix du système.', 'Voices ready in English. This language is still read by the system voices.') : L('Voix prêtes.', 'Voices ready.')) : L('Chargement du modèle (téléchargé au premier usage, environ 305 Mo)…', 'Loading the model (downloaded on first use, about 305 MB)…'))
+    : st.error || st.dlError ? st.error || st.dlError : !st.npm && !st.installed ? L('npm est introuvable : installez Node.js pour activer cette option.', 'npm not found: install Node.js to enable this option.')
+    : st.installed ? (st.gaveUp ? L('Le moteur s’est arrêté : les agents babillent à la place.', 'The engine stopped: the agents babble instead.') : st.ready ? (addFr ? L('Voix prêtes en anglais. Le français est encore lu par les voix du système.', 'Voices ready in English. This language is still read by the system voices.') : addSt ? L('Voix prêtes en anglais. Cette langue a aussi des voix naturelles : un téléchargement de plus.', 'Voices ready in English. This language has natural voices too: one more download.') : L('Voix prêtes.', 'Voices ready.')) : L('Chargement du modèle (téléchargé au premier usage, environ 305 Mo)…', 'Loading the model (downloaded on first use, about 305 MB)…'))
     : CALL_LANG[prefs.lang] ? L('Voix locales de bonne qualité, en français et en anglais. Gratuit, rien n’est envoyé nulle part.', 'Good-quality local voices, in this language and in English. Free, nothing leaves your machine.') : L('Voix locales de bonne qualité, en anglais. Gratuit, rien n’est envoyé nulle part.', 'Good-quality local voices, in English. Free, nothing leaves your machine.');
   if ((st.installing || (st.installed && !st.ready && !st.gaveUp)) && !kokoroTimer) kokoroTimer = setInterval(async () => { await kokoroUI(); }, 2500);
-  if (!st.installing && (st.ready || st.gaveUp || !st.installed) && kokoroTimer) { clearInterval(kokoroTimer); kokoroTimer = null; if (st.ready && (TTS.engine !== 'kokoro' || (st.g2p && !TTS.pool.fr.some((v) => TTS.kv.has(v))))) TTS.init(); }   /* also when the voices of the other languages have just been added */
+  if (!st.installing && (st.ready || st.gaveUp || !st.installed) && kokoroTimer) { clearInterval(kokoroTimer); kokoroTimer = null; if (st.ready && (TTS.engine !== 'kokoro' || (st.g2p && !TTS.pool.fr.some((v) => TTS.kv.has(v))) || (st.st && !TTS.pool.de.some((v) => TTS.kv.has(v))) || (st.zh && !TTS.pool.zh.some((v) => TTS.kv.has(v))))) TTS.init(); }   /* also when the voices of the other languages have just been added */
 }
-$('#kokoroInstall').onclick = async () => { try { await fetch('/api/kokoro/install', { method: 'POST' }); } catch {} kokoroUI(); voiceOffer(); };
+const ADD = () => { const l = CALL_LANG[prefs.lang]; return !l ? '' : l === 'zh' ? 'zh' : NATURAL.has(l) ? 'st' : 'g2p'; }, needSt = () => ADD() === 'st' || ADD() === 'zh', needG2p = () => ADD() === 'g2p', installVoices = () => fetch('/api/kokoro/install' + (needSt() ? '?' + ADD() + '=1' : ''), { method: 'POST' });   // the interface language says which add-on: eSpeak (French, Spanish, Portuguese), Supertonic (German, Danish, Japanese, Korean) or the Chinese model (both Chinese), read by a session in that language too, translated or not. needSt: one of the last two, a model of its own
+$('#kokoroInstall').onclick = async () => { try { await installVoices(); } catch {} kokoroUI(); voiceOffer(); };
 kokoroUI();
 // ---- on the call: one line that says the real voices exist, to whoever does not have them. Nothing outside ⚙ said so, and without them the agents babble. One click installs them (and the style changes
 // to them once they are ready, not before); ✕ and the line never comes back. Not in the scripted demo (?demo=1), which is what the pictures and videos are made from.
 let offerTimer = null;
 async function voiceOffer() {
-  const el = $('#vOffer'), hide = () => { voiceOffer.busy = false; const was = el.style.display !== 'none'; el.style.display = 'none'; clearInterval(offerTimer); offerTimer = null; if (was) packNote(); };   // one offer at a time: the pack's line, kept back while the voices download, can show now
+  const el = $('#vOffer'), hide = () => { voiceOffer.busy = false; const was = el.style.display !== 'none'; el.style.display = 'none'; clearInterval(offerTimer); offerTimer = null; if (was) { packNote(); callNote(); } };   // and the question of the call's language, kept back meanwhile   // one offer at a time: the pack's line, kept back while the voices download, can show now
   if (!prefs.voice || prefs.voiceOffer === 'no' || Q.get('demo')) return hide();
   let st; try { st = await (await fetch('/api/kokoro')).json(); } catch { return; }
-  const add = st.installed && st.ready && !st.g2p && !!CALL_LANG[prefs.lang] && prefs.vstyle === 'kokoro';   // the voices are there, from before French, Spanish and Portuguese were added: one small package more, said on the call where one of them is the language of the interface (⚙ said it, and nothing else)
+  const addFr = st.installed && st.ready && !st.g2p && needG2p() && prefs.vstyle === 'kokoro', addSt = st.installed && st.ready && needSt() && !st[ADD()] && prefs.vstyle === 'kokoro', add = addFr || addSt;   // the voices are there, from before French, Spanish and Portuguese were added: one small package more, said on the call where one of them is the language of the interface (⚙ said it, and nothing else)
   if (st.ready && prefs.voiceOffer === 'want' && !st.installing && !add) { prefs.voiceOffer = 'no'; prefs.vstyle = 'kokoro'; prefs.vstyleChosen = true; savePrefs(); $('#vstyle').value = 'kokoro'; hide(); await TTS.init(); kokoroUI(); toast(L('Voix prêtes.', 'Voices ready.')); return; }
   const busy = voiceOffer.busy = st.installing || (st.installed && !st.ready && !st.gaveUp && prefs.voiceOffer === 'want');
   if (busy && !st.installing && !voiceOffer.woke) { voiceOffer.woke = true; fetch('/api/voices?engine=kokoro').catch(() => {}); }   // installed in an earlier run, closed before the model was ready: nothing else starts the engine while another style is in use, and the line would say “Downloading” for good
-  if ((st.installed && !busy && !add) || !st.npm) return hide();   // they have them; or cannot have them (no npm), which ⚙ explains
-  $('#vOfferT').textContent = busy ? L('Téléchargement des vraies voix… vous pouvez continuer.', 'Downloading the real voices… you can carry on.') : st.error || (add ? L('Voix prêtes en anglais. Le français est encore lu par les voix du système.', 'Voices ready in English. This language is still read by the system voices.') : L('Vos agents peuvent parler avec de vraies voix.', 'Your agents can speak with real voices.'));
-  $('#vOfferB').style.display = busy ? 'none' : ''; $('#vOfferB').textContent = add ? L('Ajouter les voix françaises', 'Add the voices of this language') + L(` (${st.g2pMb} Mo)`, ` (${st.g2pMb} MB)`) : L('Installer', 'Install') + L(` (${st.sizeMb} Mo)`, ` (${st.sizeMb} MB)`); if (!busy && $('#packNote').style.display !== 'none') { el.style.display = 'none'; return; } el.style.display = ''; if ($('#packNote').style.display !== 'none') $('#packNote').style.display = 'none';   /* the pack's line, shown a few days a year, goes first; a download in progress goes before it */
+  if ((st.installed && !busy && !add) || (!st.npm && !(addSt && ADD() === 'st'))) return hide();   // they have them; or cannot have them (no npm), which ⚙ explains
+  $('#vOfferT').textContent = busy ? L('Téléchargement des vraies voix… vous pouvez continuer.', 'Downloading the real voices… you can carry on.') + (st.dlPct != null ? ' ' + st.dlPct + ' %' : '') : st.error || st.dlError || (addFr ? L('Voix prêtes en anglais. Le français est encore lu par les voix du système.', 'Voices ready in English. This language is still read by the system voices.') : addSt ? L('Voix prêtes en anglais. Cette langue a aussi des voix naturelles : un téléchargement de plus.', 'Voices ready in English. This language has natural voices too: one more download.') : L('Vos agents peuvent parler avec de vraies voix.', 'Your agents can speak with real voices.'));
+  $('#vOfferB').style.display = busy ? 'none' : ''; const mb = add ? (addSt ? st[ADD() + 'Mb'] : st.g2pMb) : st.sizeMb + (needSt() ? st[ADD() + 'Mb'] : 0); $('#vOfferB').textContent = (add ? L('Ajouter les voix françaises', 'Add the voices of this language') : L('Installer', 'Install')) + L(` (${mb} Mo)`, ` (${mb} MB)`); if (!busy && $('#packNote').style.display !== 'none') { el.style.display = 'none'; return; } el.style.display = ''; if ($('#packNote').style.display !== 'none') $('#packNote').style.display = 'none'; if (callNote.ask) $('#trNote').style.display = 'none';   /* the pack's line, shown a few days a year, goes first; a download in progress goes before it */
   if (busy && !offerTimer) offerTimer = setInterval(voiceOffer, 2500); if (!busy && offerTimer) { clearInterval(offerTimer); offerTimer = null; }
 }
-$('#vOfferB').onclick = async () => { prefs.voiceOffer = 'want'; savePrefs(); try { await fetch('/api/kokoro/install', { method: 'POST' }); } catch {} voiceOffer(); kokoroUI(); };
+$('#vOfferB').onclick = async () => { prefs.voiceOffer = 'want'; savePrefs(); try { await installVoices(); } catch {} voiceOffer(); kokoroUI(); };
 $('#vOfferX').onclick = () => { prefs.voiceOffer = 'no'; savePrefs(); voiceOffer(); };
 voiceOffer();
-// ---- on the call: the first time one is held in Spanish or Portuguese on this computer, a line says that it is translated, and with what. Nobody asked for it (it follows the interface language, as French
+// ---- on the call: the first time one is held in Spanish or Portuguese on this computer, a line says that it is translated, and with what. In German, Danish, Japanese and Korean the same line asks first (Yes / No thanks), and the call stays in English until the answer is yes. Nobody asked for it (it follows the interface language, as French
 // always did), and it sends what the agents say to Anthropic through the person's own Claude Code. Said once; "Turn off" is the switch of ⚙ → Language.
 function callNote() {
-  const on = TRL() && !FR() && !prefs.callTrSeen && !Q.get('demo'); $('#trNote').style.display = on ? '' : 'none'; if (!on) return;
-  $('#trNoteT').textContent = L('L’appel est maintenant traduit dans cette langue, avec votre Claude Code.', 'The call is now translated into this language, with your Claude Code.'); $('#trNoteOk').textContent = L('Garder', 'Keep'); $('#trNoteOff').textContent = L('Désactiver', 'Turn off');
+  const ask = callNote.ask = NATURAL.has(CALL_LANG[prefs.lang]) && prefs.callNew === undefined && !noTr && !Q.get('demo') && $('#vOffer').style.display === 'none';   // German, Danish, Japanese, Korean: asked once, never on by itself; after the line that offers their voices, not beside it
+  const on = ask || (TRL() && !FR() && !NATURAL.has(CALL()) && !prefs.callTrSeen && !Q.get('demo')); $('#trNote').style.display = on ? '' : 'none'; if (!on) return;
+  $('#trNoteT').textContent = ask ? L('Tenir l’appel dans cette langue ? Votre Claude Code traduit ce que disent les agents.', 'Hold the call in this language? Your Claude Code translates what the agents say.') : L('L’appel est maintenant traduit dans cette langue, avec votre Claude Code.', 'The call is now translated into this language, with your Claude Code.');
+  $('#trNoteOk').textContent = ask ? L('Oui', 'Yes') : L('Garder', 'Keep'); $('#trNoteOff').textContent = ask ? L('Non merci', 'No thanks') : L('Désactiver', 'Turn off');
 }
-$('#trNoteOk').onclick = () => { prefs.callTrSeen = true; savePrefs(); callNote(); };
-$('#trNoteOff').onclick = () => { prefs.callTrSeen = true; prefs.callTr = false; savePrefs(); setLang(prefs.lang); };
+$('#trNoteOk').onclick = () => { if (callNote.ask) { prefs.callNew = true; savePrefs(); callNote(); setLang(prefs.lang); return; } prefs.callTrSeen = true; savePrefs(); callNote(); };
+$('#trNoteOff').onclick = () => { if (callNote.ask) { prefs.callNew = false; savePrefs(); callNote(); setLang(prefs.lang); return; } prefs.callTrSeen = true; prefs.callTr = false; savePrefs(); setLang(prefs.lang); };
 $('#officeVol').value = prefs.officeVol; $('#officeBox').style.display = prefs.office ? '' : 'none';
 $('#officeVol').oninput = (e) => { prefs.officeVol = +e.target.value; savePrefs(); AUD.applyMusic(); };
 $('#voiceVol').value = prefs.voiceVol ?? 1; $('#voiceVolBox').style.display = prefs.voice ? '' : 'none';
@@ -3742,7 +3907,7 @@ if (EMBED) $('#mBrowser').style.display = $('#mFollowTab').style.display = '';
   loadHealth().then(() => {   // French by default only if translation can actually work; otherwise stay in English without a warning
     const h = S.health || {};
     if (!prefs.langChosen && FR() && h.claude === null && !h.apiKey) { prefs.lang = 'en'; applyLang(); }
-    if (TRL()) { fetch('/api/warm?lang=' + CALL()).catch(() => {}); prefetchTr(S.idx); } callNote();
+    if (TRL()) { fetch('/api/warm?lang=' + TLANG()).catch(() => {}); prefetchTr(S.idx); } callNote();
   });
   if (Q.get('lang')) { langKeep = prefs.lang; await setLang(Q.get('lang'), false); }
   if (Q.get('demo')) {
