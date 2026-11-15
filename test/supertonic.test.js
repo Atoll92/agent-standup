@@ -101,3 +101,27 @@ test('kokoro.js fetches the Supertonic files only when asked, follows a redirect
     assert.equal(k.natural('zh_heart'), true, 'a Chinese voice never hands its line to a system voice');
   } finally { srv.close(); k.shutdown(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('kokoro.js tries a file again when the connection is cut in the middle of it, and tells a download that gives up in words', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'as-stcut-')); for (const m of ['kokoro-js', 'espeak-ng']) { fs.mkdirSync(path.join(dir, 'node_modules', m), { recursive: true }); fs.writeFileSync(path.join(dir, 'node_modules', m, 'package.json'), '{}'); }   // installed: no npm is started
+  const body = Buffer.alloc(200000, 7), sha = crypto.createHash('sha256').update(body).digest('hex'); let cuts = 1, hits = 0; const errs = [];
+  const srv = http.createServer((req, res) => { hits++; if (errs.length) { res.writeHead(errs.shift()); return res.end(); }   // errs: the status codes to answer with, one each
+    res.writeHead(200, { 'content-length': body.length });
+    if (cuts-- > 0) { res.write(body.subarray(0, 50000)); return setTimeout(() => req.socket.destroy(), 30); }   // reset after 50 KB
+    res.end(body); });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  Object.assign(process.env, { AGENT_STANDUP_KOKORO_DIR: dir, AGENT_STANDUP_ST_URL: `http://127.0.0.1:${srv.address().port}/`, AGENT_STANDUP_ST_FILES: JSON.stringify([['onnx/big.bin', body.length, sha]]) });
+  delete require.cache[require.resolve('../kokoro.js')];   // the folder and the files are read when the module loads
+  const k = require('../kokoro.js'), done = async () => { while (k.status().installing) await new Promise((r) => setTimeout(r, 20)); return k.status(); };
+  try {
+    k.install({ st: true }); let st = await done();
+    assert.deepEqual([st.st, st.dlError, hits], [true, null, 2], 'cut once: the file is asked for again, and the install goes on without a second click');
+    fs.rmSync(path.join(dir, 'supertonic-3'), { recursive: true, force: true }); cuts = 3; hits = 0;
+    k.install({ st: true }); st = await done();
+    assert.equal(st.st, false); assert.equal(hits, 3, 'three tries, no more'); assert.match(st.dlError, /connection cut/, 'not the "aborted" of node');
+    fs.rmSync(path.join(dir, 'supertonic-3'), { recursive: true, force: true }); cuts = 0; hits = 0; errs.push(503);
+    k.install({ st: true }); st = await done(); assert.deepEqual([st.st, st.dlError, hits], [true, null, 2], 'a server error is tried again');
+    fs.rmSync(path.join(dir, 'supertonic-3'), { recursive: true, force: true }); hits = 0; errs.push(404);
+    k.install({ st: true }); st = await done(); assert.equal(st.st, false); assert.match(st.dlError, /HTTP 404/); assert.equal(hits, 1, 'a file that is not there is asked for once');
+  } finally { srv.close(); k.shutdown(); fs.rmSync(dir, { recursive: true, force: true }); }
+});

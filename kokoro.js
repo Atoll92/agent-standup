@@ -92,24 +92,29 @@ function install(o = {}) {
 let dl = null, dlError = '';
 function get(url, file, [, size, sha], hops = 0) {
   return new Promise((resolve, reject) => {
+    let abort = null;   // set once the answer is coming in: from then on every failure goes through fail(), so the half file is gone before the answer
     const req = (url.startsWith('http:') ? http : https).get(url, { headers:   /* http: only the tests' local server */ { 'user-agent': 'agent-standup' } }, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && hops < 6) { res.resume(); return get(new URL(res.headers.location, url).href, file, [, size, sha], hops + 1).then(resolve, reject); }   // Hugging Face hands the large files to its CDN
       if (res.statusCode !== 200) { res.resume(); return reject(new Error('HTTP ' + res.statusCode)); }
       const h = crypto.createHash('sha256'), part = file + '.part', out = fs.createWriteStream(part); let n = 0;
-      const fail = (e) => { res.destroy(); out.destroy(); fs.rm(part, { force: true }, () => {}); reject(e); };
-      res.on('data', (d) => { h.update(d); n += d.length; if (dl) dl.done += d.length; }); res.on('error', fail); out.on('error', fail);
+      let failed = false; const fail = abort = (e) => { if (failed) return; failed = true; /* the first cause is the one told: a cut connection also makes the half file say "write after destroyed" */ res.destroy(); const gone = () => fs.rm(part, { force: true }, () => reject(e)); if (out.closed) gone(); else { out.once('close', gone); out.destroy(); } };   // the half file is gone before the answer: a second try starts a new one of the same name
+      res.on('data', (d) => { h.update(d); n += d.length; if (dl) dl.done += d.length; }); res.on('error', (e) => fail(e && e.message === 'aborted' ? new Error('connection cut') : e)); out.on('error', fail);   // 'aborted' is what node says of a connection reset mid-body
       res.on('close', () => { if (!res.complete) fail(new Error('connection cut')); });
       out.on('finish', () => { if (n !== size || h.digest('hex') !== sha) return fail(new Error('a file arrived damaged')); try { fs.renameSync(part, file); resolve(); } catch (e) { fail(e); } });
       res.pipe(out);
     });
-    req.on('error', reject); req.setTimeout(60e3, () => req.destroy(new Error('no answer from Hugging Face')));
+    req.on('error', (e) => (abort ? abort(e) : reject(e))); req.setTimeout(60e3, () => req.destroy(new Error('no answer from Hugging Face')));
   });
+}
+const CUT = /connection cut|no answer|ECONNRESET|ECONNABORTED|EPIPE|ETIMEDOUT|EAI_AGAIN|socket hang up|HTTP 5\d\d/;   // a cut connection, a stalled one or a server error: worth another try; a missing file (HTTP 404, and other 4xx), an address that does not resolve or a refused connection (ENOTFOUND, ECONNREFUSED) or a damaged file is not
+async function getRetrying(url, to, f) {   // up to three tries a file, a short pause between them, the progress taken back to where the file began
+  for (let at = 1, from = dl ? dl.done : 0; ; at++) { try { return await get(url, to, f); } catch (e) { if (at >= 3 || !CUT.test(String((e && (e.code || e.message)) || e))) throw e; if (dl) dl.done = from; await new Promise((r) => setTimeout(r, 1000 * at)); } }
 }
 const SETS = { st: { files: ST_FILES, url: () => ST_URL, at: (f) => path.join(ST_DIR, f) }, zh: { files: ZH_FILES, url: () => ZH_URL, at: zhPath } };
 function fetchSets(names) {
   dlError = ''; const todo = []; for (const n of names) { const S = SETS[n]; for (const f of S.files) if (size(S.at(f[0])) !== f[1]) todo.push([S.url() + f[0], S.at(f[0]), f]); }
   dl = { done: 0, total: todo.reduce((n, t) => n + t[2][1], 0) };
-  (async () => { for (const [url, to, f] of todo) { fs.mkdirSync(path.dirname(to), { recursive: true }); await get(url, to, f); } })()
+  (async () => { for (const [url, to, f] of todo) { fs.mkdirSync(path.dirname(to), { recursive: true }); await getRetrying(url, to, f); } })()
     .then(() => { dl = null; }, (e) => { dl = null; dlError = 'download: ' + String((e && e.message) || e).slice(0, 120); });
 }
 
