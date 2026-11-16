@@ -87,7 +87,7 @@ async function openPanel(pin) {   // pin: { id, proj } of the session to follow 
   let u;
   try { u = await url(); } catch (e) { return vscode.window.showErrorMessage(e.message); }
   if (pin && pin.id) u += `&pin=${encodeURIComponent(pin.id)}&pproj=${encodeURIComponent(pin.proj || '')}`;   // the session the call opens on, and where it is kept (pproj). The window goes on following its own folder (proj): a Vibe or Codex session is kept under its tool, which is not a folder, and put in proj it left the window showing that tool's sessions only
-  const ext = await vscode.env.asExternalUri(vscode.Uri.parse(u + '&embed=1'));
+  const ext = await vscode.env.asExternalUri(vscode.Uri.parse(u + '&embed=1' + (rateDue() ? '&rate=1' : '')));   // rate: the call may ask for a rating (rateDue)
   panel = vscode.window.createWebviewPanel('agentStandup', 'Agent Standup', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
   relay(panel.webview); panel.webview.html = frameHtml(ext.toString(true));
   panel.onDidDispose(() => (panel = null));
@@ -96,7 +96,7 @@ const frameHtml = (src) => `<!doctype html><html><head><meta charset="utf-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src http://localhost:* http://127.0.0.1:* https:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
     <style>html,body{margin:0;height:100%;background:#12131a}iframe{border:0;width:100%;height:100vh}</style></head>
     <body><iframe src="${src}" allow="autoplay; clipboard-write"></iframe>
-    <script>const vs = acquireVsCodeApi(); const fr = document.querySelector('iframe'); addEventListener('message', (e) => { if (e.source === fr.contentWindow) { if (e.data && e.data.agentStandup) vs.postMessage(e.data); } else if (e.data && (e.data.agentStandup === 'pin' || e.data.agentStandup === 'answered' || e.data.agentStandup === 'lead')) fr.contentWindow.postMessage(e.data, '*'); });</script></body></html>`;
+    <script>const vs = acquireVsCodeApi(); const fr = document.querySelector('iframe'); addEventListener('message', (e) => { if (e.source === fr.contentWindow) { if (e.data && e.data.agentStandup) vs.postMessage(e.data); } else if (e.data && (e.data.agentStandup === 'pin' || e.data.agentStandup === 'answered' || e.data.agentStandup === 'lead' || e.data.agentStandup === 'rateOn' || e.data.agentStandup === 'rateOff')) fr.contentWindow.postMessage(e.data, '*'); });</script></body></html>`;
 // Messages from the page: open it in the browser, or open a donation link or the draft of a problem report (https only, known sites only).
 // A link that carries a query (the draft of a report) is handed over as text: given as a Uri, VS Code decodes and re-encodes the query, and the draft arrives cut at its first "&" or "#".
 const DONATE_HOSTS = /^(www\.)?(buymeacoffee\.com|ko-fi\.com|paypal\.me|paypal\.com|github\.com)$/, SHOP_HOSTS = /^(checkout\.stripe\.com|agent-standup\.com|(www\.)?instagram\.com)$/, ARTIFACT_PATH = /^\/(code\/)?artifact\/[\w-]+$/;   // SHOP_HOSTS: the payment page of a pack bought from ⚙ → Characters, and the page of the artist who drew it. Its address ends with a fragment the page needs, so it is handed over as text too
@@ -105,6 +105,8 @@ const relay = (webview) => webview.onDidReceiveMessage((m) => {
   if (m.agentStandup === 'openBrowser') openBrowser();
   if (m.agentStandup === 'openCharacters') openCharacters();
   if (m.agentStandup === 'rate') rateNow();
+  if (m.agentStandup === 'rateShown') rateShown();   // the call showed its line: it counts as asked
+  if (m.agentStandup === 'rateNo') { const st = extCtx && extCtx.globalState; if (st) st.update('rate.over', true); }
   if (m.agentStandup === 'answer' && typeof m.id === 'string') { const a = answerHere(m.id); if (a && a.how === 'app' && a.app) webview.postMessage({ agentStandup: 'answered', how: 'app', app: String(a.app) }); }   // the page says where it waits
   if (m.agentStandup === 'notify' && typeof m.text === 'string' && !(m.text.includes('✋') && cfg().get('notifyNeedsYou') !== false && !callInView() && Date.now() - needsTold < 60e3)) vscode.window.showInformationMessage('Agent Standup: ' + m.text.slice(0, 120));   // the page's own "may be waiting for you ✋", from a call out of view, a minute after the notification that names the session (see needsYou): the same news twice. Otherwise it is the only word of it (a stalled agent, a sub-agent's approval, a session of another folder)
   if (m.agentStandup === 'openExternal') { try { const u = new URL(m.url); if (u.protocol === 'https:' && (DONATE_HOSTS.test(u.hostname) || SHOP_HOSTS.test(u.hostname) || (u.hostname === 'claude.ai' && ARTIFACT_PATH.test(u.pathname)))) vscode.env.openExternal(u.search || u.hash ? u.toString() : vscode.Uri.parse(u.toString())); } catch {} }
@@ -115,7 +117,7 @@ const sidebar = {
   async resolveWebviewView(view) {
     view.webview.options = { enableScripts: true }; relay(view.webview); opened(); side = view; view.onDidDispose(() => { if (side === view) side = null; });
     try {
-      const ext = await vscode.env.asExternalUri(vscode.Uri.parse((await url()) + '&embed=1'));
+      const ext = await vscode.env.asExternalUri(vscode.Uri.parse((await url()) + '&embed=1' + (rateDue() ? '&rate=1' : '')));
       view.webview.html = frameHtml(ext.toString(true));
     } catch (e) { view.webview.html = `<body style="font:13px sans-serif;color:#ccc;padding:12px">${e.message}</body>`; }
   },
@@ -262,7 +264,7 @@ function askUsage(st = extCtx && extCtx.globalState, again = false) {
   } catch (err) { logErr('usage ask', err); return Promise.resolve(); }
 }
 // Each time the call is opened, in a panel or in the side bar: the question about usage (the first time), the week counted (when shared), the days towards the rating
-const opened = () => { askUsage(); pingWeek(); noteUse(); };
+const opened = () => { askUsage(); pingWeek(); noteUse(undefined, undefined, true); };
 // A rating, asked at most twice: on the third day of use, a notification asks for a rating on the page of the store this editor installs from
 // (the VS Code Marketplace; Open VSX for Cursor, VSCodium and the others). "Rate it" and "No thanks" end it. Anything else asks again a week later, one last time: "Later",
 // closing it, or no answer at all (VS Code tucks a notification into the bell after a few seconds, and most people never click it).
@@ -274,14 +276,24 @@ let extCtx = null;
 const ratedHere = new WeakSet();   // as askedHere: asked once by this window, whatever the store has written yet
 const ratePage = () => (/^vscode(-insiders)?$/.test(vscode.env.uriScheme || '') ? RATE_PAGES.vscode : RATE_PAGES.other);
 function rateNow(st = extCtx && extCtx.globalState) { try { if (st) st.update('rate.over', true); vscode.env.openExternal(ratePage()); } catch (err) { logErr('rating', err); } }
-function noteUse(st = extCtx && extCtx.globalState, day = new Date().toISOString().slice(0, 10)) {
+// The call asks too, in a line of its own: when the asking is due (rateDue), the call opens with &rate=1 (an open call is told so: rateOn) and shows the line once, at the end of a run
+// followed live (index.html, rateAsk). A line shown counts as a notification shown (rateShown), "No thanks" in it ends the asking (rateNo), its star opens the store as ⚙ › Rate does.
+// Those who opened the call in the last 7 days ('rate.call') are asked by the call only; the notification is for the others. Once it shows, the open calls keep theirs (rateOff).
+const today = () => new Date().toISOString().slice(0, 10), inAWeek = (day) => new Date(Date.parse(day) + 7 * 864e5).toISOString().slice(0, 10);
+function asked(st, day) { if (st.get('rate.later') || st.get('rate.done')) { ratedHere.add(st); st.update('rate.over', true); } else st.update('rate.later', inAWeek(day)); }   // asked before: this is the last time. The first time: again in a week, whatever happens to it, unless it is answered
+function rateDue(st = extCtx && extCtx.globalState, day = today()) { try { const later = st && st.get('rate.later'); return !!st && !ratedHere.has(st) && !st.get('rate.over') && (st.get('rate.days') || 0) >= 3 && !(later && day < later); } catch { return false; } }
+function rateShown(st = extCtx && extCtx.globalState, day = today()) { try { if (rateDue(st, day)) { asked(st, day); ratedHere.add(st); } } catch (err) { logErr('rating', err); } }   // ratedHere: no notification from this window after the line
+function noteUse(st = extCtx && extCtx.globalState, day = today(), call = false) {
   try {
     if (!st || ratedHere.has(st) || st.get('rate.over')) return;
     const fresh = st.get('rate.last') !== day, days = (st.get('rate.days') || 0) + (fresh ? 1 : 0), later = st.get('rate.later') || '';
     if (fresh) { st.update('rate.last', day); st.update('rate.days', days); }
+    if (call && st.get('rate.call') !== day) st.update('rate.call', day);   // call: the call is being opened
     if (days < 3 || (later && day < later)) return;
-    if (later || st.get('rate.done')) { ratedHere.add(st); st.update('rate.over', true); }   // asked before: this is the last time. Marked before it shows: another window opening the call at the same time does not ask too
-    else st.update('rate.later', new Date(Date.parse(day) + 7 * 864e5).toISOString().slice(0, 10));   // the first time: again in a week, whatever happens to the notification, unless it is answered
+    const views = [panel && panel.webview, side && side.webview].filter(Boolean), seen = st.get('rate.call');
+    if (call || callInView() || (seen && Date.parse(day) - Date.parse(seen) < 7 * 864e5)) { for (const w of views) try { w.postMessage({ agentStandup: 'rateOn' }); } catch {} return; }   // the call asks, in its own way
+    asked(st, day);   // marked before it shows: another window opening the call at the same time does not ask too
+    for (const w of views) try { w.postMessage({ agentStandup: 'rateOff' }); } catch {}
     const rate = tt('Rate it'), not = tt('Later'), no = tt('No thanks'), page = ratePage();
     Promise.resolve(vscode.window.showInformationMessage(tt('Enjoying Agent Standup? A rating helps other people find it.'), rate, not, no)).then((a) => {
       if (a === rate || a === no) st.update('rate.over', true);
@@ -338,4 +350,4 @@ function activate(ctx) {
   if (cfg().get('autoOpen')) openPanel();
 }
 async function deactivate() { stopping = true; try { require('./server.js').forgetEditor(); } catch {} try { if (started) { const s = await started; if (s.kid) s.kid.kill(); if (s.server) { s.server.close(); require('./server.js').shutdown(); } } } catch {} }
-module.exports = { activate, deactivate, _server: () => started, _pingActive: pingActive, _noteUse: noteUse, _rateNow: rateNow, _ratePages: RATE_PAGES, _askUsage: askUsage, _pingWeek: pingWeek, _mondayOf: mondayOf, _net: net, _needsYou: needsYou, _inWorkspace: inWorkspace, _projKey: projKey, _tipLine: tipLine, _barText: barText };
+module.exports = { activate, deactivate, _server: () => started, _pingActive: pingActive, _noteUse: noteUse, _rateNow: rateNow, _rateDue: rateDue, _rateShown: rateShown, _ratePages: RATE_PAGES, _askUsage: askUsage, _pingWeek: pingWeek, _mondayOf: mondayOf, _net: net, _needsYou: needsYou, _inWorkspace: inWorkspace, _projKey: projKey, _tipLine: tipLine, _barText: barText };

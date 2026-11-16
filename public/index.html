@@ -1640,7 +1640,7 @@ function paintStates() {
     if (st.k === 'done' && was && was !== 'done' && was !== 'idle') { pr.textContent = '🎉'; pr.className = 'prop cheer'; if (shown) oneShot(t, 'yay', 950); setTimeout(() => { if (pr.classList.contains('cheer')) { pr.textContent = ''; pr.className = 'prop'; } }, 1200); }
     else if (!pr.classList.contains('cheer')) { if (pr.textContent !== want) pr.textContent = want; const pc = 'prop ' + (want ? st.k : ''); if (pr.className !== pc) pr.className = pc; }
     if (shown && !S.gone.has(p.id)) ros.push({ p, st });
-    if (p.id === 'main' && st.k === 'done' && was && was !== 'done' && was !== 'idle' && S.live && S.playing) { S.wrap = was; if (Date.now() - (S.mainBusyAt || 0) > 45000) confetti(); if (S.mainBusyAt) coffeeAsk(S.mainBusyAt); }   // the lead is done, its face says so: it always has a word for it (see wrapUp, which needs to know what it was doing just before), and confetti after a long turn
+    if (p.id === 'main' && st.k === 'done' && was && was !== 'done' && was !== 'idle' && S.live && S.playing) { S.wrap = was; if (Date.now() - (S.mainBusyAt || 0) > 45000) confetti(); if (S.mainBusyAt && !rateAsk(S.mainBusyAt)) coffeeAsk(S.mainBusyAt); }   // the lead is done, its face says so: it always has a word for it (see wrapUp, which needs to know what it was doing just before), and confetti after a long turn
     if (p.id === 'main') { if (st.k === 'working' || st.k === 'waiting') S.mainBusyAt = S.mainBusyAt || Date.now(); else if (st.k === 'done') S.mainBusyAt = 0; }
     S.prevState[p.id] = st.k; const tip = `${p.name} — ${p.role}${st.txt ? '\n' + st.txt : ''}${S.lastTool[p.id] ? '\n' + S.lastTool[p.id] : ''}`; if (t.title !== tip) t.title = tip;
   }
@@ -2505,13 +2505,26 @@ function rateDay() {   // a day of use: the page in view that day
 }
 function rateTip() {
   const t = $('#rateTip'); if (!RATE_ASKS || prefs.rateDone || firstDay() || askedToday('rate') || (+prefs.rateDays || 0) < 3 || (prefs.rateLater && utcDay() < prefs.rateLater) || $('#menuTip').style.display !== 'none' || $('#usageTip').style.display !== 'none' || $('#updTip').style.display !== 'none' || $('#menu').classList.contains('on')) { t.style.display = 'none'; return; }
-  const r = $('#bMenu').getBoundingClientRect(); if (!r.width) return;
-  $('#rateTipT').textContent = L('Agent Standup vous plaît ? Une étoile sur GitHub aide d’autres personnes à le trouver.', 'Enjoying Agent Standup? A star on GitHub helps other people find it.');
-  $('#rateYes').textContent = L('⭐ Mettre une étoile', '⭐ Star it'); $('#rateLater').textContent = L('Plus tard', 'Later'); $('#rateNo').textContent = L('Non merci', 'No thanks');
-  rateTip.seen = utcDay(); noteAsk('rate'); t.style.display = ''; t.style.top = Math.round(r.bottom + 10) + 'px'; t.style.right = Math.max(8, Math.round(innerWidth - r.right - 6)) + 'px'; t.style.setProperty('--ax', Math.max(8, Math.round(r.width / 2 - 2)) + 'px');
+  rateShow();
 }
-$('#rateYes').onclick = rateGo; $('#rateNo').onclick = rateEnd;
-$('#rateLater').onclick = () => { if (prefs.rateLater) return rateEnd(); prefs.rateLater = new Date(Date.parse(utcDay()) + 7 * 864e5).toISOString().slice(0, 10); savePrefs(); $('#rateTip').style.display = 'none'; };
+function rateShow() {   // the tip by the menu: a star on GitHub, or in the editor a rating on the store it installs from
+  const t = $('#rateTip'), r = $('#bMenu').getBoundingClientRect(); if (!r.width) return false;
+  $('#rateTipT').textContent = RATE_ED ? L('Agent Standup vous plaît ? Une note aide d’autres personnes à le trouver.', 'Enjoying Agent Standup? A rating helps other people find it.') : L('Agent Standup vous plaît ? Une étoile sur GitHub aide d’autres personnes à le trouver.', 'Enjoying Agent Standup? A star on GitHub helps other people find it.');
+  $('#rateYes').textContent = RATE_ED ? L('⭐ Noter', '⭐ Rate it') : L('⭐ Mettre une étoile', '⭐ Star it'); $('#rateLater').textContent = L('Plus tard', 'Later'); $('#rateNo').textContent = L('Non merci', 'No thanks');
+  rateTip.seen = utcDay(); noteAsk('rate'); t.style.display = ''; t.style.top = Math.round(r.bottom + 10) + 'px'; t.style.right = Math.max(8, Math.round(innerWidth - r.right - 6)) + 'px'; t.style.setProperty('--ax', Math.max(8, Math.round(r.width / 2 - 2)) + 'px'); return true;
+}
+// In the editor the extension keeps the days and the answers (noteUse in extension.js); when a rating is due it opens the call with &rate=1, and the call asks once, in this line,
+// at the end of a run followed live (the lead at work for 2 minutes, its turn closed, 8 s for the confetti and its last word): a moment the call has just been worth watching.
+// Never the first day, never the day the coffee or the notification asked; shown, it counts as asked (rateShown); the star opens the store, "No thanks" ends it. Nothing is sent.
+const RATE_ED = APP.kind === 'editor' && EMBED && !Q.get('demo');
+function rateAsk(busyAt) {
+  if (!RATE_ED || !(rateAsk.on || Q.get('rate') === '1') || rateAsk.done || firstDay() || askedToday('rate') || document.hidden || !S.turnOver || Date.now() - busyAt < 2 * 60e3) return false;
+  rateAsk.done = true; clearTimeout(rateAsk.t);
+  rateAsk.t = setTimeout(() => { if (document.hidden || !S.turnOver || $('#menu').classList.contains('on') || [$('#menuTip'), $('#usageTip'), $('#updTip'), $('#coffeeTip')].some((x) => x.style.display !== 'none') || agentState('main', Date.now()).k !== 'done' || !rateShow()) { rateAsk.done = false; return; } window.parent.postMessage({ agentStandup: 'rateShown' }, '*'); }, 8000);
+  return true;
+}
+$('#rateYes').onclick = rateGo; $('#rateNo').onclick = () => { rateEnd(); if (RATE_ED) window.parent.postMessage({ agentStandup: 'rateNo' }, '*'); };
+$('#rateLater').onclick = () => { if (RATE_ED) { $('#rateTip').style.display = 'none'; return; }   /* the editor keeps the days: it asks again a week later (rateShown in extension.js) */ if (prefs.rateLater) return rateEnd(); prefs.rateLater = new Date(Date.parse(utcDay()) + 7 * 864e5).toISOString().slice(0, 10); savePrefs(); $('#rateTip').style.display = 'none'; };
 document.addEventListener('visibilitychange', rateDay); setInterval(rateDay, 3600e3);   // the desktop window can stay open for days
 // ☕ Once, at the end of a run the call followed live (the lead at work for 3 minutes, or 3 agents at work in that turn, and the turn closed by its end mark), from the second day the call has been in view.
 // Never twice ("No thanks", the coffee or nothing at all end it), never the day the star is asked, never in a demo. The days are kept in the settings file; nothing is sent.
@@ -3238,6 +3251,8 @@ setInterval(async () => {
 
 window.addEventListener('message', (e) => {   // VS Code asks for a given session: the one the status bar was clicked for, or the one of the Claude Code tab you went to (the message is named 'pin' on both sides, from when the call was pinned there)
   const d = e.data; if (EMBED && e.source === window.parent && d && d.agentStandup === 'lead' && typeof d.name === 'string') { APP.lead = d.name.slice(0, 100); leadField(); renameLead(); return; }   // agentStandup.leadName changed in the editor
+  if (EMBED && e.source === window.parent && d && d.agentStandup === 'rateOff') { rateAsk.done = true; clearTimeout(rateAsk.t); return; }   // the editor's notification asked today: never the line too
+  if (EMBED && e.source === window.parent && d && d.agentStandup === 'rateOn') { rateAsk.on = true; return; }   // a rating became due while this call was open
   if (EMBED && e.source === window.parent && d && d.agentStandup === 'answered' && d.how === 'app' && typeof d.app === 'string') { toast('✋ ' + L('Elle vous attend dans ', 'Waiting for you in ') + d.app.slice(0, 40)); return; }   // the extension opened the terminal or app the session runs in (answerAt)
   if (!EMBED || e.source !== window.parent || !d || d.agentStandup !== 'pin' || typeof d.id !== 'string') return;
   if (d.tab) { if (prefs.followTab !== false && S.live && !S.demo && typeof d.proj === 'string' && !(S.pick && S.pick.pin)) goSession(d.proj, d.id); return; }   // the Claude Code tab you went to: the call goes with you (followTab in extension.js; off in ⚙), unless you pinned a call (📌): that one stays while you go through your tabs

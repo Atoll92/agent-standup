@@ -122,6 +122,25 @@ test('a day an agent works counts towards the rating, call opened or not; âš™ â€
   } finally { await x.close(); if (r0 == null) delete process.env.AGENT_STANDUP_RATE; else process.env.AGENT_STANDUP_RATE = r0; }
 });
 
+test('the call asks for the rating itself: opened when the rating is due, it carries rate=1 and the notification keeps quiet; its line counts as asked, its "No thanks" ends it, and a notification tells the open calls to keep theirs', async () => {
+  const m = new Map(), st = { get: (k) => m.get(k), update: async (k, val) => { m.set(k, val); } }, v = standIn(), asked = [], tick = () => new Promise((r) => setImmediate(r));
+  v.vscode.window.showInformationMessage = (msg, ...b) => { asked.push(msg); return new Promise(() => {}); };
+  await st.update('rate.days', 2); await st.update('rate.last', '2000-01-01'); await st.update('rate.call', new Date(Date.now() - 864e5).toISOString().slice(0, 10));   // two days of use before today, the call opened yesterday
+  const x = await activated(v, undefined, { globalState: st });   // the call opened today: the third day
+  try {
+    await tick(); assert.equal(m.get('rate.days'), 3); assert.deepEqual(asked, [], 'no notification while the call is being opened');
+    assert.match(v.side.html, /&embed=1&rate=1"/, 'the call may ask'); assert.equal(x.ext._rateDue(st), true);
+    const on = v.sent.length; x.ext._noteUse(st); await tick(); assert.deepEqual(asked, [], 'nor while the call is in use'); assert.ok(v.sent.slice(on).some((s) => s.agentStandup === 'rateOn'), 'the open calls are told the rating is due');
+    v.relay({ agentStandup: 'rateShown' }); await tick();
+    assert.equal(x.ext._rateDue(st), false); assert.ok(m.get('rate.later') > new Date().toISOString().slice(0, 10), 'asked: again in a week'); assert.equal(m.get('rate.over'), undefined);
+    v.relay({ agentStandup: 'rateNo' }); await tick(); assert.equal(m.get('rate.over'), true, '"No thanks" in the call ends it');
+    const n = new Map(), st2 = { get: (k) => n.get(k), update: async (k, val) => { n.set(k, val); } }; await st2.update('rate.days', 3); await st2.update('rate.last', '2000-01-01');
+    const before = v.sent.length; x.ext._noteUse(st2); await tick();
+    assert.deepEqual(asked, ['Enjoying Agent Standup? A rating helps other people find it.'], 'the call not opened for a week, not in view: the notification asks');
+    assert.ok(v.sent.slice(before).some((s) => s.agentStandup === 'rateOff'), 'and the open calls keep their line'); assert.equal(x.ext._rateDue(st2), false);
+  } finally { await x.close(); }
+});
+
 test('sharing usage is asked once, the first time the call is opened, never when VS Code telemetry is off; yes turns it on for every window, and a week is counted once', async () => {
   const v = standIn(), x = await activated(v), asked = [], sent = [], updates = [], conf = { shareUsage: false };
   v.vscode.workspace.getConfiguration = () => ({ get: (k) => conf[k], update: async (k, val, target) => { updates.push([k, val, target]); conf[k] = val; } });
