@@ -86,7 +86,7 @@ for (const [code, name, label, htmlLang, dir] of LANGS) {
     .replace(/\ssrc="[^"]*"\sdata-en-src="([^"]*)"\sdata-fr-src="([^"]*)"/g, (m, en, fr) => ` src="${code === 'fr' ? fr : en}"`)
     .replace(/\shref="[^"]*"\sdata-en-href="([^"]*)"\sdata-fr-href="([^"]*)"/g, (m, en, fr) => ` href="${code === 'fr' ? fr : en}"`)   // a link with a French page of its own (IT-Connect's article)
     .replace(/\{\{([^{}]+)\}\}/g, (m, en) => esc(t(en)))
-    .replace(/\b(href|src|poster)=(["'])(?!https?:|#|\/|mailto:|data:|\.\/["']|shop\/)/g, (m, attr, q) => (slug ? m : `${attr}=${q}${up}`))   // a language page is one folder down; its shop is beside it (/fr/shop/)
+    .replace(/\b(href|src|poster)=(["'])(?!https?:|#|\/|mailto:|data:|__PAGE__|\.\/["']|shop\/)/g, (m, attr, q) => (slug ? m : `${attr}=${q}${up}`))   // a language page is one folder down; its shop is beside it (/fr/shop/)
     .replace('<html lang="en">', `<html lang="${htmlLang}">`).replace(/__PAGE__/g, site + dir + slug).replace(/__HOME__/g, '/' + dir)
     .replace('<!--HREFLANG-->', alternates).replace('<!--REDIRECT-->\n', redirect ? redirect + '\n' : '').replace('<!--LANGS-->', menu)
     .replace('__COPY__', () => JSON.stringify(COPY.map(([en, fr]) => t(en, fr))))
