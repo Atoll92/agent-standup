@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.47.1
+- **In VS Code, the call asks for a rating itself.** When a rating is due (from the third day you use it), the call asks once, in a small line by the ⚙ menu, at the end of a run you watched: the lead at work for two minutes or more, its turn done. Before, a notification asked, and VS Code tucks those into the bell after a few seconds. “⭐ Rate it” opens the store page your editor installs from, “No thanks” ends it, and anything else asks again a week later, one last time. If you have not opened the call for a week, the notification still asks. Nothing is sent.
+- **A voice download cut in the middle tries that file again.** A German, Danish, Japanese, Korean or Chinese voice file whose connection is cut, stalls or meets a server error is fetched again, up to three times, instead of stopping at “download: aborted”. By leomattos7 (#20).
+
 ## 1.47.0
 - **The call in German, Danish, Japanese, Korean or Chinese.** With one of them as the interface language, the call asks once: “Hold the call in this language?” Until you say yes it stays in English, as before. After yes, what the agents say is translated by your own Claude Code, and the call's own lines (answers to orders, goodbyes, small talk) are written in that language: Chinese in Simplified, and in Traditional as used in Taiwan for the Taiwanese interface.
 - **Natural voices for these languages, never system voices.** German, Danish, Japanese and Korean are read by Supertonic 3 (about 400 MB), Chinese by Kokoro's own Chinese model (about 365 MB). After your yes, the call offers to add them, and ⚙ has the same button. They are fetched at a fixed version, each file checked before it is kept, and installing the voices fetches only the English ones until you say yes. Until they are there, a call held in one of these languages babbles. The English, French, Spanish and Portuguese voices are unchanged.
