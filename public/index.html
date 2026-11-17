@@ -2492,7 +2492,7 @@ $('#mCoffee').onclick = () => { $('#menu').classList.remove('on'); openExternal(
 // is in view, a tip by the menu; "Later" asks again a week later, one time; the star and "No thanks" end it. The days are kept in the settings file; nothing is sent.
 $('#mRate').onclick = () => { $('#menu').classList.remove('on'); rateGo(); };
 function rateGo() { rateEnd(); if (EMBED && APP.kind === 'editor') window.parent.postMessage({ agentStandup: 'rate' }, '*'); else openExternal(APP.rate); }
-const rateEnd = () => { prefs.rateDone = utcDay(); savePrefs(); $('#rateTip').style.display = 'none'; };
+const rateEnd = () => { prefs.rateDone = utcDay(); savePrefs(); $('#rateTip').style.display = 'none'; rateAsk.done = true; clearTimeout(rateAsk.t); };   /* rateAsk.done: rated or declined in this page, its line never shows; not prefs.rateDone, which a star given in the desktop app also sets */
 const RATE_ASKS = (APP.kind === 'desktop' || APP.kind === 'cli' || APP.kind === 'plugin') && !EMBED && !Q.get('demo'), utcDay = () => new Date().toISOString().slice(0, 10);
 // One ask a day at most, and none the first day the call is in view (prefs.firstDay): the star, the coffee and the pack each wait for a day nothing else was asked (prefs.askDay, and which one in askWhat, so the same ask can show again that day).
 // The real voices are not an ask but an offer of the app itself: they keep their line until answered, and step aside on the few days the Halloween pack's line shows (not while they download).
@@ -2518,9 +2518,9 @@ function rateShow() {   // the tip by the menu: a star on GitHub, or in the edit
 // Never the first day, never the day the coffee or the notification asked; shown, it counts as asked (rateShown); the star opens the store, "No thanks" ends it. Nothing is sent.
 const RATE_ED = APP.kind === 'editor' && EMBED && !Q.get('demo');
 function rateAsk(busyAt) {
-  if (!RATE_ED || !(rateAsk.on || Q.get('rate') === '1') || rateAsk.done || prefs.rateDone || firstDay() || askedToday('rate') || document.hidden || !S.turnOver || Date.now() - busyAt < 2 * 60e3) return false;
+  if (!RATE_ED || !(rateAsk.on || Q.get('rate') === '1') || rateAsk.done || firstDay() || askedToday('rate') || document.hidden || !S.turnOver || Date.now() - busyAt < 2 * 60e3) return false;
   rateAsk.done = true; clearTimeout(rateAsk.t);
-  rateAsk.t = setTimeout(() => { if (prefs.rateDone) return; if (document.hidden || !S.turnOver || $('#menu').classList.contains('on') || [$('#menuTip'), $('#usageTip'), $('#updTip'), $('#coffeeTip')].some((x) => x.style.display !== 'none') || agentState('main', Date.now()).k !== 'done' || !rateShow()) { rateAsk.done = false; return; } window.parent.postMessage({ agentStandup: 'rateShown' }, '*'); }, 8000);
+  rateAsk.t = setTimeout(() => { if (document.hidden || !S.turnOver || $('#menu').classList.contains('on') || [$('#menuTip'), $('#usageTip'), $('#updTip'), $('#coffeeTip')].some((x) => x.style.display !== 'none') || agentState('main', Date.now()).k !== 'done' || !rateShow()) { rateAsk.done = false; return; } window.parent.postMessage({ agentStandup: 'rateShown' }, '*'); }, 8000);
   return true;
 }
 $('#rateYes').onclick = rateGo; $('#rateNo').onclick = () => { rateEnd(); if (RATE_ED) window.parent.postMessage({ agentStandup: 'rateNo' }, '*'); };
