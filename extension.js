@@ -107,6 +107,7 @@ const relay = (webview) => webview.onDidReceiveMessage((m) => {
   if (m.agentStandup === 'rate') rateNow();
   if (m.agentStandup === 'rateShown') rateShown();   // the call showed its line: it counts as asked
   if (m.agentStandup === 'rateNo') { const st = extCtx && extCtx.globalState; if (st) st.update('rate.over', true); }
+  if (m.agentStandup === 'rate' || m.agentStandup === 'rateShown' || m.agentStandup === 'rateNo') rateOff();   // rated, declined or asked in one view: the panel and the side bar of this window keep their line
   if (m.agentStandup === 'answer' && typeof m.id === 'string') { const a = answerHere(m.id); if (a && a.how === 'app' && a.app) webview.postMessage({ agentStandup: 'answered', how: 'app', app: String(a.app) }); }   // the page says where it waits
   if (m.agentStandup === 'notify' && typeof m.text === 'string' && !(m.text.includes('✋') && cfg().get('notifyNeedsYou') !== false && !callInView() && Date.now() - needsTold < 60e3)) vscode.window.showInformationMessage('Agent Standup: ' + m.text.slice(0, 120));   // the page's own "may be waiting for you ✋", from a call out of view, a minute after the notification that names the session (see needsYou): the same news twice. Otherwise it is the only word of it (a stalled agent, a sub-agent's approval, a session of another folder)
   if (m.agentStandup === 'openExternal') { try { const u = new URL(m.url); if (u.protocol === 'https:' && (DONATE_HOSTS.test(u.hostname) || SHOP_HOSTS.test(u.hostname) || (u.hostname === 'claude.ai' && ARTIFACT_PATH.test(u.pathname)))) vscode.env.openExternal(u.search || u.hash ? u.toString() : vscode.Uri.parse(u.toString())); } catch {} }
@@ -282,6 +283,7 @@ function rateNow(st = extCtx && extCtx.globalState) { try { if (st) st.update('r
 const today = () => new Date().toISOString().slice(0, 10), inAWeek = (day) => new Date(Date.parse(day) + 7 * 864e5).toISOString().slice(0, 10);
 function asked(st, day) { if (st.get('rate.later') || st.get('rate.done')) { ratedHere.add(st); st.update('rate.over', true); } else st.update('rate.later', inAWeek(day)); }   // asked before: this is the last time. The first time: again in a week, whatever happens to it, unless it is answered
 function rateDue(st = extCtx && extCtx.globalState, day = today()) { try { const later = st && st.get('rate.later'); return !!st && !ratedHere.has(st) && !st.get('rate.over') && (st.get('rate.days') || 0) >= 3 && !(later && day < later); } catch { return false; } }
+const rateOff = () => { for (const w of [panel && panel.webview, side && side.webview].filter(Boolean)) try { w.postMessage({ agentStandup: 'rateOff' }); } catch {} };   // the open calls of this window keep their line
 function rateShown(st = extCtx && extCtx.globalState, day = today()) { try { if (rateDue(st, day)) { asked(st, day); ratedHere.add(st); } } catch (err) { logErr('rating', err); } }   // ratedHere: no notification from this window after the line
 function noteUse(st = extCtx && extCtx.globalState, day = today(), call = false) {
   try {
@@ -293,7 +295,7 @@ function noteUse(st = extCtx && extCtx.globalState, day = today(), call = false)
     const views = [panel && panel.webview, side && side.webview].filter(Boolean), seen = st.get('rate.call');
     if (call || callInView() || (seen && Date.parse(day) - Date.parse(seen) < 7 * 864e5)) { for (const w of views) try { w.postMessage({ agentStandup: 'rateOn' }); } catch {} return; }   // the call asks, in its own way
     asked(st, day);   // marked before it shows: another window opening the call at the same time does not ask too
-    for (const w of views) try { w.postMessage({ agentStandup: 'rateOff' }); } catch {}
+    rateOff();
     const rate = tt('Rate it'), not = tt('Later'), no = tt('No thanks'), page = ratePage();
     Promise.resolve(vscode.window.showInformationMessage(tt('Enjoying Agent Standup? A rating helps other people find it.'), rate, not, no)).then((a) => {
       if (a === rate || a === no) st.update('rate.over', true);

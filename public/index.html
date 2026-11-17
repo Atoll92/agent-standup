@@ -2518,9 +2518,9 @@ function rateShow() {   // the tip by the menu: a star on GitHub, or in the edit
 // Never the first day, never the day the coffee or the notification asked; shown, it counts as asked (rateShown); the star opens the store, "No thanks" ends it. Nothing is sent.
 const RATE_ED = APP.kind === 'editor' && EMBED && !Q.get('demo');
 function rateAsk(busyAt) {
-  if (!RATE_ED || !(rateAsk.on || Q.get('rate') === '1') || rateAsk.done || firstDay() || askedToday('rate') || document.hidden || !S.turnOver || Date.now() - busyAt < 2 * 60e3) return false;
+  if (!RATE_ED || !(rateAsk.on || Q.get('rate') === '1') || rateAsk.done || prefs.rateDone || firstDay() || askedToday('rate') || document.hidden || !S.turnOver || Date.now() - busyAt < 2 * 60e3) return false;
   rateAsk.done = true; clearTimeout(rateAsk.t);
-  rateAsk.t = setTimeout(() => { if (document.hidden || !S.turnOver || $('#menu').classList.contains('on') || [$('#menuTip'), $('#usageTip'), $('#updTip'), $('#coffeeTip')].some((x) => x.style.display !== 'none') || agentState('main', Date.now()).k !== 'done' || !rateShow()) { rateAsk.done = false; return; } window.parent.postMessage({ agentStandup: 'rateShown' }, '*'); }, 8000);
+  rateAsk.t = setTimeout(() => { if (prefs.rateDone) return; if (document.hidden || !S.turnOver || $('#menu').classList.contains('on') || [$('#menuTip'), $('#usageTip'), $('#updTip'), $('#coffeeTip')].some((x) => x.style.display !== 'none') || agentState('main', Date.now()).k !== 'done' || !rateShow()) { rateAsk.done = false; return; } window.parent.postMessage({ agentStandup: 'rateShown' }, '*'); }, 8000);
   return true;
 }
 $('#rateYes').onclick = rateGo; $('#rateNo').onclick = () => { rateEnd(); if (RATE_ED) window.parent.postMessage({ agentStandup: 'rateNo' }, '*'); };

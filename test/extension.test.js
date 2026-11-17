@@ -131,9 +131,9 @@ test('the call asks for the rating itself: opened when the rating is due, it car
     await tick(); assert.equal(m.get('rate.days'), 3); assert.deepEqual(asked, [], 'no notification while the call is being opened');
     assert.match(v.side.html, /&embed=1&rate=1"/, 'the call may ask'); assert.equal(x.ext._rateDue(st), true);
     const on = v.sent.length; x.ext._noteUse(st); await tick(); assert.deepEqual(asked, [], 'nor while the call is in use'); assert.ok(v.sent.slice(on).some((s) => s.agentStandup === 'rateOn'), 'the open calls are told the rating is due');
-    v.relay({ agentStandup: 'rateShown' }); await tick();
+    const sh = v.sent.length; v.relay({ agentStandup: 'rateShown' }); await tick(); assert.ok(v.sent.slice(sh).some((s) => s.agentStandup === 'rateOff'), 'the line shown in one view: the other views of the window keep theirs');
     assert.equal(x.ext._rateDue(st), false); assert.ok(m.get('rate.later') > new Date().toISOString().slice(0, 10), 'asked: again in a week'); assert.equal(m.get('rate.over'), undefined);
-    v.relay({ agentStandup: 'rateNo' }); await tick(); assert.equal(m.get('rate.over'), true, '"No thanks" in the call ends it');
+    const sn = v.sent.length; v.relay({ agentStandup: 'rateNo' }); await tick(); assert.ok(v.sent.slice(sn).some((s) => s.agentStandup === 'rateOff'), 'declined: the open calls are told'); assert.equal(m.get('rate.over'), true, '"No thanks" in the call ends it');
     const n = new Map(), st2 = { get: (k) => n.get(k), update: async (k, val) => { n.set(k, val); } }; await st2.update('rate.days', 3); await st2.update('rate.last', '2000-01-01');
     const before = v.sent.length; x.ext._noteUse(st2); await tick();
     assert.deepEqual(asked, ['Enjoying Agent Standup? A rating helps other people find it.'], 'the call not opened for a week, not in view: the notification asks');
