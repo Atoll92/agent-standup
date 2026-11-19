@@ -2,7 +2,7 @@
 
 ![Agent Standup](.claude-plugin/icon.png)
 
-Watch the Claude Code, Codex, Mistral Vibe and Cowork sessions on your computer as a live team call. Each agent is a small character at its desk: the lead gives orders, sub-agents join, share their screen with the real commands and diffs, and report back. You see at a glance who is working, who waits on whom, and who needs you.
+Watch the Claude Code, Codex, Mistral Vibe, Cursor and Cowork sessions on your computer as a live team call. Each agent is a small character at its desk: the lead gives orders, sub-agents join, share their screen with the real commands and diffs, and report back. You see at a glance who is working, who waits on whom, and who needs you.
 
 This plugin is a thin way in to the [Agent Standup](https://github.com/Atoll92/agent-standup) app. It adds four skills to Claude Code.
 

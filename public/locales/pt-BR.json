@@ -373,8 +373,6 @@
  "may need you": "talvez precise de você",
  "needs you": "precisa de você",
  "needs you ": "precisa de você ",
- "No session on this computer yet. Start Claude Code, Codex or Mistral Vibe (or a Cowork task): the call will start by itself.": "Ainda não há sessão neste computador. Inicie o Claude Code, o Codex ou o Mistral Vibe (ou uma tarefa do Cowork): a chamada começará sozinha.",
- "No session yet. Start Claude Code, Codex or Mistral Vibe in {0}: the call will start by itself.": "Ainda não há sessão. Inicie o Claude Code, o Codex ou o Mistral Vibe em {0}: a chamada começará sozinha.",
  "nobody at work: the call stays": "ninguém trabalhando: a chamada fica aqui",
  "on sub-agents": "esperam seus subagentes",
  "Or click anywhere in the call": "Ou clique em qualquer lugar da chamada",
@@ -468,5 +466,7 @@
  "Zen mode: alerts, no voices": "Modo zen: alertas, sem vozes",
  "Hold the call in this language? Your Claude Code translates what the agents say.": "Fazer a chamada neste idioma? O seu Claude Code traduz o que os agentes dizem.",
  "Yes": "Sim",
- "Voices ready in English. This language has natural voices too: one more download.": "Vozes prontas em inglês. Este idioma também tem vozes naturais: mais um download."
+ "Voices ready in English. This language has natural voices too: one more download.": "Vozes prontas em inglês. Este idioma também tem vozes naturais: mais um download.",
+ "No session on this computer yet. Start Claude Code, Codex, Mistral Vibe or Cursor (or a Cowork task): the call will start by itself.": "Ainda não há sessão neste computador. Inicie o Claude Code, o Codex, o Mistral Vibe ou o Cursor (ou uma tarefa do Cowork): a chamada começará sozinha.",
+ "No session yet. Start Claude Code, Codex, Mistral Vibe or Cursor in {0}: the call will start by itself.": "Ainda não há sessão. Inicie o Claude Code, o Codex, o Mistral Vibe ou o Cursor em {0}: a chamada começará sozinha."
 }

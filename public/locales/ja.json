@@ -373,8 +373,6 @@
  "may need you": "あなたを待っているかも",
  "needs you": "あなたを待っています",
  "needs you ": "あなたを待っています ",
- "No session on this computer yet. Start Claude Code, Codex or Mistral Vibe (or a Cowork task): the call will start by itself.": "このコンピューターにはまだセッションがありません。Claude Code、Codex、Mistral Vibe（または Cowork のタスク）を始めると、通話は自動で始まります。",
- "No session yet. Start Claude Code, Codex or Mistral Vibe in {0}: the call will start by itself.": "まだセッションがありません。{0} で Claude Code、Codex、Mistral Vibe を始めると、通話は自動で始まります。",
  "nobody at work: the call stays": "誰も作業していません：通話はここに留まります",
  "on sub-agents": "サブエージェント待ち",
  "Or click anywhere in the call": "または通話のどこかをクリック",
@@ -468,5 +466,7 @@
  "Zen mode: alerts, no voices": "Zenモード：通知音のみ、声なし",
  "Hold the call in this language? Your Claude Code translates what the agents say.": "通話をこの言語で行いますか？エージェントの発言はあなたの Claude Code が翻訳します。",
  "Yes": "はい",
- "Voices ready in English. This language has natural voices too: one more download.": "英語の音声は準備完了です。この言語にも自然な音声があります（追加のダウンロードが必要です）。"
+ "Voices ready in English. This language has natural voices too: one more download.": "英語の音声は準備完了です。この言語にも自然な音声があります（追加のダウンロードが必要です）。",
+ "No session on this computer yet. Start Claude Code, Codex, Mistral Vibe or Cursor (or a Cowork task): the call will start by itself.": "このコンピューターにはまだセッションがありません。Claude Code、Codex、Mistral Vibe、Cursor（または Cowork のタスク）を始めると、通話は自動で始まります。",
+ "No session yet. Start Claude Code, Codex, Mistral Vibe or Cursor in {0}: the call will start by itself.": "まだセッションがありません。{0} で Claude Code、Codex、Mistral Vibe、Cursor を始めると、通話は自動で始まります。"
 }

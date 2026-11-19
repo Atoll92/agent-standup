@@ -1,12 +1,12 @@
 # Agent Standup: notes for coding agents
 
-Agent Standup shows the Claude Code, Codex, Mistral Vibe and Cowork sessions of a computer as a live video call: drawn characters, voices, a board, a sessions list. Its local Node server only reads the session files those tools already write. It has no runtime dependencies, and it calls Claude only to translate the call and, when turned on, for the jokes: the user's own `claude`, or the Anthropic API when `ANTHROPIC_API_KEY` is set. It ships as a VS Code extension (Marketplace and Open VSX), an npm CLI (`@double_geste/agent-standup`), a Claude Code plugin, and a macOS app. The repository is public (MIT).
+Agent Standup shows the Claude Code, Codex, Mistral Vibe, Cursor and Cowork sessions of a computer as a live video call: drawn characters, voices, a board, a sessions list. Its local Node server only reads the session files those tools already write. It has no runtime dependencies, and it calls Claude only to translate the call and, when turned on, for the jokes: the user's own `claude`, or the Anthropic API when `ANTHROPIC_API_KEY` is set. It ships as a VS Code extension (Marketplace and Open VSX), an npm CLI (`@double_geste/agent-standup`), a Claude Code plugin, and a macOS app. The repository is public (MIT).
 
 ## Map
 | Path | What |
 |---|---|
 | `server.js` | The whole backend: reads `~/.claude/projects/**/*.jsonl` incrementally, merges sub-agents, serves `/api/*` and `public/`. For the shared screen it also reads the live output of background commands from Claude Code's temp folder (`/tmp/claude-<uid>/<project>/<session>/tasks/<id>.output`, `/api/taskout`). Also handles translation, prefs, characters, packs and the shop client. |
-| `codex.js`, `vibe.js` | Readers for Codex and Mistral Vibe. Each lists its sessions under one made-up project (`SOURCES` in server.js). Cowork is read like Claude Code, from the desktop app's folder (`coworkHomes`). |
+| `codex.js`, `vibe.js`, `cursor.js` | Readers for Codex, Mistral Vibe and Cursor Agent CLI. Each lists its sessions under one made-up project (`SOURCES` in server.js). Cowork is read like Claude Code, from the desktop app's folder (`coworkHomes`). |
 | `boards.js` | Claude Whiteboards and Claude Sheets on the shared screen. They send no page: a board lives in its own store (`ArtifactData` writes), a Sheet's cells on Anthropic's server (Claude Docs `applyEdits`). Each write that went through is a version, drawn again from the session file as a still SVG or grid and served by `/api/artifact` like any other artifact. |
 | `demo.js` | The built-in demo: a made-up session (English and French) that `server.js` serves. |
 | `reply.js` | Talk to the session from the call (PR #10): off unless `AGENT_STANDUP_REPLY=on` (`--reply`, `agentStandup.reply`); `/api/reply` answers 404 otherwise. Linux only (the pane and the caller's uid are found through `/proc`); a token per server start, given to the page in `/api/prefs.js`; sends only to an `idle` session and reads it again before Enter. |
@@ -26,7 +26,7 @@ Agent Standup shows the Claude Code, Codex, Mistral Vibe and Cowork sessions of 
 
 ## Run and test
 - `node server.js` → http://localhost:4747 (`PORT=…`). `?live=0` opens the replay picker, `?proj=<dir>` limits the call to one project.
-- To run against chosen data, set `AGENT_STANDUP_PROJECTS` (sessions folder), `AGENT_STANDUP_PREFS` (settings file), `AGENT_STANDUP_CC_SESSIONS` (Claude Code's per-session status folder, `~/.claude/sessions`), `AGENT_STANDUP_CHARACTERS`, `AGENT_STANDUP_PACKS`, `AGENT_STANDUP_KOKORO_DIR`, `AGENT_STANDUP_COWORK=off`, `AGENT_STANDUP_CODEX=0`, `AGENT_STANDUP_VIBE=0`, `AGENT_STANDUP_CLAUDE` (a stand-in `claude` for translation) and `AGENT_STANDUP_STORE` (the shop; `scripts/shop-dev.js` is a pretend one). Never point a test server at the user's real prefs.
+- To run against chosen data, set `AGENT_STANDUP_PROJECTS` (sessions folder), `AGENT_STANDUP_PREFS` (settings file), `AGENT_STANDUP_CC_SESSIONS` (Claude Code's per-session status folder, `~/.claude/sessions`), `AGENT_STANDUP_CHARACTERS`, `AGENT_STANDUP_PACKS`, `AGENT_STANDUP_KOKORO_DIR`, `AGENT_STANDUP_COWORK=off`, `AGENT_STANDUP_CODEX=0`, `AGENT_STANDUP_VIBE=0`, `AGENT_STANDUP_CURSOR=0`, `AGENT_STANDUP_CLAUDE` (a stand-in `claude` for translation) and `AGENT_STANDUP_STORE` (the shop; `scripts/shop-dev.js` is a pretend one). Never point a test server at the user's real prefs.
 - The live tests get their own empty packs and characters folders and treat the Halloween line as done; a change that depends on the date or on installed packs can pass here and fail in CI.
 - `npm test` takes about 2.5 minutes: the four browser files run side by side. While iterating, run one file: `node --test test/server.test.js`.
 - `npm run i18n` checks that every language has every key, and rebuilds the website and landing locale files.
@@ -40,7 +40,7 @@ Agent Standup shows the Claude Code, Codex, Mistral Vibe and Cowork sessions of 
 
 ## Traps
 - **Long lines.** `server.js`, `public/index.html`, `vibe.js` and `codex.js` put many statements on one line. A `//` comment inserted mid-line silently comments out the rest of the line. Put comments at the end of a line or on their own line, or use `/* */`.
-- **Other tools' readers go through `guard()`.** A session of Codex, Vibe or Cowork that cannot be read must cost that session only, never `/api/sessions` for everyone.
+- **Other tools' readers go through `guard()`.** A session of Codex, Vibe, Cursor or Cowork that cannot be read must cost that session only, never `/api/sessions` for everyone.
 - **The landing copies the "cast" section of `public/index.html`.** There, `prefs`, `S` and the server do not exist. After `npm run landing`, if `docs/index.html` changed by more than the version, open it in a browser.
 - **The four builds pick their files differently.** The vsix takes everything that `.vscodeignore` does not leave out, so a new non-runtime file at the root (notes, exports, this file) must be added there. The CLI and the desktop app take only what they list, so a new runtime file must be added to `scripts/build-cli.js` (the copy list and the package's `files`) and `scripts/build-desktop.js`. After a change, check the result with `unzip -l` on the vsix.
 - **Every user-facing text is in 10 languages:** page `public/locales/`, extension `l10n/` + `package.nls.*.json`, website `website/locales/`, landing `landing/locales/`. Add the English key, translate it into the other nine, then run `npm run i18n`.

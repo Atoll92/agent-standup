@@ -1,6 +1,6 @@
 ---
 name: whiteboard
-description: Draw the day's standup of the Claude Code, Codex, Mistral Vibe and Cowork sessions on this computer as a Claude Whiteboard on claude.ai, one section per session (what it was asked, what it did, what it waits on) and what needs the user standing out. Use when the user asks to put the standup on a whiteboard, to draw or map what their agents did today, or for a board of their sessions.
+description: Draw the day's standup of the Claude Code, Codex, Mistral Vibe, Cursor and Cowork sessions on this computer as a Claude Whiteboard on claude.ai, one section per session (what it was asked, what it did, what it waits on) and what needs the user standing out. Use when the user asks to put the standup on a whiteboard, to draw or map what their agents did today, or for a board of their sessions.
 ---
 
 The user asked for a whiteboard of what their agent sessions did. Agent Standup reads the local session files and tells the day; you draw it on a Claude Whiteboard, a private artifact on claude.ai that the user can share.

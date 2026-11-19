@@ -11,13 +11,13 @@ const pkg = require('../package.json');
 const argv = process.argv.slice(2), flags = {}, rest = [];
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], val = () => argv[++i];
-  if (a === '--port') flags.port = val(); else if (a === '--projects') flags.projects = val(); else if (a === '--codex') flags.codex = val(); else if (a === '--vibe') flags.vibe = val(); else if (a === '--cowork') flags.cowork = val(); else if (a === '--characters') flags.characters = val(); else if (a === '--config-dir') flags.config = val();
+  if (a === '--port') flags.port = val(); else if (a === '--projects') flags.projects = val(); else if (a === '--codex') flags.codex = val(); else if (a === '--vibe') flags.vibe = val(); else if (a === '--cursor') flags.cursor = val(); else if (a === '--cowork') flags.cowork = val(); else if (a === '--characters') flags.characters = val(); else if (a === '--config-dir') flags.config = val();
   else if (a === '--reply') flags.reply = /^(0|1|on|off|yes|no|true|false)$/i.test(argv[i + 1] || '') ? val() : 'on';   // alone or followed by on / off
   else if (a === '--from') flags.from = val(); else if (a === '--open') flags.open = true; else if (a === '--here') flags.here = true; else if (a === '--json') flags.json = true; else if (a === '--titles') flags.titles = true; else if (a === '--config') flags.config = val(); else if (a === '--day') flags.day = val(); else if (a === '--session') flags.session = val();
   else if (a === '-h' || a === '--help') flags.help = true; else if (a === '-v' || a === '--version') flags.version = true; else rest.push(a);
 }
 const cmd = rest[0] || 'serve';
-const HELP = `Agent Standup ${pkg.version} — your Claude Code, Codex and Mistral Vibe agents as a live video call
+const HELP = `Agent Standup ${pkg.version} — your Claude Code, Codex, Mistral Vibe and Cursor agents as a live video call
 
 Usage
   agent-standup [serve] [--port 4747] [--open]   start the local server (http://localhost:4747)
@@ -36,6 +36,7 @@ Options
                     no other account's)
   --codex DIR       where Codex keeps its files (default ~/.codex, or $CODEX_HOME); "off" to leave Codex sessions out
   --vibe DIR        where Mistral Vibe keeps its files (default ~/.vibe, or $VIBE_HOME); "off" to leave Vibe sessions out
+  --cursor DIR      where Cursor keeps its files (default ~/.cursor, or $CURSOR_DATA_DIR); "off" to leave Cursor sessions out
   --cowork DIR      where the Claude desktop app keeps its Cowork sessions (default: its local-agent-mode-sessions folder); "off" to leave them out
   --reply           let the call type into the followed Claude Code session's tmux pane (Linux, off by default; anyone who can run commands as you can then type into your sessions)
   --characters DIR  folder with your own pixel-art characters (default ~/.agent-standup/characters)
@@ -54,6 +55,7 @@ if (flags.projects) process.env.AGENT_STANDUP_PROJECTS = path.resolve(flags.proj
 if (flags.projects && path.basename(path.resolve(flags.projects)) === 'projects' && !process.env.AGENT_STANDUP_CC_SESSIONS) process.env.AGENT_STANDUP_CC_SESSIONS = path.join(path.dirname(path.resolve(flags.projects)), 'sessions');   // another Claude Code folder: its sessions' status (what needs you) is beside its projects
 if (flags.codex !== undefined) process.env.AGENT_STANDUP_CODEX = /^(0|off|no|false)?$/i.test(String(flags.codex)) ? 'off' : path.resolve(String(flags.codex));
 if (flags.vibe !== undefined) process.env.AGENT_STANDUP_VIBE = /^(0|off|no|false)?$/i.test(String(flags.vibe)) ? 'off' : path.resolve(String(flags.vibe));
+if (flags.cursor !== undefined) process.env.AGENT_STANDUP_CURSOR = /^(0|off|no|false)?$/i.test(String(flags.cursor)) ? 'off' : path.resolve(String(flags.cursor));
 if (flags.cowork !== undefined) process.env.AGENT_STANDUP_COWORK = /^(0|off|no|false)?$/i.test(String(flags.cowork)) ? 'off' : path.resolve(String(flags.cowork));
 if (flags.reply !== undefined) { if (/^(1|on|yes|true)$/i.test(flags.reply)) process.env.AGENT_STANDUP_REPLY = 'on'; else delete process.env.AGENT_STANDUP_REPLY; }
 if (flags.config) { process.env.CLAUDE_CONFIG_DIR = path.resolve(flags.config); process.env.AGENT_STANDUP_CLAUDE_DIRS = 'off'; }   // the one account asked for, not the other Claude Code folders
@@ -90,7 +92,7 @@ function dayRange(d) {   // [start, end) of a local day
   else if (d && d !== 'today') { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d); if (!m || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31) { console.error(`Invalid --day "${d}": use YYYY-MM-DD, today or yesterday.`); process.exit(2); } t.setFullYear(+m[1], +m[2] - 1, +m[3]); if (t.getMonth() !== +m[2] - 1) { console.error(`Invalid --day "${d}": there is no such day.`); process.exit(2); } }
   const end = new Date(t); end.setDate(end.getDate() + 1); return [+t, +end];
 }
-const TOOLS = { codex: 'Codex', vibe: 'Mistral Vibe', cowork: 'Cowork' }, projLabel = (p) => (path.isAbsolute(String(p)) ? String(p).split(/[\\/]+/).filter(Boolean).slice(-2).join('/') : p);   // a folder written whole (Codex, Vibe): its last two names, as Claude Code's projects read
+const TOOLS = { codex: 'Codex', vibe: 'Mistral Vibe', cursor: 'Cursor', cowork: 'Cowork' }, projLabel = (p) => (path.isAbsolute(String(p)) ? String(p).split(/[\\/]+/).filter(Boolean).slice(-2).join('/') : p);   // a folder written whole (Codex, Vibe, Cursor): its last two names, as Claude Code's projects read
 const CALLS = { cmd: 'commands', edit: 'edits', write: 'edits', read: 'reads', web: 'web', browser: 'browser', artifact: 'artifacts' };
 async function report(day, dir, titles) {
   const [from, to] = dayRange(day);

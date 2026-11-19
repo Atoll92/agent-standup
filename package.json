@@ -103,6 +103,11 @@
           "default": true,
           "description": "%config.vibe.description%"
         },
+        "agentStandup.cursor": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.cursor.description%"
+        },
         "agentStandup.reply": {
           "type": "boolean",
           "default": false,
