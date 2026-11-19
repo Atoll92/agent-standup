@@ -235,8 +235,6 @@
  "No preview here: the page is on claude.ai": "No preview here: the page is on claude.ai",
  "No recent session": "No recent session",
  "No results": "No results",
- "No session on this computer yet. Start Claude Code, Codex or Mistral Vibe (or a Cowork task): the call will start by itself.": "No session on this computer yet. Start Claude Code, Codex or Mistral Vibe (or a Cowork task): the call will start by itself.",
- "No session yet. Start Claude Code, Codex or Mistral Vibe in {0}: the call will start by itself.": "No session yet. Start Claude Code, Codex or Mistral Vibe in {0}: the call will start by itself.",
  "No setting found": "No setting found",
  "No system voice found: agents will mumble.": "No system voice found: agents will mumble.",
  "No thanks": "No thanks",
@@ -463,5 +461,7 @@
  "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.": "Your vampire comes from the Halloween pack, drawn by hand by Fabien Coupas. The rest of the cast is in it too.",
  "Yours": "Yours",
  "Zen mode: alerts, no voices": "Zen mode: alerts, no voices",
- "Zen: alerts only, no voices (M key)": "Zen: alerts only, no voices (M key)"
+ "Zen: alerts only, no voices (M key)": "Zen: alerts only, no voices (M key)",
+ "No session on this computer yet. Start Claude Code, Codex, Mistral Vibe or Cursor (or a Cowork task): the call will start by itself.": "No session on this computer yet. Start Claude Code, Codex, Mistral Vibe or Cursor (or a Cowork task): the call will start by itself.",
+ "No session yet. Start Claude Code, Codex, Mistral Vibe or Cursor in {0}: the call will start by itself.": "No session yet. Start Claude Code, Codex, Mistral Vibe or Cursor in {0}: the call will start by itself."
 }

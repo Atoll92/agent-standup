@@ -8,9 +8,10 @@ const os = require('os');
 const crypto = require('crypto');
 const codex = require('./codex.js');     // Codex sessions, read as the same call (see codex.js)
 const vibe = require('./vibe.js');       // Mistral Vibe sessions, the same way (see vibe.js)
+const cursor = require('./cursor.js');   // Cursor Agent CLI sessions, the same way (see cursor.js)
 const boards = require('./boards.js');   // Claude Whiteboards and Sheets, drawn again from the session's writes for the shared screen (see boards.js)
 const reply = require('./reply.js');     // the human's line, typed into the session's tmux pane (see reply.js); off unless AGENT_STANDUP_REPLY=on
-const SOURCES = [codex, vibe], sourceOf = (proj) => SOURCES.find((m) => m.PROJ === proj) || null, guard = (fn, or) => { try { return fn(); } catch (e) { logError('reader', e); return or; } };   // guard: a session of another tool that cannot be read costs that session, never the list   // the tools other than Claude Code: each lists its sessions under one made-up project
+const SOURCES = [codex, vibe, cursor], sourceOf = (proj) => SOURCES.find((m) => m.PROJ === proj) || null, guard = (fn, or) => { try { return fn(); } catch (e) { logError('reader', e); return or; } };   // guard: a session of another tool that cannot be read costs that session, never the list   // the tools other than Claude Code: each lists its sessions under one made-up project
 const kokoro = require('./kokoro.js');   // natural voices, installed on demand (see kokoro.js)
 const zlib = require('zlib');
 const { execFileSync, execFile } = require('child_process');
@@ -1093,8 +1094,8 @@ function parseRecord(st, r) {
     }
   }
 }
-const codexRecord = codex.parser({ toolLabel, clip, clipOut, testsOf, diffOf, resultMax: RESULT_MAX }), vibeRecord = vibe.parser({ toolLabel, clip: clipOut, resultMax: RESULT_MAX });   // Vibe clips only thoughts and outputs: without the codes of a terminal
-const recordOf = (sx) => (sx === codex ? codexRecord : sx === vibe ? vibeRecord : parseRecord);
+const codexRecord = codex.parser({ toolLabel, clip, clipOut, testsOf, diffOf, resultMax: RESULT_MAX }), vibeRecord = vibe.parser({ toolLabel, clip: clipOut, resultMax: RESULT_MAX }), cursorRecord = cursor.parser({ toolLabel, clip: clipOut, resultMax: RESULT_MAX });   // Vibe and Cursor clip only thoughts and outputs: without the codes of a terminal
+const recordOf = (sx) => (sx === codex ? codexRecord : sx === vibe ? vibeRecord : sx === cursor ? cursorRecord : parseRecord);
 // A sub-agent the person named keeps that name on screen: the name given when it was launched, or else its type when that type is the person's own (.claude/agents/code-reviewer.md → "Code Reviewer").
 // The types Claude Code ships are not names: those agents get a first name from the page, as before.
 const STOCK_AGENT = /^(general-purpose|explore|plan|claude|agent|task|fork|main|default|worker|subagent|workflow-subagent|statusline-setup|output-style-setup|claude-code-guide|verification|magic-docs)$/i;
@@ -1646,7 +1647,7 @@ module.exports = { answerIn, missingTranscripts, noteEditor, forgetEditor, _winA
 if (require.main === module && process.env.AGENT_STANDUP_CHILD === '1' && typeof process.send === 'function') {   // started by the VS Code extension in a process of its own (see extension.js): reading a large session no longer stops the editor's extensions. Asked for by name: pm2 and others give any app a channel too
   const srv = start(+process.env.PORT || 0), tell = (m) => { try { process.send(m); } catch {} };
   srv.on('listening', () => tell({ port: srv.address().port })).on('error', (e) => { tell({ error: e.code || String(e) }); process.exit(1); });
-  process.on('message', (m) => { if (m && m.env && typeof m.env === 'object') for (const [k, v] of Object.entries(m.env)) { if (v == null) delete process.env[k]; else process.env[k] = String(v); } });   // a setting changed in the editor (claudePath, codex, vibe…)
+  process.on('message', (m) => { if (m && m.env && typeof m.env === 'object') for (const [k, v] of Object.entries(m.env)) { if (v == null) delete process.env[k]; else process.env[k] = String(v); } });   // a setting changed in the editor (claudePath, codex, vibe, cursor…)
   process.on('disconnect', () => { try { shutdown(); } catch {} process.exit(0); });   // the editor window closed, or its extension host ended: this server ends with it
   process.on('uncaughtException', (e) => logError('crash', e)); process.on('unhandledRejection', (e) => logError('promise', e));   // written down and gone on, as in the extension host it ran in before: one odd request does not end the call
 } else if (require.main === module) {

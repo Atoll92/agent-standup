@@ -19,6 +19,8 @@ What exists today, what was investigated, and what is deliberately not built yet
 
 **Mistral Vibe is read** (`vibe.js`): both of its engines, checked against real sessions of Vibe 2.26.1, with its sub-agents. Pictures are not shown.
 
+**Cursor Agent CLI is read** (`cursor.js`): the `agent` / `cursor-agent` command (and Agents Window chats that share the same transcript layout). Transcripts live under `~/.cursor/projects/<slug>/agent-transcripts/<id>/`, with titles and cwd from `~/.cursor/chats/<hash>/<id>/meta.json`. Sub-agents join the call; tool results are not in the JSONL (Cursor does not write them back), and tool ids are often null so the reader invents stable ones. Pictures and token totals are not shown.
+
 The rest is researched, not built. Reading another tool needs one adapter each. A web research pass found that **almost every format is undocumented or reverse-engineered and sources disagree**, and no real log of these tools was available to test against, so no adapter was written blind. Ranking if/when someone wants to take one (sources are third-party; verify against a real install first):
 
 | Tool | Where logs live (per sources) | Fit |
@@ -27,7 +29,7 @@ The rest is researched, not built. Reading another tool needs one adapter each. 
 | OpenCode | `~/.local/share/opencode/` | Has explicit parent/child sessions and full token/cost data, but storage changed between versions (SQLite, then JSON, then SQLite again). |
 | Amp | `~/.local/share/amp/threads/T-<uuid>.json` (community sources) | One JSON file per thread; small adapter, small user base. |
 | Cline / Roo | VS Code `globalStorage/.../tasks/<id>/*.json` | Medium; no sub-agents found. |
-| Aider, Cursor, Copilot agent mode | Markdown history / SQLite / undocumented | Poor fit: no structured tool calls, or undocumented databases. |
+| Aider, Copilot agent mode | Markdown history / SQLite / undocumented | Poor fit: no structured tool calls, or undocumented databases. |
 
 A good adapter design: one small module per tool turning its log into the common event list the UI already uses (`say`, `tools`, `results`, `order`, `finish`, `usage`…), selected by folder. Contributions are welcome; please attach a few anonymised sample logs.
 

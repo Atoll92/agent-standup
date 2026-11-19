@@ -373,8 +373,6 @@
  "may need you": "可能需要你",
  "needs you": "需要你",
  "needs you ": "需要你 ",
- "No session on this computer yet. Start Claude Code, Codex or Mistral Vibe (or a Cowork task): the call will start by itself.": "这台电脑上还没有会话。启动 Claude Code、Codex 或 Mistral Vibe（或一个 Cowork 任务），通话会自动开始。",
- "No session yet. Start Claude Code, Codex or Mistral Vibe in {0}: the call will start by itself.": "还没有会话。在 {0} 中启动 Claude Code、Codex 或 Mistral Vibe，通话会自动开始。",
  "nobody at work: the call stays": "没有人在工作：通话留在这里",
  "on sub-agents": "在等子代理",
  "Or click anywhere in the call": "或在通话中任意位置点击",
@@ -468,5 +466,7 @@
  "Zen mode: alerts, no voices": "禅模式：提示音，无语音",
  "Hold the call in this language? Your Claude Code translates what the agents say.": "用此语言进行通话吗？智能体说的话由你的 Claude Code 翻译。",
  "Yes": "是",
- "Voices ready in English. This language has natural voices too: one more download.": "英语语音已就绪。此语言也有自然语音：再下载一次即可。"
+ "Voices ready in English. This language has natural voices too: one more download.": "英语语音已就绪。此语言也有自然语音：再下载一次即可。",
+ "No session on this computer yet. Start Claude Code, Codex, Mistral Vibe or Cursor (or a Cowork task): the call will start by itself.": "这台电脑上还没有会话。启动 Claude Code、Codex、Mistral Vibe 或 Cursor（或一个 Cowork 任务），通话会自动开始。",
+ "No session yet. Start Claude Code, Codex, Mistral Vibe or Cursor in {0}: the call will start by itself.": "还没有会话。在 {0} 中启动 Claude Code、Codex、Mistral Vibe 或 Cursor，通话会自动开始。"
 }

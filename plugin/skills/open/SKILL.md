@@ -1,9 +1,9 @@
 ---
 name: open
-description: Open Agent Standup, a local page that shows the Claude Code, Codex, Mistral Vibe and Cowork sessions on this computer as a live team call (who is working, who waits on whom, who needs the user). Use when the user asks to watch, see or follow their agents, sub-agents or sessions, or asks for the standup or the call.
+description: Open Agent Standup, a local page that shows the Claude Code, Codex, Mistral Vibe, Cursor and Cowork sessions on this computer as a live team call (who is working, who waits on whom, who needs the user). Use when the user asks to watch, see or follow their agents, sub-agents or sessions, or asks for the standup or the call.
 ---
 
-Agent Standup is a small local web server. It reads the session files Claude Code, Codex, Mistral Vibe and Cowork already write on this computer and shows them as a call. By default it sends nothing anywhere, and it never changes those files.
+Agent Standup is a small local web server. It reads the session files Claude Code, Codex, Mistral Vibe, Cursor and Cowork already write on this computer and shows them as a call. By default it sends nothing anywhere, and it never changes those files.
 
 To open it:
 

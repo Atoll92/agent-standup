@@ -5,7 +5,7 @@ Thanks for helping. Issues, ideas and pull requests are all welcome.
 ## Before you start
 
 - For anything bigger than a small fix, open an issue first (or a draft pull request) and say what you plan. It saves you work if the idea needs a different shape.
-- Agent Standup only reads the session files that Claude Code, Codex, Mistral Vibe and Cowork already write, and it sends nothing by default. A change that adds a network request must be opt-in and asked once; say so in the pull request.
+- Agent Standup only reads the session files that Claude Code, Codex, Mistral Vibe, Cursor and Cowork already write, and it sends nothing by default. A change that adds a network request must be opt-in and asked once; say so in the pull request.
 - The app has no runtime dependencies. Please keep it that way.
 
 ## Run it
@@ -20,7 +20,7 @@ To run against chosen data instead of your own, set `AGENT_STANDUP_PROJECTS` (a 
 ## Where things are
 
 - `server.js`: the backend. It reads the transcripts and serves `/api/*` and `public/`.
-- `codex.js`, `vibe.js`: the Codex and Mistral Vibe readers.
+- `codex.js`, `vibe.js`, `cursor.js`: the Codex and Mistral Vibe readers.
 - `public/index.html`: the whole page, one inline script.
 - `extension.js`: the VS Code extension.
 - `test/`: `node:test` suites. The `live-*` files drive the real page in Chrome through puppeteer-core.
