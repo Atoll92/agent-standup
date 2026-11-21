@@ -301,6 +301,12 @@
   .tile.stretch:not(.speaking) .fig { animation:stretch 1.2s ease-in-out } @keyframes stretch { 40% { transform:scale(1.03,.97) translateY(.6px) } 65% { transform:scale(.98,1.035) translateY(-1.2px) } }
   .tile.inhale .brow { animation:browup .34s ease-out } .tile.wow .brow { animation:wow 1.1s ease-out } @keyframes browup { 50% { transform:translateY(-1.8px) } } @keyframes wow { 20%, 70% { transform:translateY(-1.9px) } }
   .tile.settle .smile, .tile.settle .grin { transform-box:fill-box; transform-origin:center; animation:settle .35s ease-out } @keyframes settle { from { transform:scale(.55,1.8) } }
+  /* the riso cast (?cast=2, public/riso.js): one drawing per tile holds every face with its marks (data-f) and every arm pose (data-a); the tile's state shows one of each, and turns the head */
+  .rz [data-f], .rz [data-a] { display:none } .rz .rtilt { transform-origin:50px 50px; transform:rotate(2.5deg); transition:transform .4s ease } .rz .rgaze { transition:transform .45s ease; transform:translate(calc(var(--lx,0) * .6px), calc(var(--ly,0) * .45px)) }
+  :not(.speaking):not(.done):not(.blocked):not(.stalled):not(.waiting):not(.working) > .rz [data-f=listening], .speaking > .rz [data-f=speaking], .done:not(.speaking) > .rz [data-f=done], .blocked:not(.speaking) > .rz [data-f=needs], .stalled:not(.speaking) > .rz [data-f=stuck], .waiting:not(.speaking) > .rz [data-f=waiting], .working:not(.speaking) > .rz [data-f=focused],
+  .blocked > .rz [data-a=handUp], .working:not(.blocked) > .rz [data-a=working], .speaking:not(.working):not(.blocked) > .rz [data-a=gesture], .waiting:not(.speaking):not(.blocked):not(.working) > .rz [data-a=waiting], :not(.blocked):not(.working):not(.speaking):not(.waiting) > .rz [data-a=idle] { display:inline }
+  .speaking > .rz .rtilt { transform:rotate(-2deg) } .working:not(.speaking) > .rz .rtilt { transform:none } .done:not(.speaking) > .rz .rtilt { transform:rotate(3.5deg) } .blocked:not(.speaking) > .rz .rtilt { transform:rotate(-3deg) } .stalled:not(.speaking) > .rz .rtilt { transform:rotate(-3.5deg) } .waiting:not(.speaking) > .rz .rtilt { transform:rotate(-6deg) }
+  .tile:has(> .rz) > .prop:not(.cheer) { display:none }   /* the drawing raises its hand, sweats or waits chin in hand: no emoji over it */
   @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important } .confetti, .fly { display:none !important } }
   .tile:focus-visible, .rr:focus-visible, .bcard:focus-visible { outline:2px solid var(--accent); outline-offset:2px }
   .fly { position:fixed; left:0; top:0; font-size:28px; z-index:8; pointer-events:none; filter:drop-shadow(0 3px 4px rgba(0,0,0,.5)) }
@@ -500,6 +506,7 @@
 <div id="card"></div><div id="recap"><div class="box"></div></div>
 
 <script src="/api/prefs.js"></script>
+<script data-cast>if (/[?&]cast=2(&|$)/.test(location.search)) document.write('<script src="/riso.js"><\/script>');   /* the cast drawn as a two-ink print, on trial: only when the address asks for it */</script>
 <script>
 // =====================================================================
 //  helpers, prefs, i18n
@@ -837,6 +844,7 @@ const ACC = [
 const pumpkinDay = () => { const d = new Date(); return d.getMonth() === 9 && d.getDate() >= 30; };   // Halloween and its eve: the drawn characters bring a pumpkin (mine, not the pack's art)
 const pumpkin = (x) => `<g class="pumpkin"><ellipse cx="${x}" cy="58.3" rx="6.2" ry="4.4" fill="#f28c28"/><path d="M${x - 2.3} 54.2q-1.7 4.1 0 8.3M${x + 2.3} 54.2q1.7 4.1 0 8.3" fill="none" stroke="#c8650f" stroke-width=".7"/><path d="M${x} 54.3q.2-2 1.7-2.7" fill="none" stroke="#4f8a3a" stroke-width="1.3" stroke-linecap="round"/><path d="M${x - 3.5} 57.7l1.3-2 1.3 2zM${x + .9} 57.7l1.3-2 1.3 2z" fill="#ffd84a"/><path d="M${x - 3.3} 59.5q3.3 2.5 6.6 0l-1 1.5-1.1-.8-1.1.9-1.1-.9-1.1.8z" fill="#ffd84a"/></g>`;
 function avatarSVG(p, o, uid = '') {   // uid keeps SVG ids unique per instance: duplicate ids made gradients vanish when the first copy was in a hidden element
+  if (window.RISO && !p.custom) return RISO.svg(p, o, uid);   /* ?cast=2: the riso cast (public/riso.js); a pack's character keeps its own pictures */
   const st = !!o, sh = SHAPES[p.shape], fy = sh.fy, top = sh.top, bot = p.shape === 4, c = p.shirt, c1 = mix(c, '#ffffff', .3), c2 = mix(c, '#000000', .2);
   const ink = bot ? '#8ff0ff' : '#2a2233', gid = uid + 'b' + p.gid, sc = SCENES[p.scene], eg = EYES[p.eye], ex = p.shape === 1 ? [43, 57] : [41.5, 58.5];
   const V = (cls, show, html) => (st ? (show ? html : '') : `<g class="${cls}">${html}</g>`);
