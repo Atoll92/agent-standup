@@ -188,7 +188,7 @@ if (cmd === 'credits') {
   process.stdout.write(text + '\n', () => process.exit(0));   // the timelines leave timers behind: once written, it is done
   });
 } else if (cmd === 'statusline') {
-  let raw = ''; const go = () => { let dir = ''; try { const j = JSON.parse(raw); dir = (j.workspace && j.workspace.current_dir) || j.cwd || ''; } catch {} console.log(line(snapshot(dir), true)); process.exit(0); };
+  let raw = ''; const go = () => { let dir = ''; try { const j = JSON.parse(raw); dir = (j.workspace && j.workspace.current_dir) || j.cwd || ''; server.saveLimits(j); } catch {} console.log(line(snapshot(dir), true)); process.exit(0); };
   if (process.stdin.isTTY) go(); else { process.stdin.setEncoding('utf8'); process.stdin.on('data', (d) => (raw += d)); process.stdin.on('end', go); setTimeout(go, 800); }
 } else if (cmd === 'serve') {
   const port = +process.env.PORT || 4747, srv = server.start(port);

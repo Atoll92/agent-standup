@@ -107,7 +107,7 @@
   .bdone summary { cursor:pointer; list-style:none } .bdone summary::-webkit-details-marker { display:none } .bdone summary::after { content:'▸' } .bdone[open] summary::after { content:'▾' } .bdone .bcard { opacity:.7 }
   .bdo, .bpr { flex:none; font:inherit; font-size:11.5px; line-height:1.5; color:var(--dim); background:none; border:1px solid var(--line); border-radius:99px; padding:0 8px; cursor:pointer } .bh .stc + .bpr, .bh .stc + .bdo { margin-left:auto } .bdo:hover, .bpr:hover, .bdo:focus-visible, .bpr:focus-visible { color:var(--text); border-color:var(--accent) }
   .stc { font-size:11.5px; padding:2px 9px; border-radius:99px; background:rgba(14,15,24,.6); white-space:nowrap } .stc.working { color:var(--gold) } .stc.waiting { color:#8fd3ff } .stc.blocked { color:#fff; background:#c0392b; font-weight:700 } .stc.stalled { color:#1b1d27; background:#ffb347; font-weight:700 } .stc.done, .stc.turn { color:var(--ok) } .stc.idle { color:var(--dim) }
-  .ctxp { font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; background:var(--panel2); white-space:nowrap; cursor:default } .ctxp.lo, .cx.lo { color:#7ee2a8 } .ctxp.mid, .cx.mid { color:#ffc857 } .ctxp.hi, .cx.hi { color:#fff; background:#c0392b }
+  .ctxp { font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; background:var(--panel2); white-space:nowrap; cursor:default } .ctxp.lo, .cx.lo { color:#7ee2a8 } .ctxp.mid, .cx.mid { color:#ffc857 } .ctxp.hi, .cx.hi { color:#fff; background:#c0392b } .ctxp.old { opacity:.6 }
   .cx:empty { display:none } .tag .cx { font-size:10px }
   #hl { display:none; flex:0 0.01 auto; min-height:30px; max-height:66px; overflow-y:auto; scrollbar-width:thin; flex-wrap:wrap; gap:6px; padding:5px 12px; border-top:1px solid var(--line); background:var(--panel) } body.replay #hl.has { display:flex } body.board #hl, body.tree #hl { display:none !important }
   .hlc { font-size:11.5px; padding:3px 10px; border-radius:99px; background:var(--panel2); border:1px solid var(--line); color:var(--text) } .hlc:hover { border-color:var(--accent) }
@@ -387,7 +387,7 @@
 <body>
 <header>
   <div class="brand"><img class="logo" src="icon.svg" alt=""><div><b>Agent Standup</b><small id="subtitle"></small></div></div>
-  <span id="pill">REPLAY</span><button id="tok" class="tok" style="display:none"></button><button id="ctxp" class="ctxp" style="display:none"></button><span id="board" aria-live="polite"></span><span id="meet" class="meet"></span>
+  <span id="pill">REPLAY</span><button id="tok" class="tok" style="display:none"></button><button id="ctxp" class="ctxp" style="display:none"></button><button id="lim" class="ctxp lim" style="display:none"></button><span id="board" aria-live="polite"></span><span id="meet" class="meet"></span>
   <div class="sp"></div>
   <div class="seg" id="viewSeg"><button data-v="call" class="on" data-ic="👥" data-fr="Appel" data-en="Call">Appel</button><button data-v="tree" data-ic="🌳" data-fr="Arbre" data-en="Tree">Arbre</button><button data-v="board" data-ic="🗂" data-fr="Sessions" data-en="Sessions">Sessions</button></div>
   <button class="ic" id="bPlay" title="Pause / Lecture (espace)">⏸</button>
@@ -1561,6 +1561,19 @@ function renderCtx() {   // "context N% full": per agent chip (from 50%), a head
     else if (x && x.p < 60) delete S.ctxWarned[id]; }
   const lead = ctxInfo('main'), cp = $('#ctxp'); if (lead) { cp.style.display = ''; cp.textContent = `ctx ${lead.p}%`; cp.className = 'ctxp ' + lead.lvl; cp.title = `${L('Contexte du chef', 'Lead context')}: ${fmtTok(lead.c)} / ${fmtTok(lead.w)}${S.compacts.main ? ' · ' + S.compacts.main + '×🗜' : ''}`; } else cp.style.display = 'none';
 }
+async function renderLimits() {   // plan limits (5-hour and weekly windows) of the subscription the call's session runs on, Claude's or Codex's, read by the server from local files (limits.js). Hidden in a replay, the demo and Mistral Vibe
+  const b = $('#lim'); if (!b) return; const proj = S.cur && S.cur.proj, tool = proj === '_codex' ? 'codex' : proj === '_vibe' ? '' : 'claude';
+  let r = null; if (S.live && !S.demo && S.cur && tool) { try { r = await (await fetch('/api/limits?tool=' + tool)).json(); } catch {} }
+  if ((S.cur && S.cur.proj) !== proj) return;   // the call moved to another session meanwhile: its own call draws it
+  if (!r || !r.windows || !r.windows.length) { b.style.display = 'none'; return; }
+  const name = (k) => (k === '5h' ? '5 h' : k === 'week' ? L('semaine', 'week') : k === 'month' ? L('mois', 'month') : k);
+  const at = (ms) => { try { return new Date(ms).toLocaleString(document.documentElement.lang || undefined, ms - Date.now() > 20 * 3600e3 ? { weekday: 'short', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
+  const hi = Math.max(...r.windows.map((w) => w.pct)), old = Date.now() - r.asOf > 30 * 60e3;
+  b.style.display = ''; b.className = 'ctxp lim ' + (hi >= 90 ? 'hi' : hi >= 70 ? 'mid' : 'lo') + (old ? ' old' : '');
+  b.textContent = '⏳ ' + r.windows.map((w) => `${name(w.key)} ${w.pct}%`).join(' · ');
+  b.title = `${L('Limites du forfait', 'Plan limits')} (${tool === 'codex' ? 'Codex' : 'Claude'})\n` + r.windows.map((w) => `${name(w.key)}: ${w.pct}% ${L('utilisés', 'used')} · ${L('remise à zéro', 'resets')} ${at(w.resetsAt)}`).join('\n') + `\n${L('Lu à', 'Read at')} ${clockOf(r.asOf)}`;
+}
+setInterval(renderLimits, 20e3);
 function renderTokens() {
   renderCtx(); const mix = mixedModels();
   const all = { i: 0, o: 0, r: 0, w: 0 }; for (const id in S.usage) for (const k in all) all[k] += S.usage[id][k];
@@ -3179,7 +3192,7 @@ async function loadSession(proj, id) {
   if (mine !== S.loadN || data.error) return false;
   leadProject = data.project || null; clearTimeout(leadTimer); leadField(true);
   S.term = {}; S.camFor = null; S.focus = null; S.agents = {}; S.cost = data.cost || null; for (const k in nameBook) delete nameBook[k]; const all = [{ id: 'user' }, ...data.agents]; S.soon = all; for (const a of byBorn(all)) S.agents[a.id] = persona(twinOf(a)); S.soon = null; S.agents = Object.fromEntries(all.map((a) => [a.id, S.agents[a.id]]));   // named in the order they started, kept in the server's order
-  clearThoughts(); Object.assign(TH, { since: {}, next: {}, said: {}, last: 0 }); S.events = data.events; stampT(0); S.byK = new Map(data.events.map((e) => [e.k, e])); S.seq = data.seq || 0; S.ep = data.ep || ''; S.sawEnd = !!data.marks || data.events.some((e) => e.end); S.late = []; S.pos = 0; S.joinAt = Date.now(); S.idx = 0; S.status = {}; S.tc = {}; S.cur = { proj, id }; S.logTo = 0; S.detail = null; $('#detail').classList.remove('on'); S.fgone = new Set(); S.fmade = new Map(); S.artOk = new Map(); S.artPin = null; S.artWhole = null; S.wholeSeen = new Set();
+  clearThoughts(); Object.assign(TH, { since: {}, next: {}, said: {}, last: 0 }); S.events = data.events; stampT(0); S.byK = new Map(data.events.map((e) => [e.k, e])); S.seq = data.seq || 0; S.ep = data.ep || ''; S.sawEnd = !!data.marks || data.events.some((e) => e.end); S.late = []; S.pos = 0; S.joinAt = Date.now(); S.idx = 0; S.status = {}; S.tc = {}; S.cur = { proj, id }; setTimeout(renderLimits, 300); S.logTo = 0; S.detail = null; $('#detail').classList.remove('on'); S.fgone = new Set(); S.fmade = new Map(); S.artOk = new Map(); S.artPin = null; S.artWhole = null; S.wholeSeen = new Set();
   const opt = $('#sessions').selectedOptions[0]; S.title = (S.live ? niceProj(proj) : opt && opt.dataset.title) || '';
   if (proj === '_demo') S.events.forEach((e) => { if (e.fr) trMem.set(baseText(e), e.fr, 'fr'); });   // the demo ships its own French
   $('#subtitle').textContent = S.title; recomputeStatus(0); buildStage(); renderHighlights(); setFocus('main'); renderLog(true); computeGantt(); layout(); paintStatus(); prefetchTr(0); return true;

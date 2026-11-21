@@ -8,6 +8,7 @@ const os = require('os');
 const crypto = require('crypto');
 const codex = require('./codex.js');     // Codex sessions, read as the same call (see codex.js)
 const vibe = require('./vibe.js');       // Mistral Vibe sessions, the same way (see vibe.js)
+const limits = require('./limits.js');   // plan limits (5-hour and weekly windows), read from local files only (see limits.js)
 const boards = require('./boards.js');   // Claude Whiteboards and Sheets, drawn again from the session's writes for the shared screen (see boards.js)
 const reply = require('./reply.js');     // the human's line, typed into the session's tmux pane (see reply.js); off unless AGENT_STANDUP_REPLY=on
 const SOURCES = [codex, vibe], sourceOf = (proj) => SOURCES.find((m) => m.PROJ === proj) || null, guard = (fn, or) => { try { return fn(); } catch (e) { logError('reader', e); return or; } };   // guard: a session of another tool that cannot be read costs that session, never the list   // the tools other than Claude Code: each lists its sessions under one made-up project
@@ -1559,6 +1560,7 @@ function start(port = PORT) {
     if (url.pathname === '/api/errors') return json(errorReport());
     if (url.pathname === '/api/current') { const q = (k) => url.searchParams.get(k) || ''; return json(currentSession(q('proj'), q('pid') ? { proj: q('pproj'), id: q('pid'), since: q('since') ? +q('since') : NaN, pin: q('pin') === '1' } : null, { proj: q('sproj'), id: q('sid') })); }
     if (url.pathname === '/api/board') return json(boardRows());
+    if (url.pathname === '/api/limits') { const tool = url.searchParams.get('tool'); return json(tool === 'codex' ? guard(() => (codex.home() ? limits.codex(codex.files()) : null), null) : guard(() => limits.claude(path.dirname(PREFS)), null)); }   // { windows: [{ key, pct, resetsAt }], asOf, src } or null
     if (url.pathname === '/api/missing') return json(missingTranscripts());   // live Claude Code sessions whose transcript is not where the call reads (missingTranscripts)
     if (url.pathname === '/api/characters') return json(listCharacters(url.searchParams.get('pack') || ''));
     if (url.pathname === '/api/characters/add' && req.method === 'POST') return readBody((body) => { try { const b = JSON.parse(body || '{}') || {}; json(addCharacter(String(b.role || ''), b.name, b.data)); } catch (e) { if (!e.word) logError('add character', e); json({ error: e.word || 'write' }, e.word ? 400 : 500); } }, 512 * 1024);   // a picture of 300 KB is 400 KB once written as text
@@ -1642,7 +1644,7 @@ function start(port = PORT) {
   } catch (e) { logError(req.method + ' ' + url.pathname, e); if (res.headersSent) return res.destroy(); json({ error: String(e.message || e) }, 500); }
   }).listen(port, '127.0.0.1', function () { console.log(`Agent Standup → http://localhost:${this.address().port}`); });
 }
-module.exports = { answerIn, missingTranscripts, noteEditor, forgetEditor, _winArg: winArg, start, currentSession, shutdown, findClaude, bundledClaude, boardRows, timeline: (proj, id) => timelineEntry(proj, id).tl, transcriptFile: (proj, id) => path.join(projDir(proj, id), id + '.jsonl'), sessionRows: listSessions, sessionsSince: (t) => listSessions0(+t || 0), codexPending: () => guard(() => !!(codex.zPending && codex.zPending()), false), charactersDir, listCharacters, packsDir, installPack, logError, updateInfo, _reveal: reveal, _scrub: { tidy, homeRe }, _artifact: { page: artifactPage, csp: artifactCsp }, readPrefs, leadKey: (proj, id) => guard(() => (leadProject(proj, id) || {}).key || '', '') };
+module.exports = { saveLimits: (statusJson) => guard(() => limits.save(path.dirname(PREFS), statusJson), false), answerIn, missingTranscripts, noteEditor, forgetEditor, _winArg: winArg, start, currentSession, shutdown, findClaude, bundledClaude, boardRows, timeline: (proj, id) => timelineEntry(proj, id).tl, transcriptFile: (proj, id) => path.join(projDir(proj, id), id + '.jsonl'), sessionRows: listSessions, sessionsSince: (t) => listSessions0(+t || 0), codexPending: () => guard(() => !!(codex.zPending && codex.zPending()), false), charactersDir, listCharacters, packsDir, installPack, logError, updateInfo, _reveal: reveal, _scrub: { tidy, homeRe }, _artifact: { page: artifactPage, csp: artifactCsp }, readPrefs, leadKey: (proj, id) => guard(() => (leadProject(proj, id) || {}).key || '', '') };
 if (require.main === module && process.env.AGENT_STANDUP_CHILD === '1' && typeof process.send === 'function') {   // started by the VS Code extension in a process of its own (see extension.js): reading a large session no longer stops the editor's extensions. Asked for by name: pm2 and others give any app a channel too
   const srv = start(+process.env.PORT || 0), tell = (m) => { try { process.send(m); } catch {} };
   srv.on('listening', () => tell({ port: srv.address().port })).on('error', (e) => { tell({ error: e.code || String(e) }); process.exit(1); });

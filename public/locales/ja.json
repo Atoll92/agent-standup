@@ -468,5 +468,11 @@
  "Zen mode: alerts, no voices": "Zenモード：通知音のみ、声なし",
  "Hold the call in this language? Your Claude Code translates what the agents say.": "通話をこの言語で行いますか？エージェントの発言はあなたの Claude Code が翻訳します。",
  "Yes": "はい",
- "Voices ready in English. This language has natural voices too: one more download.": "英語の音声は準備完了です。この言語にも自然な音声があります（追加のダウンロードが必要です）。"
+ "Voices ready in English. This language has natural voices too: one more download.": "英語の音声は準備完了です。この言語にも自然な音声があります（追加のダウンロードが必要です）。",
+ "week": "週",
+ "month": "月",
+ "Plan limits": "プランの上限",
+ "used": "使用",
+ "resets": "リセット",
+ "Read at": "取得時刻"
 }

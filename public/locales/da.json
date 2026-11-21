@@ -467,5 +467,11 @@
  "Zen mode: alerts, no voices": "Zen-tilstand: advarsler, ingen stemmer",
  "Hold the call in this language? Your Claude Code translates what the agents say.": "Holde opkaldet på dette sprog? Din Claude Code oversætter, hvad agenterne siger.",
  "Yes": "Ja",
- "Voices ready in English. This language has natural voices too: one more download.": "Stemmerne er klar på engelsk. Dette sprog har også naturlige stemmer: én download mere."
+ "Voices ready in English. This language has natural voices too: one more download.": "Stemmerne er klar på engelsk. Dette sprog har også naturlige stemmer: én download mere.",
+ "week": "uge",
+ "month": "måned",
+ "Plan limits": "Abonnementsgrænser",
+ "used": "brugt",
+ "resets": "nulstilles",
+ "Read at": "Læst kl."
 }

@@ -468,5 +468,11 @@
  "Zen mode: alerts, no voices": "Zen-Modus: Hinweistöne, keine Stimmen",
  "Hold the call in this language? Your Claude Code translates what the agents say.": "Den Call in dieser Sprache führen? Dein Claude Code übersetzt, was die Agenten sagen.",
  "Yes": "Ja",
- "Voices ready in English. This language has natural voices too: one more download.": "Stimmen auf Englisch bereit. Diese Sprache hat auch natürliche Stimmen: ein Download mehr."
+ "Voices ready in English. This language has natural voices too: one more download.": "Stimmen auf Englisch bereit. Diese Sprache hat auch natürliche Stimmen: ein Download mehr.",
+ "week": "Woche",
+ "month": "Monat",
+ "Plan limits": "Plan-Limits",
+ "used": "genutzt",
+ "resets": "setzt zurück",
+ "Read at": "Gelesen um"
 }

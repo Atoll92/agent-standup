@@ -468,5 +468,11 @@
  "Zen mode: alerts, no voices": "禪模式：提示音，無語音",
  "Hold the call in this language? Your Claude Code translates what the agents say.": "用此語言進行通話嗎？代理說的話由你的 Claude Code 翻譯。",
  "Yes": "是",
- "Voices ready in English. This language has natural voices too: one more download.": "英文語音已就緒。此語言也有自然語音：再下載一次即可。"
+ "Voices ready in English. This language has natural voices too: one more download.": "英文語音已就緒。此語言也有自然語音：再下載一次即可。",
+ "week": "每週",
+ "month": "每月",
+ "Plan limits": "方案限額",
+ "used": "已用",
+ "resets": "重置於",
+ "Read at": "讀取於"
 }

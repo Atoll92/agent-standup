@@ -389,4 +389,4 @@ function image(id, toolId, n, user, agent = 'main') {   // { type, buf } or null
   return out;
 }
 const zPending = () => zBusy || zQueue.length > 0;   // compressed threads still being read in the background (the day report waits for them)
-module.exports = { zPending, PROJ, SOURCE, home, dirKey, sessions, row, fileOf, cwd, inProject, projectLabel, title, boardRow, subFiles, subCount, state, parser, image };
+module.exports = { files: () => scan().rows, zPending, PROJ, SOURCE, home, dirKey, sessions, row, fileOf, cwd, inProject, projectLabel, title, boardRow, subFiles, subCount, state, parser, image };
