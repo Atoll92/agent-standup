@@ -46,7 +46,7 @@ function trackClicks() {
   document.addEventListener('click', (e) => {
     try {
       const el = e.target.closest && e.target.closest('a[href], button[data-copy]'), w = el && what(el); if (!w) return;
-      const where = el.closest('.hero') ? 'hero' : el.closest('header') ? 'nav' : el.closest('footer') ? 'footer' : (el.closest('section[id]') || {}).id || 'page', data = { where };
+      const where = el.closest('.watched') ? 'after video' : el.closest('.hero') ? 'hero' : el.closest('header') ? 'nav' : el.closest('footer') ? 'footer' : (el.closest('section[id]') || {}).id || 'page', data = { where };
       if (w[1]) data.what = w[1]; window.va('event', { name: w[0], data });
     } catch (err) {}
   }, true);

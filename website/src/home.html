@@ -49,6 +49,7 @@
     </div>
     <div class="pinned">
       <a class="frame yt" href="https://www.youtube.com/watch?v=nUfxQ_BPOzY" rel="noopener" data-yt="nUfxQ_BPOzY" data-title="AI agents burning you out? Stop babysitting them."><img src="media/promo-video.jpg" width="1280" height="720" alt=""><span data-en="Play the video" data-fr="Lire la vidéo">Play the video</span></a>
+      <div class="watched" hidden><a class="btn primary" href="https://marketplace.visualstudio.com/items?itemName=DoubleGeste.agent-standup" rel="noopener"><span data-en="Install in VS Code" data-fr="Installer dans VS Code">Install in VS Code</span> <small>v__VERSION__</small></a><button class="cmd" type="button" data-copy="npx @double_geste/agent-standup@latest --open"><code><i>npx</i> <i>@double_geste/agent-standup</i><i>@latest</i> <i>--open</i></code><span data-en="copy" data-fr="copier">copy</span></button></div>
       <p class="pin"><span class="new" data-en="New on YouTube" data-fr="Nouveau sur YouTube">New on YouTube</span> <span data-en="<b>AI agents burning you out?</b> The whole idea in 54 seconds, with the real app at work." data-fr="<b>Vos agents IA vous épuisent ?</b> Toute l’idée en 54 secondes, avec la vraie app au travail.">AI agents burning you out? The whole idea in 54 seconds, with the real app at work.</span> <a href="https://www.youtube.com/@Agent_Standup?sub_confirmation=1" rel="noopener" data-en="Subscribe" data-fr="S’abonner">Subscribe</a></p>
     </div>
   </div>
@@ -291,7 +292,8 @@ document.querySelectorAll('a[data-yt]').forEach((a) => { a.onclick = (e) => {
   const box = document.createElement('div'), f = document.createElement('iframe'); box.className = a.className;
   f.src = 'https://www.youtube-nocookie.com/embed/' + a.dataset.yt + '?autoplay=1&rel=0&hl=' + encodeURIComponent(document.documentElement.lang);
   f.title = a.dataset.title; f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'; f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin';
-  box.appendChild(f); a.replaceWith(box); f.focus();
+  const next = a.parentElement && a.parentElement.querySelector(':scope > .watched'); box.appendChild(f); a.replaceWith(box); f.focus();
+  if (next) next.hidden = false;   // the way to install, right under the video it is watching: on a phone the hero's buttons are above, out of sight
 }; });
 </script>
 </body>

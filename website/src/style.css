@@ -53,7 +53,7 @@ nav a:hover, nav button:hover { color: var(--ink) }
 .fine { font-size: 14.5px; color: var(--dim); margin-top: 12px }
 .frame { border-radius: 20px; overflow: hidden; background: #0a1a1f; box-shadow: 0 0 0 3px var(--gold), 0 24px 60px rgba(0, 0, 0, .45) }   /* the gold border of whoever is speaking */
 .frame video, .frame img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover }
-.pinned a.frame { display: block } .pin { margin-top: 14px; color: var(--soft); font-size: 15.5px; line-height: 1.5 } .pin a { color: var(--gold); font-weight: 600; white-space: nowrap } .pin b { color: var(--ink) }   /* the latest video, pinned in the hero */
+.pinned a.frame { display: block } .watched { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px } .watched[hidden] { display: none } .watched .cmd { margin-top: 0 } .pin { margin-top: 14px; color: var(--soft); font-size: 15.5px; line-height: 1.5 } .pin a { color: var(--gold); font-weight: 600; white-space: nowrap } .pin b { color: var(--ink) }   /* the latest video, pinned in the hero */
 .pin .new { display: inline-block; margin-right: 4px; padding: 1px 9px; border-radius: 99px; background: var(--gold); color: #1d1205; font: 700 12px/1.6 Figtree, sans-serif; letter-spacing: .05em; text-transform: uppercase }
 nav a.shop { display: inline-flex; gap: 6px; color: var(--soft) }
 .shot { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #0a1a1f; box-shadow: 0 16px 40px rgba(0, 0, 0, .35) }
