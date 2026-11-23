@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.48.0
+- **Your plan limits at the top of the call.** A small ⏳ badge shows how much of your 5-hour and weekly windows you have used, for Claude or Codex depending on the session the call follows, and its tooltip says when each resets. It turns yellow from 70 % and red from 90 %. It is read from files already on your computer: for Claude, the copy Claude Code keeps in `~/.claude.json`, and, if `agent-standup statusline` is your Claude Code status line, the fresher numbers Claude Code hands it after each answer; for Codex, its session files. Nothing is fetched.
+- **A new look for the cast: Two-ink print.** In ⚙ → Characters, the app's characters redrawn as a print in two inks, with grain and offset colours: Margot with her headset, the sub-agents with their own hair, skin, tops and rooms. Their faces, arms and heads follow what each agent does: hand up when it needs you, chin in hand while it waits, a laptop while it works, a cheer when it is done. The drawn characters stay the default; this one is new and still being refined.
+
 ## 1.47.1
 - **In VS Code, the call asks for a rating itself.** When a rating is due (from the third day you use it), the call asks once, in a small line by the ⚙ menu, at the end of a run you watched: the lead at work for two minutes or more, its turn done. Before, a notification asked, and VS Code tucks those into the bell after a few seconds. “⭐ Rate it” opens the store page your editor installs from, “No thanks” ends it, and anything else asks again a week later, one last time. If you have not opened the call for a week, the notification still asks. Nothing is sent.
 - **A voice download cut in the middle tries that file again.** A German, Danish, Japanese, Korean or Chinese voice file whose connection is cut, stalls or meets a server error is fetched again, up to three times, instead of stopping at “download: aborted”. By leomattos7 (#20).
