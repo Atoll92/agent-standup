@@ -70,5 +70,6 @@
  "The video comes from YouTube, and only once you press play.": "動画は YouTube から配信され、再生ボタンを押したときにだけ読み込まれます。",
  "<b>{people} people</b> have already bought him <b>{coffees} coffees</b>. Thank you!": "すでに <b>{people} 人</b>が <b>{coffees} 杯のコーヒー</b>をおごってくれました。ありがとう！",
  "Your name here": "ここにあなたの名前",
- "One coffee puts you on this wall.": "コーヒー一杯で、この壁に名前が載ります。"
+ "One coffee puts you on this wall.": "コーヒー一杯で、この壁に名前が載ります。",
+ "<b>New in 1.48:</b> the cast, redrawn as a two-ink print. Pick it in ⚙ → Characters → Two-ink print; today’s cast stays the default.": "<b>1.48の新機能：</b>おなじみの面々を2色刷りで描き直しました。⚙ → キャラクター → 2色刷り で選べます。今のキャラクターが引き続き標準です。"
 }

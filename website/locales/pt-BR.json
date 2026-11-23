@@ -200,5 +200,11 @@
  "Instagram, translated from Hebrew": "Instagram, traduzido do hebraico",
  "Instagram, translated from Portuguese": "Instagram, traduzido do português",
  "Instagram, translated from French": "Instagram, traduzido do francês",
- "“Your AI agents, in a team meeting.”": "“Your AI agents, in a team meeting.”"
+ "“Your AI agents, in a team meeting.”": "“Your AI agents, in a team meeting.”",
+ "New in 1.48": "Novo na 1.48",
+ "New in 1.47": "Novo na 1.47",
+ "The cast, redrawn as a two-ink print": "A equipe, redesenhada como impressão em duas cores",
+ "Same team, same names, a new look: your agents printed in two inks, with grain and offset colours. Their faces and arms follow what each one does: a hand up when it needs you, chin in hand while it waits, a cheer when it is done. Pick it in ⚙ → Characters → <b>Two-ink print</b>; today’s cast stays the default.": "A mesma equipe, os mesmos nomes, um visual novo: seus agentes impressos em duas cores, com granulado e cores deslocadas. Rostos e braços acompanham o que cada um faz: a mão levantada quando precisa de você, o queixo na mão enquanto espera, uma comemoração quando termina. Escolha em ⚙ → Personagens → <b>Impressão em duas cores</b>; a equipe de hoje continua sendo o padrão.",
+ "<b>And your plan limits, at the top of the call.</b> A ⏳ badge shows how much of your five-hour and weekly Claude or Codex limits you have used, and when they reset. It reads files already on your computer: nothing is fetched.": "<b>E os limites do seu plano, no topo da chamada.</b> Um selo ⏳ mostra quanto você já usou dos seus limites de cinco horas e semanais do Claude ou do Codex, e quando eles reiniciam. Ele lê arquivos que já estão no seu computador: nada é baixado.",
+ "The same four agents before and after: today’s drawn cast on the left, the two-ink print on the right": "Os mesmos quatro agentes antes e depois: à esquerda a equipe desenhada de hoje, à direita a impressão em duas cores"
 }

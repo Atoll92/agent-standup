@@ -200,5 +200,11 @@
  "Instagram, translated from Hebrew": "Instagram，译自希伯来语",
  "Instagram, translated from Portuguese": "Instagram，译自葡萄牙语",
  "Instagram, translated from French": "Instagram，译自法语",
- "“Your AI agents, in a team meeting.”": "“Your AI agents, in a team meeting.”"
+ "“Your AI agents, in a team meeting.”": "“Your AI agents, in a team meeting.”",
+ "New in 1.48": "1.48 新功能",
+ "New in 1.47": "1.47 新功能",
+ "The cast, redrawn as a two-ink print": "整个团队，重绘为双色印刷",
+ "Same team, same names, a new look: your agents printed in two inks, with grain and offset colours. Their faces and arms follow what each one does: a hand up when it needs you, chin in hand while it waits, a cheer when it is done. Pick it in ⚙ → Characters → <b>Two-ink print</b>; today’s cast stays the default.": "同样的团队，同样的名字，全新的样子：你的代理以双色印刷呈现，带颗粒感和错位的套色。他们的表情和手臂随各自的状态变化：需要你时举手，等待时托腮，完成时欢呼。在 ⚙ → 角色 → <b>双色印刷</b> 中选择；现在的角色仍是默认。",
+ "<b>And your plan limits, at the top of the call.</b> A ⏳ badge shows how much of your five-hour and weekly Claude or Codex limits you have used, and when they reset. It reads files already on your computer: nothing is fetched.": "<b>还有你的套餐额度，就在通话顶部。</b>⏳ 徽章显示你已用掉多少 Claude 或 Codex 的五小时和每周额度，以及何时重置。它只读取你电脑上已有的文件：不会下载任何东西。",
+ "The same four agents before and after: today’s drawn cast on the left, the two-ink print on the right": "同样四个代理的前后对比：左边是现在的角色，右边是双色印刷"
 }

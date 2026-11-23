@@ -70,5 +70,6 @@
  "The video comes from YouTube, and only once you press play.": "视频来自 YouTube，只有在你按下播放后才会加载。",
  "<b>{people} people</b> have already bought him <b>{coffees} coffees</b>. Thank you!": "已经有 <b>{people} 个人</b>请他喝了 <b>{coffees} 杯咖啡</b>。谢谢你们！",
  "Your name here": "你的名字",
- "One coffee puts you on this wall.": "一杯咖啡，你就会出现在这面墙上。"
+ "One coffee puts you on this wall.": "一杯咖啡，你就会出现在这面墙上。",
+ "<b>New in 1.48:</b> the cast, redrawn as a two-ink print. Pick it in ⚙ → Characters → Two-ink print; today’s cast stays the default.": "<b>1.48 新功能：</b>整个团队，重绘为双色印刷。在 ⚙ → 角色 → 双色印刷 中选择；现在的角色仍是默认。"
 }

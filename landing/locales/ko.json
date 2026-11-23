@@ -70,5 +70,6 @@
  "The video comes from YouTube, and only once you press play.": "동영상은 YouTube에서 제공되며, 재생을 누를 때에만 불러옵니다.",
  "<b>{people} people</b> have already bought him <b>{coffees} coffees</b>. Thank you!": "벌써 <b>{people}명</b>이 <b>커피 {coffees}잔</b>을 사 주었습니다. 고마워요!",
  "Your name here": "여기에 당신의 이름을",
- "One coffee puts you on this wall.": "커피 한 잔이면 이 벽에 이름이 올라갑니다."
+ "One coffee puts you on this wall.": "커피 한 잔이면 이 벽에 이름이 올라갑니다.",
+ "<b>New in 1.48:</b> the cast, redrawn as a two-ink print. Pick it in ⚙ → Characters → Two-ink print; today’s cast stays the default.": "<b>1.48의 새 기능:</b> 팀을 2도 인쇄로 다시 그렸습니다. ⚙ → 캐릭터 → 2도 인쇄에서 고르세요. 지금의 캐릭터가 계속 기본입니다."
 }

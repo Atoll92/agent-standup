@@ -70,5 +70,6 @@
  "The video comes from YouTube, and only once you press play.": "Das Video kommt von YouTube, und erst, wenn du auf Abspielen drückst.",
  "<b>{people} people</b> have already bought him <b>{coffees} coffees</b>. Thank you!": "<b>{people} Leute</b> haben ihm schon <b>{coffees} Kaffees</b> spendiert. Danke!",
  "Your name here": "Dein Name hier",
- "One coffee puts you on this wall.": "Ein Kaffee, und du stehst an dieser Wand."
+ "One coffee puts you on this wall.": "Ein Kaffee, und du stehst an dieser Wand.",
+ "<b>New in 1.48:</b> the cast, redrawn as a two-ink print. Pick it in ⚙ → Characters → Two-ink print; today’s cast stays the default.": "<b>Neu in 1.48:</b> das Team, neu gezeichnet als Zweifarbendruck. Wähle ihn unter ⚙ → Figuren → Zweifarbendruck; das heutige Team bleibt der Standard."
 }

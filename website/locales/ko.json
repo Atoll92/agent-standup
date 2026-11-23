@@ -200,5 +200,11 @@
  "Instagram, translated from Hebrew": "Instagram, 히브리어에서 번역",
  "Instagram, translated from Portuguese": "Instagram, 포르투갈어에서 번역",
  "Instagram, translated from French": "Instagram, 프랑스어에서 번역",
- "“Your AI agents, in a team meeting.”": "“Your AI agents, in a team meeting.”"
+ "“Your AI agents, in a team meeting.”": "“Your AI agents, in a team meeting.”",
+ "New in 1.48": "1.48의 새 기능",
+ "New in 1.47": "1.47의 새 기능",
+ "The cast, redrawn as a two-ink print": "팀을 2도 인쇄로 다시 그렸습니다",
+ "Same team, same names, a new look: your agents printed in two inks, with grain and offset colours. Their faces and arms follow what each one does: a hand up when it needs you, chin in hand while it waits, a cheer when it is done. Pick it in ⚙ → Characters → <b>Two-ink print</b>; today’s cast stays the default.": "같은 팀, 같은 이름, 새로운 모습: 에이전트들을 거친 입자와 어긋난 색판의 2도 인쇄로 그렸습니다. 얼굴과 팔은 각자 하는 일을 따라 움직입니다. 당신이 필요하면 손을 들고, 기다리는 동안 턱을 괴고, 끝나면 환호합니다. ⚙ → 캐릭터 → <b>2도 인쇄</b>에서 고르세요. 지금의 캐릭터가 계속 기본입니다.",
+ "<b>And your plan limits, at the top of the call.</b> A ⏳ badge shows how much of your five-hour and weekly Claude or Codex limits you have used, and when they reset. It reads files already on your computer: nothing is fetched.": "<b>요금제 한도도 통화 맨 위에.</b> ⏳ 배지가 Claude 또는 Codex의 5시간·주간 한도를 얼마나 썼는지, 언제 초기화되는지 보여 줍니다. 이미 컴퓨터에 있는 파일만 읽으며, 아무것도 가져오지 않습니다.",
+ "The same four agents before and after: today’s drawn cast on the left, the two-ink print on the right": "같은 네 에이전트의 전후 비교: 왼쪽은 지금의 캐릭터, 오른쪽은 2도 인쇄"
 }

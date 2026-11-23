@@ -200,5 +200,11 @@
  "Instagram, translated from Hebrew": "Instagram、ヘブライ語からの翻訳",
  "Instagram, translated from Portuguese": "Instagram、ポルトガル語からの翻訳",
  "Instagram, translated from French": "Instagram、フランス語からの翻訳",
- "“Your AI agents, in a team meeting.”": "“Your AI agents, in a team meeting.”"
+ "“Your AI agents, in a team meeting.”": "“Your AI agents, in a team meeting.”",
+ "New in 1.48": "1.48の新機能",
+ "New in 1.47": "1.47の新機能",
+ "The cast, redrawn as a two-ink print": "おなじみの面々を2色刷りで描き直しました",
+ "Same team, same names, a new look: your agents printed in two inks, with grain and offset colours. Their faces and arms follow what each one does: a hand up when it needs you, chin in hand while it waits, a cheer when it is done. Pick it in ⚙ → Characters → <b>Two-ink print</b>; today’s cast stays the default.": "同じチーム、同じ名前、新しい見た目。エージェントたちを、粒子感とずれた色版のある2色刷りで描きました。顔と腕はそれぞれの動きに合わせて変わります。あなたが必要なときは手を挙げ、待っている間は頬杖をつき、終わったら歓声を上げます。⚙ → キャラクター → <b>2色刷り</b> で選べます。今のキャラクターが引き続き標準です。",
+ "<b>And your plan limits, at the top of the call.</b> A ⏳ badge shows how much of your five-hour and weekly Claude or Codex limits you have used, and when they reset. It reads files already on your computer: nothing is fetched.": "<b>プランの利用上限も、通話の上部に。</b>⏳ バッジが Claude または Codex の5時間・週間の上限をどれだけ使ったか、いつリセットされるかを表示します。すでにパソコンにあるファイルを読むだけで、何も取得しません。",
+ "The same four agents before and after: today’s drawn cast on the left, the two-ink print on the right": "同じ4人のエージェントのビフォー・アフター。左が今の描画キャラクター、右が2色刷り"
 }
