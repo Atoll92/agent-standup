@@ -506,7 +506,7 @@
 <div id="card"></div><div id="recap"><div class="box"></div></div>
 
 <script src="/api/prefs.js"></script>
-<script data-cast>if (/[?&]cast=2(&|$)/.test(location.search)) document.write('<script src="/riso.js"><\/script>');   /* the cast drawn as a two-ink print, on trial: only when the address asks for it */</script>
+<script data-cast>if (/[?&]cast=2(&|$)/.test(location.search)) { window.RISO_ON = true; document.write('<script src="/riso.js"><\/script>'); }   /* the two-ink print forced by the address; otherwise loadChars fetches it when ⚙ → Characters picks it */</script>
 <script>
 // =====================================================================
 //  helpers, prefs, i18n
@@ -621,7 +621,8 @@ const hexRGB = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, t) => { const A = hexRGB(a), B = hexRGB(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
 // ---- custom characters: the person's own pixel art (folder served by /api/characters) replaces the drawn figure, scene and desk stay ----
 let CHARS = { lead: null, you: null, pool: [], dir: '', n: 0 };
-const CHAR_CHOICES = ['none', 'folder', 'cats', 'halloween'];   // what ⚙ → Characters offers: the drawn characters, one's own folder, the built-in packs and the packs of the shop
+const CHAR_CHOICES = ['none', 'riso', 'folder', 'cats', 'halloween'];   // what ⚙ → Characters offers: the drawn characters, the same cast as a two-ink print, one's own folder, the built-in packs and the packs of the shop
+const risoLoad = () => (window.RISO ? Promise.resolve() : new Promise((res) => { const s = document.createElement('script'); s.src = '/riso.js'; s.onload = s.onerror = res; document.head.appendChild(s); }));   /* public/riso.js, fetched from the app's own server only once the two-ink print is picked (or shown in ⚙ → Characters) */
 let SHOP = {};   // the packs of the shop, by name, as the server knows them: how many characters are here (none until it is bought), its price, the code of the purchase
 const toData = (url) => fetch(url).then((r) => r.blob()).then((b) => new Promise((res) => { const f = new FileReader(); f.onload = () => res(f.result); f.readAsDataURL(b); }));
 const imgSize = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res([i.naturalWidth, i.naturalHeight]); i.onerror = () => res([0, 0]); i.src = src; }), isDrawing = (wh) => Math.max(wh[0], wh[1]) > 128;   // a large image is a drawing, shown smooth; pixel art (32 or 64 px) keeps its hard pixels
@@ -640,10 +641,11 @@ async function loadChars() {
     let n = 0; try { n = ((await (await fetch('/api/characters')).json()).chars || []).length; } catch {} prefs.charPack = n ? 'folder' : 'none'; savePrefs();
   }
   const pack = prefs.charPack, next = { lead: null, you: null, pool: [], dir: '', n: 0, pack, youFrom: '', castYou: null };   // castYou: the cast's own human, for the window
+  window.RISO_ON = pack === 'riso' || /[?&]cast=2(&|$)/.test(location.search); if (window.RISO_ON) await risoLoad();   // the two-ink print: the drawn cast, drawn otherwise (avatarSVG hands it every character that is not a picture)
   try { SHOP = Object.fromEntries((await (await fetch('/api/packs')).json()).filter((p) => p.shop).map((p) => [p.name, p])); } catch {}
   try {
-    const base = pack === 'folder' ? '/characters/' : '/packs/' + pack + '/', d = await (await fetch('/api/characters?pack=' + (pack === 'folder' || pack === 'none' ? '' : pack))).json(); next.dir = d.dir || '';   // with the drawn characters, only where the folder is
-    if (pack !== 'none') for (const c of d.chars || []) { try { const e = await charEntry(base, c); if (c.role === 'lead') next.lead = e; else if (c.role === 'you') { next.you = e; next.castYou = e; } else next.pool.push(e); next.n++; } catch {} }
+    const base = pack === 'folder' ? '/characters/' : '/packs/' + pack + '/', d = await (await fetch('/api/characters?pack=' + (pack === 'folder' || pack === 'none' || pack === 'riso' ? '' : pack))).json(); next.dir = d.dir || '';   // with the drawn characters, only where the folder is
+    if (pack !== 'none' && pack !== 'riso') for (const c of d.chars || []) { try { const e = await charEntry(base, c); if (c.role === 'lead') next.lead = e; else if (c.role === 'you') { next.you = e; next.castYou = e; } else next.pool.push(e); next.n++; } catch {} }
   } catch {}
   if (youMode() === 'vampire') { try { VAMP = VAMP || (await vampEntry()); if (VAMP) { next.you = VAMP; next.youFrom = 'vampire'; } } catch {} }
   CHARS = next;
@@ -688,7 +690,7 @@ function renderShop(el, name, shop) {
   $('#shopGo').onclick = async () => { const code = $('#shopKey').value.trim(); if (!code) return; shopSay('…'); const r = await shopAsk('claim', { pack: name, code }); if (r.ok) shopDone(name); else shopSay(shopWhy(r.error)); };
   if (shop.waiting && !renderShop.tried) { renderShop.tried = true; shopAsk('claim', { pack: name }).then((r) => { if (r.ok) shopDone(name); }); }   // a payment page was opened earlier (the app was closed meanwhile, say): asked once, in case it was paid since
 }
-const packLabel = (name) => ({ none: L('Personnages dessinés', 'Drawn characters'), folder: L('Mon dossier', 'My folder'), cats: L('Pack de chats', 'Cat pack'), halloween: L('Pack Halloween', 'Halloween pack') }[name] || String(name).replace(/^./, (c) => c.toUpperCase()));
+const packLabel = (name) => ({ none: L('Personnages dessinés', 'Drawn characters'), riso: L('Impression deux encres', 'Two-ink print'), folder: L('Mon dossier', 'My folder'), cats: L('Pack de chats', 'Cat pack'), halloween: L('Pack Halloween', 'Halloween pack') }[name] || String(name).replace(/^./, (c) => c.toUpperCase()));
 function renderCharInfo() {   // the line of ⚙ → Characters, and the window when it is open
   if (!$('#recap.on #chdlg')) renderMenuShop(); const el = $('#charNow'); if (el) el.textContent = packLabel(CHARS.pack || prefs.charPack || 'none') + ' · ' + (youMode() === 'vampire' ? L('Vous : le vampire', 'You: the vampire') : L('Vous : comme l’équipe', 'You: like the cast'));
   return $('#recap.on #chdlg') ? openChars() : Promise.resolve();
@@ -697,18 +699,21 @@ const CHPICK = { more: '' };   // what the window shows under the cast: the fold
 async function openChars() {   // ⚙ → Characters: the whole cast (drawn, a pack, a pack of the shop, one's own pictures), then who you are
   let packs = [], mine = { chars: [], dir: CHARS.dir }; try { packs = await (await fetch('/api/packs')).json(); } catch {} try { mine = await (await fetch('/api/characters')).json(); } catch {}
   if (!VAMP) { try { VAMP = await vampEntry(); } catch {} }
+  await risoLoad();   // the two-ink print's card shows its own lead
   const files = {}; for (const p of packs.filter((x) => !x.shop && x.name !== 'vampire')) { try { files[p.name] = ((await (await fetch('/api/characters?pack=' + p.name)).json()).chars || []).map((c) => c.file); } catch { files[p.name] = []; } }
   const cast = CHARS.pack || prefs.charPack, more = CHPICK.more || cast, ym = youMode(); let k = 0;
   const tile = (id, custom) => avatarSVG({ ...persona0({ id, role: '' }), custom: custom || null }, undefined, 'cp' + k++ + '_');   // the very drawing of a tile
   const pics = (base, list, px) => `<span class="pics">${list.slice(0, 3).map((f) => `<img src="${base + encodeURIComponent(f)}" alt=""${px ? ' style="image-rendering:pixelated"' : ''}>`).join('')}</span>`;
   const many = (n) => `${n} ${n === 1 ? L('personnage', 'character') : L('personnages', 'characters')}`;
   const card = (on, pv, title, sub, tag, data) => `<button class="ccard${on ? ' on' : ''}" ${data}><span class="pv">${pv}${tag ? `<i class="ptag">${esc(tag)}</i>` : ''}</span><b>${esc(title)}</b><span class="sub">${esc(sub)}</span></button>`;
-  const castCards = [card(cast === 'none', tile('main'), packLabel('none'), L('Ceux de l’app', 'The app’s own'), '', 'data-cast="none"'),
+  const tileAs = (on, id) => { const was = window.RISO_ON; window.RISO_ON = on; try { return tile(id); } finally { window.RISO_ON = was; } };   // each drawn card in its own style, whichever one the call uses
+  const castCards = [card(cast === 'none', tileAs(false, 'main'), packLabel('none'), L('Ceux de l’app', 'The app’s own'), '', 'data-cast="none"'),
+    ...(window.RISO ? [card(cast === 'riso', tileAs(true, 'main'), packLabel('riso'), L('Nouveau · la même équipe, redessinée', 'New · the same cast, redrawn'), '', 'data-cast="riso"')] : []),
     ...packs.filter((p) => p.shop).map((p) => card(cast === p.name && p.n, `<img src="pack-${esc(p.name)}.jpg" alt="">`, packLabel(p.name), p.n ? `✓ ${L('Le vôtre', 'Yours')} · ${many(p.n)}` : p.artist ? `${L('Dessinés par', 'Drawn by')} ${p.artist}` : L('Dessinés à la main, chacun dans sa pièce', 'Hand-drawn, each in its own room'), p.n ? '' : p.price, `data-cast="${esc(p.name)}"`)),
     ...packs.filter((p) => !p.shop && p.name !== 'vampire').map((p) => card(cast === p.name, pics('/packs/' + p.name + '/', files[p.name], true), packLabel(p.name), `${many(p.n)}`, '', `data-cast="${esc(p.name)}"`)),
     card(cast === 'folder', mine.chars.length ? pics('/characters/', mine.chars.map((c) => c.file)) : '<span class="pvx">🖼️</span>', packLabel('folder'), mine.chars.length ? many(mine.chars.length) : L('Vos propres images', 'Your own pictures'), '', 'data-cast="folder"')];
   const youCards = [card(ym === 'vampire', VAMP ? tile('user', VAMP) : '', L('Le vampire', 'The vampire'), L('Offert, du pack Halloween', 'Free, from the Halloween pack'), '', 'data-you="vampire"'),
-    card(ym === 'cast', CHARS.castYou ? tile('user', CHARS.castYou) : tile('user'), L('Comme l’équipe', 'Like the cast'), cast === 'none' || !CHARS.castYou ? L('Le personnage dessiné', 'The drawn character') : packLabel(cast), '', 'data-you="cast"')];
+    card(ym === 'cast', CHARS.castYou ? tile('user', CHARS.castYou) : tile('user'), L('Comme l’équipe', 'Like the cast'), cast === 'none' || cast === 'riso' || !CHARS.castYou ? L('Le personnage dessiné', 'The drawn character') : packLabel(cast), '', 'data-you="cast"')];
   const box = $('#recap .box'), top = $('#recap').scrollTop; $('#menuShop').innerHTML = '';
   box.innerHTML = `<div id="chdlg"><h1>${esc(L('Personnages', 'Characters'))}</h1>
     <h3>${esc(L('L’équipe', 'The cast'))}</h3><div class="cgrid">${castCards.join('')}</div><div id="castMore" class="cmore"></div>
@@ -721,6 +726,7 @@ async function openChars() {   // ⚙ → Characters: the whole cast (drawn, a p
   if (sp && !sp.n) renderShop(el, more, sp);
   else if (more === 'folder') renderFolder(el, mine);
   else if (more === cast && more === 'none') el.textContent = L('Les personnages dessinés par l’application. Choisissez « Mon dossier » pour vos propres images, ou un pack.', 'The characters drawn by the app. Pick “My folder” for your own images, or a pack.');
+  else if (more === cast && more === 'riso') el.textContent = L('Les personnages de l’application, redessinés comme une impression en deux encres. C’est nouveau, et encore en finition.', 'The app’s characters, redrawn as a print in two inks. New, and still being refined.');
   else if (more === cast) {
     el.innerHTML = `✓ ${CHARS.n} ${esc(L('personnages du pack', 'characters from the pack'))} · ${esc(L('Pour les modifier, copiez-les dans votre dossier et choisissez « Mon dossier ».', 'To tweak them, copy them into your folder and pick “My folder”.'))}${sp && sp.artist ? `<br>${esc(L('Dessinés par', 'Drawn by'))} <a href="#" class="artist">${esc(sp.artist)}</a>` : ''}`;
     el.querySelectorAll('.artist').forEach((a) => (a.onclick = (e) => { e.preventDefault(); openExternal(sp.artistUrl); }));
@@ -844,7 +850,7 @@ const ACC = [
 const pumpkinDay = () => { const d = new Date(); return d.getMonth() === 9 && d.getDate() >= 30; };   // Halloween and its eve: the drawn characters bring a pumpkin (mine, not the pack's art)
 const pumpkin = (x) => `<g class="pumpkin"><ellipse cx="${x}" cy="58.3" rx="6.2" ry="4.4" fill="#f28c28"/><path d="M${x - 2.3} 54.2q-1.7 4.1 0 8.3M${x + 2.3} 54.2q1.7 4.1 0 8.3" fill="none" stroke="#c8650f" stroke-width=".7"/><path d="M${x} 54.3q.2-2 1.7-2.7" fill="none" stroke="#4f8a3a" stroke-width="1.3" stroke-linecap="round"/><path d="M${x - 3.5} 57.7l1.3-2 1.3 2zM${x + .9} 57.7l1.3-2 1.3 2z" fill="#ffd84a"/><path d="M${x - 3.3} 59.5q3.3 2.5 6.6 0l-1 1.5-1.1-.8-1.1.9-1.1-.9-1.1.8z" fill="#ffd84a"/></g>`;
 function avatarSVG(p, o, uid = '') {   // uid keeps SVG ids unique per instance: duplicate ids made gradients vanish when the first copy was in a hidden element
-  if (window.RISO && !p.custom) return RISO.svg(p, o, uid);   /* ?cast=2: the riso cast (public/riso.js); a pack's character keeps its own pictures */
+  if (window.RISO_ON && window.RISO && !p.custom) return RISO.svg(p, o, uid);   /* ⚙ → Characters → Two-ink print (or ?cast=2): the riso cast (public/riso.js); a pack's character keeps its own pictures */
   const st = !!o, sh = SHAPES[p.shape], fy = sh.fy, top = sh.top, bot = p.shape === 4, c = p.shirt, c1 = mix(c, '#ffffff', .3), c2 = mix(c, '#000000', .2);
   const ink = bot ? '#8ff0ff' : '#2a2233', gid = uid + 'b' + p.gid, sc = SCENES[p.scene], eg = EYES[p.eye], ex = p.shape === 1 ? [43, 57] : [41.5, 58.5];
   const V = (cls, show, html) => (st ? (show ? html : '') : `<g class="${cls}">${html}</g>`);
