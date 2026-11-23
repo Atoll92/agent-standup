@@ -22,10 +22,13 @@ function result(windows, asOf, src, now) {   // the windows still running, or nu
 // ---- Claude Code
 const savedFile = (dir) => process.env.AGENT_STANDUP_LIMITS || path.join(dir, 'limits.json');
 function save(dir, statusJson) {   // from the status line's JSON: keep its rate_limits, if it has any. Written only when they changed or a minute went by, so a status line redrawn often costs nothing
-  const rl = statusJson && statusJson.rate_limits; if (!rl || typeof rl !== 'object') return false;
+  const all = statusJson && statusJson.rate_limits; if (!all || typeof all !== 'object') return false;
+  const rl = {}; for (const k of Object.keys(KEYS)) { const w = all[k]; if (w && typeof w === 'object' && typeof w.used_percentage === 'number') rl[k] = { used_percentage: w.used_percentage, resets_at: typeof w.resets_at === 'number' ? w.resets_at : typeof w.resets_at === 'string' ? w.resets_at.slice(0, 40) : null }; }   // only the percentages and reset times of the two windows, whatever else Claude Code may add
+  if (!Object.keys(rl).length) return false;
   const f = savedFile(dir), body = JSON.stringify(rl);
   try { const was = JSON.parse(fs.readFileSync(f, 'utf8')); if (was && JSON.stringify(was.rate_limits) === body && Date.now() - was.at < 60e3) return false; } catch {}
-  try { fs.mkdirSync(path.dirname(f), { recursive: true }); const tmp = f + '.' + process.pid + '.tmp'; fs.writeFileSync(tmp, JSON.stringify({ at: Date.now(), rate_limits: rl })); fs.renameSync(tmp, f); return true; } catch { return false; }
+  const tmp = f + '.' + process.pid + '.tmp';
+  try { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(tmp, JSON.stringify({ at: Date.now(), rate_limits: rl })); fs.renameSync(tmp, f); return true; } catch { try { fs.unlinkSync(tmp); } catch {} return false; }   // a rename that failed leaves no temporary file behind
 }
 function fromSaved(dir, now) {
   let v; try { v = JSON.parse(fs.readFileSync(savedFile(dir), 'utf8')); } catch { return null; }
