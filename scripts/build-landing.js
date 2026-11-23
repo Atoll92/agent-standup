@@ -1,7 +1,7 @@
 // Builds docs/index.html (the GitHub Pages landing page) from landing/template.html,
 // pulling the character art straight out of public/index.html so the two never drift apart.
 const fs = require('fs'), path = require('path');
-const { LANGS, load } = require('./site-locales.js');
+const { langsOf, load } = require('./site-locales.js'), LANGS = langsOf('landing');
 const supporters = require('./supporters.js'), backers = supporters.read();
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');

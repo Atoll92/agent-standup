@@ -72,7 +72,7 @@ home = supporters.fill(home, backers).replace(/__VERSION__/g, version).replace(/
 // ---- one page per language, written here and not by the browser, so that each has its own address for search engines: / and /shop/ in English, /fr/ and /fr/shop/, /de/…
 // English and French come from the page (data-en / data-fr), the others from website/locales/<code>.json (see scripts/site-locales.js); a missing text stays in English.
 const locales = load('website');
-const pick = "(ls) => { for (const l of ls) { const s = String(l).toLowerCase(), b = s.split('-')[0]; if (b === 'zh') return /hant|tw|hk|mo/.test(s) ? 'zh-TW' : 'zh-CN'; if (b === 'pt') return 'pt-BR'; if (['en', 'fr', 'es', 'de', 'da', 'ja', 'ko'].includes(b)) return b; } return 'en'; }";
+const pick = "(ls) => { for (const l of ls) { const s = String(l).toLowerCase(), b = s.split('-')[0]; if (b === 'zh') return /hant|tw|hk|mo/.test(s) ? 'zh-TW' : 'zh-CN'; if (b === 'pt') return 'pt-BR'; if (['en', 'fr', 'es', 'de', 'da', 'ja', 'ko', 'pl'].includes(b)) return b; } return 'en'; }";
 // slug: '' for the home page, whose links are relative, or 'shop/' for the shop, whose links all start with /
 function languages(source, slug) {
 for (const [code, name, label, htmlLang, dir] of LANGS) {
