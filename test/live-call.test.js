@@ -1,4 +1,4 @@
-// test/live-call.test.js: the live call in a real browser: joining the call, orders and lines: what was said before is not said again, and every line, yours too, is said once.
+// test/live-call.test.js: the live call in a real browser: joining the call, orders and lines: what was said before is not said again, and your lines are said once when their voice is on.
 // The setup shared by the live-*.test.js files (temporary folder, stand-in claude, sessions being written, the call watched) is in live-helpers.js, which must be required before server.js.
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), path = require('path');
 const { tmp, missing, wait, start, session, open, count, closing, closed, YOURS } = require('./live-helpers.js');
@@ -59,8 +59,26 @@ test('live call: joining, orders and lines', { skip: missing || false, timeout: 
     await c.until(() => (S.tc.main || 0) === 3, null, 15000); assert.equal(await c.page.evaluate(() => S.events.filter((e) => e.kind === 'tools').reduce((n, e) => n + e.tools.length, 0)), 3); await c.close();
   });
 
-  await t.test('your own line is always voiced: typed long before it was delivered, or in the middle of a backlog', async () => {
+  await t.test('your own line is shown but not sent to a voice by default', async () => {
     const s = session(); s.user('hello', Date.now() - 600000); s.say('Ready.', { at: Date.now() - 590000, end: true }); const c = await open(s);
+    await c.page.evaluate(() => { prefs.voice = true; window.__played = []; for (const k of ['speakBabble', 'speakServer', 'speakBrowser']) { const o = window[k]; window[k] = function () { const p = arguments[1]; window.__played.push({ id: p && p.id, kind: k }); return o.apply(this, arguments); }; } }); s.user('YOUR silent order'); await wait(1500); s.say('Lead still speaks.', { end: true }); await c.heard('Lead still speaks'); await c.quiet();
+    assert.equal(count(await c.lines('user'), 'YOUR silent order'), 1, 'the order is still shown');
+    const played = await c.page.evaluate(() => window.__played); assert.equal(played.filter((x) => x.id === 'user').length, 0, 'your order is not voiced'); assert.ok(played.some((x) => x.id === 'main'), 'the agent keeps its voice');
+    await c.close();
+  });
+
+  await t.test('the setting voices your own lines and survives a reload', async () => {
+    const s = session(); s.user('hello', Date.now() - 600000); s.say('Ready.', { at: Date.now() - 590000, end: true }); const c = await open(s);
+    const switched = await c.page.evaluate(async () => { openPrefs(); const b = document.querySelector('#prefs .mi[data-t="voiceYou"]'); b.click(); closePrefs(); clearTimeout(prefsTimer); await putPrefs(); return [prefs.voiceYou, b.getAttribute('aria-checked')]; }); assert.deepEqual(switched, [true, 'true']);
+    const c2 = await open(s, false); assert.equal(await c2.page.evaluate(() => prefs.voiceYou), true, 'the saved setting reaches a new page'); await c2.close();
+    await c.page.evaluate(() => { prefs.voice = true; window.__played = []; for (const k of ['speakBabble', 'speakServer', 'speakBrowser']) { const o = window[k]; window[k] = function () { const p = arguments[1]; window.__played.push({ id: p && p.id, kind: k }); return o.apply(this, arguments); }; } }); s.user('YOUR voiced order'); await wait(1500); s.say('Voiced answer.', { end: true }); await c.heard('Voiced answer'); await c.quiet();
+    const played = await c.page.evaluate(() => window.__played); assert.equal(played.filter((x) => x.id === 'user').length, 1, 'your order is voiced once when enabled'); assert.ok(played.some((x) => x.id === 'main'), 'the agent keeps its voice');
+    await c.close();
+  });
+
+  await t.test('when their voice is on, your own line is always voiced: typed long before it was delivered, or in the middle of a backlog', async () => {
+    const s = session(); s.user('hello', Date.now() - 600000); s.say('Ready.', { at: Date.now() - 590000, end: true }); const c = await open(s);
+    await c.page.evaluate(() => { prefs.voiceYou = true; });
     s.user('Start', Date.now() - 170000); await wait(1200); s.say('Working on it.', { at: Date.now() - 165000 }); await c.heard('Working on it'); await c.quiet(500);   // dated as if the command below had really run for two minutes
     const id = s.tool('Bash', { command: 'sleep 140' }, { at: Date.now() - 150000 }); await wait(1500); s.result(id, 'ok'); s.queued('ORDER TYPED TWO MINUTES AGO', Date.now() - 130000); await wait(300); s.say('Noted.', { end: true });   // a long command, an order typed 20 s into it: Claude Code hands the order over when the command returns, stamped with the time it was typed
     await c.heard('ORDER TYPED TWO MINUTES AGO'); await c.heard('Noted'); await c.quiet(500);
