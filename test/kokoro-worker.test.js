@@ -1,19 +1,22 @@
 // test/kokoro-worker.test.js: the Kokoro worker against a stand-in kokoro-js in a temporary install folder (no model, no download)
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), os = require('os'), path = require('path'), { spawn } = require('child_process');
 const WORKER = path.join(__dirname, '..', 'kokoro-worker.js'), MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
-const KOKORO_JS = `const fs = require('fs'), path = require('path');
-class KokoroTTS {   // from_pretrained behaves like transformers.js: a file that is there is used as it is (and fails when it is cut short); a missing one is "downloaded"
-  static async from_pretrained(model, options) {
-    const { dtype } = options;
-    const f = path.join(process.env.AGENT_STANDUP_KOKORO_DIR, 'models', ...model.split('/'), 'onnx', 'model_' + dtype + '.onnx');
-    fs.appendFileSync(process.env.STUB_LOG + '.options', JSON.stringify({ model, options }) + '\\n');
-    fs.appendFileSync(process.env.STUB_LOG, 'load ' + (fs.existsSync(f) ? fs.statSync(f).size : 'absent') + '\\n');
-    if (process.env.STUB_FAIL) throw new Error('no network');
-    if (fs.existsSync(f) && fs.statSync(f).size < 100) throw new Error('Load model from ' + f + ' failed: Protobuf parsing failed.');
-    fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, Buffer.alloc(200)); return new KokoroTTS();
-  }
-  constructor() { this.tokenizer = Object.assign((t, o) => ({ input_ids: { text: t, dims: [1, (o && o.truncation ? Math.min(t.length, 510) : t.length) + 2] } }), { model_max_length: 512 }); }   // one token per character and, like the real one, a silent cut at the model's limit when asked to truncate
-  async model({ input_ids, style, speed }) { fs.appendFileSync(process.env.STUB_LOG + '.model', JSON.stringify({ phonemes: input_ids.text.slice(0, input_ids.dims[1] - 2), style: [style.data[0], style.data[255]], dims: style.dims, speed: speed.data[0] }) + '\\n'); return { waveform: { data: new Float32Array(2400).fill(0.1) } }; }   // the model called directly, as the worker does for French: what it was given goes to a log
+// The loading is transformers.js' (the worker calls it itself, so that its session options reach ONNX Runtime): a file that is there is used as it is (and fails when it is cut short); a missing one is "downloaded"
+const TRANSFORMERS_JS = `const fs = require('fs'), path = require('path');
+const StyleTextToSpeech2Model = { async from_pretrained(model, options) {
+  const f = path.join(process.env.AGENT_STANDUP_KOKORO_DIR, 'models', ...model.split('/'), 'onnx', 'model_' + options.dtype + '.onnx');
+  fs.appendFileSync(process.env.STUB_LOG + '.options', JSON.stringify({ model, options }) + '\\n');
+  fs.appendFileSync(process.env.STUB_LOG, 'load ' + (fs.existsSync(f) ? fs.statSync(f).size : 'absent') + '\\n');
+  if (process.env.STUB_FAIL) throw new Error('no network');
+  if (fs.existsSync(f) && fs.statSync(f).size < 100) throw new Error('Load model from ' + f + ' failed: Protobuf parsing failed.');
+  fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, Buffer.alloc(200));
+  return async ({ input_ids, style, speed }) => { fs.appendFileSync(process.env.STUB_LOG + '.model', JSON.stringify({ phonemes: input_ids.text.slice(0, input_ids.dims[1] - 2), style: [style.data[0], style.data[255]], dims: style.dims, speed: speed.data[0] }) + '\\n'); return { waveform: { data: new Float32Array(2400).fill(0.1) } }; };   // the model called directly, as the worker does for French: what it was given goes to a log
+} };
+const AutoTokenizer = { async from_pretrained() { return Object.assign((t, o) => ({ input_ids: { text: t, dims: [1, (o && o.truncation ? Math.min(t.length, 510) : t.length) + 2] } }), { model_max_length: 512 }); } };   // one token per character and, like the real one, a silent cut at the model's limit when asked to truncate
+module.exports = { env: {}, Tensor: class { constructor(type, data, dims) { this.data = data; this.dims = dims; } }, StyleTextToSpeech2Model, AutoTokenizer };`;
+const KOKORO_JS = `const fs = require('fs');
+class KokoroTTS {   // the real constructor: a model and its tokenizer
+  constructor(model, tokenizer) { this.model = model; this.tokenizer = tokenizer; }
   async generate(text) { text = text.trim(); const kept = this.tokenizer(text, { truncation: true }).input_ids.dims[1] - 2; fs.appendFileSync(process.env.STUB_LOG + '.spoken', JSON.stringify(text.slice(0, kept)) + '\\n'); return { audio: new Float32Array(2400).fill(0.1), sampling_rate: 24000 }; }   // what was really "spoken" goes to a log
 }
 module.exports = { KokoroTTS };`;
@@ -28,7 +31,7 @@ export default async function (o) {
 }`;
 function install(french) {   // a fake install folder: the two packages the worker requires, nothing else; with `french`, the phonemizer and two voice files as well
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'as-kokoro-'));
-  for (const [m, src] of [['@huggingface/transformers', 'module.exports = { env: {}, Tensor: class { constructor(type, data, dims) { this.data = data; this.dims = dims; } } };'], ['kokoro-js', KOKORO_JS]]) { const d = path.join(dir, 'node_modules', m); fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(path.join(d, 'package.json'), '{"main":"index.js"}'); fs.writeFileSync(path.join(d, 'index.js'), src); }
+  for (const [m, src] of [['@huggingface/transformers', TRANSFORMERS_JS], ['kokoro-js', KOKORO_JS]]) { const d = path.join(dir, 'node_modules', m); fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(path.join(d, 'package.json'), '{"main":"index.js"}'); fs.writeFileSync(path.join(d, 'index.js'), src); }
   if (french) {
     const d = path.join(dir, 'node_modules', 'espeak-ng'); fs.mkdirSync(path.join(d, 'dist'), { recursive: true }); fs.writeFileSync(path.join(d, 'package.json'), '{"type":"module","main":"dist/espeak-ng.js"}'); fs.writeFileSync(path.join(d, 'dist', 'espeak-ng.js'), ESPEAK_JS);
     const v = path.join(dir, 'node_modules', 'kokoro-js', 'voices'); fs.mkdirSync(v); for (const [n, x] of [['ff_siwis', 1], ['am_fenrir', 3]]) fs.writeFileSync(path.join(v, n + '.bin'), Buffer.from(new Float32Array(510 * 256).fill(x).buffer));   // a voice: 510 styles of 256 numbers

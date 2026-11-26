@@ -7,6 +7,7 @@ const MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 // kokoro.js puts its files, checked, where transformers.js keeps what it downloads, so loading it here reads them from disk. Its phonemes come from zh-g2p.js, its voices from <dir>/zh-voices.
 const ZH_MODEL = 'onnx-community/Kokoro-82M-v1.1-zh-ONNX', ZH_DTYPE = 'fp32';
 const ORT_OPTS = { session_options: { enableCpuMemArena: false } };   // Chromium traps when ONNX's arena doubles to 2 GiB in Electron; plain tensor allocations stay below it
+// kokoro-js' own from_pretrained passes only dtype, device and progress_callback on to transformers.js, so the session options would be dropped: build its KokoroTTS from the model and tokenizer loaded here
 const send = (o) => fs.writeSync(1, JSON.stringify(o) + '\n');
 const finite = (samples) => { for (let i = 0; i < samples.length; i++) if (samples[i] !== samples[i]) return false; return true; };   // a quantised model can return NaN for a whole line, which would be written as silence
 function wav(samples, rate) {   // Float32 in [-1, 1] → 16-bit mono WAV
@@ -55,7 +56,7 @@ async function main() {
   const dir = process.env.AGENT_STANDUP_KOKORO_DIR, dtype = process.env.AGENT_STANDUP_KOKORO_DTYPE || 'q4';
   const req = createRequire(path.join(dir, 'node_modules', 'x.js'));   // resolve from the install folder, not from the extension
   const tf = req('@huggingface/transformers'); tf.env.cacheDir = path.join(dir, 'models');
-  const { KokoroTTS } = req('kokoro-js'), load = () => KokoroTTS.from_pretrained(MODEL, { ...ORT_OPTS, dtype, device: 'cpu' });
+  const { KokoroTTS } = req('kokoro-js'), pretrained = async (m, d) => new KokoroTTS(...await Promise.all([tf.StyleTextToSpeech2Model.from_pretrained(m, { ...ORT_OPTS, dtype: d, device: 'cpu' }), tf.AutoTokenizer.from_pretrained(m)])), load = () => pretrained(MODEL, dtype);
   let tts; try { tts = await load(); } catch (e) {
     // transformers.js writes the model straight to its final name and never checks it again: a download cut short (the worker killed while the model
     // was being fetched, e.g. by a reload of the window) leaves a file that fails to load every time after. Drop this model's files and fetch them once more.
@@ -67,7 +68,7 @@ async function main() {
   strict(tts);   // kokoro-js calls the tokenizer with truncation on, which drops every phoneme past the model's limit and says nothing: count them all here and refuse instead
   const packs = new Map(), pack = (n) => { if (!packs.has(n)) { const b = fs.readFileSync(/^z[fm]_/.test(n) ? path.join(dir, 'zh-voices', n + '.bin') : path.join(dir, 'node_modules', 'kokoro-js', 'voices', n + '.bin')); packs.set(n, new Float32Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.length))); } return packs.get(n); };   // a voice: 510 styles of 256 numbers, one per length of line. All 54 of v1.0 come with kokoro-js; the Chinese ones are fetched by kokoro.js
   let zh = null;   // the Chinese model and its phonemizer, loaded on the first Chinese line: whoever never hears one never loads them
-  const zhLoad = async () => zh || (zh = { tts: strict(await KokoroTTS.from_pretrained(ZH_MODEL, { ...ORT_OPTS, dtype: ZH_DTYPE, device: 'cpu' })), g2p: require(path.join(__dirname, 'zh-g2p.js')).make(req('pinyin-pro'), req('jieba-wasm'), req('opencc-js').Converter({ from: 'tw', to: 'cn' })) });
+  const zhLoad = async () => zh || (zh = { tts: strict(await pretrained(ZH_MODEL, ZH_DTYPE)), g2p: require(path.join(__dirname, 'zh-g2p.js')).make(req('pinyin-pro'), req('jieba-wasm'), req('opencc-js').Converter({ from: 'tw', to: 'cn' })) });
   const foreign = async (text, o) => {   // what kokoro-js' generate_from_ids does, with a style that can be a mix of several voices (o.mix: [[voice, share], …])
     const z = o.lang === 'zh' ? await zhLoad() : null, m = z ? z.tts : tts;   // Chinese: its own model; an English word inside the line is said from its English phonemes
     const ph = z ? await z.g2p(text, (w) => phonemes(dir, w, 'en-us')) : await phonemes(dir, text, o.lang);
