@@ -1220,7 +1220,7 @@ function warmTTS(i) {   // called by run() before each line (i is that line) and
     else if (isSub(e.agent)) { while (j < Math.min(len, k + 28) && group.length < 3) { const e2 = S.events[j]; if (quiet(e2)) j++; else if (e2.kind !== 'order' && isSub(e2.agent) && !group.some((g) => g.agent === e2.agent)) { group.push(e2); j++; } else break; } }
     const pl = paceAt(k), many = e.kind === 'order' && group.length > 1, rate = TTS.rateAt(many || !S.live ? k : j - 1, pl.boost);
     for (const g of many ? [e] : group) {   // orders in a row: only the first is read out
-      if (g.agent === 'user' && !prefs.voiceYou) continue;
+      if (g.agent === 'user' && S.live && !prefs.voiceYou) continue;   // your own lines: silent in the live call unless their switch is on (you just typed them); a replay or the demo reads them, as its listener did not
       n++; const p = S.agents[g.agent], bt = baseText(g); if ((pl.hurry && g.kind !== 'user') || !p || (TRL() && !trMem.has(bt) && langOf(bt) !== CALL())) continue;   // not translated yet: what will be said is not known
       const said = clipSpeech(talkLine(g), pl.pace), text = speakable(said), voice = TTS.voiceFor(p, sessVoice(said, g)); if (text && voice) jobs.push({ k, text, voice, rate });
     }
@@ -1372,9 +1372,9 @@ function sessVoice(text, ev) {   // for the lines that come from the session (ev
   }
   return inCall(lo ?? sessLang());
 }
-async function speakLine(text, p, primary, token, lo = voiceLang(text), always = false) {   // always: your own lines are voiced even when the call is behind, if their voice is on
+async function speakLine(text, p, primary, token, lo = voiceLang(text), always = false) {   // always: your own lines are voiced even when the call is behind, if their voice is on (always in a replay or the demo)
   captionRun(p.id, text, estMs(text));
-  if (p.id === 'user' && !prefs.voiceYou) return sleep(estMs(text));
+  if (p.id === 'user' && S.live && !prefs.voiceYou) return sleep(estMs(text));
   if (AUD.calm() || !prefs.voice) { if (!AUD.calm() && prefs.office) AUD.murmur(0.5 + (p.vi % 5) / 10, estMs(text) / 1000); return sleep(estMs(text)); }
   if (S.hurry && !always) return sleep(estMs(text));
   const bab = babbles() || noNatural(lo); if (bab && AUD.ctx) { try { await speakBabble(text, p, primary ? 1 : 0.5, token); return; } catch {} }

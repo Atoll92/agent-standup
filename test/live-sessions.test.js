@@ -31,6 +31,18 @@ test('live call: sessions, tabs and replays', { skip: missing || false, timeout:
     assert.equal(await c.page.evaluate(() => window.__most), 1, 'voices at once'); assert.deepEqual((await c.lines()).filter((l) => l.includes('PART')).map((l) => l.slice(0, 6)), ['PART 1', 'PART 2', 'PART 3'], 'each in turn, in the order they spoke'); await c.close();
   });
 
+  await t.test('a replay reads your own lines even with their switch off: its listener did not type them', async () => {
+    const s = session(), t0 = Date.now() - 3000; s.user('REPLAYED ORDER for the team', t0); s.say('Replayed answer.', { at: t0 + 1000, end: true });
+    const c = await open(s, false);
+    await c.page.evaluate(async (proj) => {
+      joinSound(); prefs.voice = true; prefs.voiceYou = false; window.__played = [];   // the click that turns the sound on
+      for (const k of ['speakBabble', 'speakServer', 'speakBrowser']) { const o = window[k]; window[k] = function () { const p = arguments[1]; window.__played.push(p && p.id); return o.apply(this, arguments); }; }
+      await setMode('replay'); await loadSession(proj, 's'); S.locked = false; $('#gate').classList.remove('on'); seekTo(0);   // at normal speed: at full speed a replay voices nobody
+    }, s.proj);
+    await c.until(() => !S.playing && window.__said.some((x) => x.line.includes('Replayed answer')), null, 60000);
+    const played = await c.page.evaluate(() => window.__played); assert.equal(played.filter((x) => x === 'user').length, 1, 'your order is voiced once'); assert.ok(played.includes('main'), 'and the agent too'); await c.close();
+  });
+
   await t.test('a replay paused while one of them speaks loses no line: it resumes with the one that was cut, then the others', async () => {
     const s = session(), t0 = Date.now() - 3000; s.user('Split the work in three', t0); s.say('Three of you, one part each.', { at: t0 + 1000 });
     for (const k of [1, 2, 3]) { s.launch(k, 'Part ' + k, `Do part ${k} and say where you are.`); await wait(20); }
