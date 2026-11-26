@@ -3,8 +3,10 @@ const test = require('node:test'), assert = require('node:assert'), fs = require
 const WORKER = path.join(__dirname, '..', 'kokoro-worker.js'), MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 const KOKORO_JS = `const fs = require('fs'), path = require('path');
 class KokoroTTS {   // from_pretrained behaves like transformers.js: a file that is there is used as it is (and fails when it is cut short); a missing one is "downloaded"
-  static async from_pretrained(model, { dtype }) {
+  static async from_pretrained(model, options) {
+    const { dtype } = options;
     const f = path.join(process.env.AGENT_STANDUP_KOKORO_DIR, 'models', ...model.split('/'), 'onnx', 'model_' + dtype + '.onnx');
+    fs.appendFileSync(process.env.STUB_LOG + '.options', JSON.stringify({ model, options }) + '\\n');
     fs.appendFileSync(process.env.STUB_LOG, 'load ' + (fs.existsSync(f) ? fs.statSync(f).size : 'absent') + '\\n');
     if (process.env.STUB_FAIL) throw new Error('no network');
     if (fs.existsSync(f) && fs.statSync(f).size < 100) throw new Error('Load model from ' + f + ' failed: Protobuf parsing failed.');
@@ -118,6 +120,20 @@ test('Chinese goes to its own model, loaded on the first Chinese line, as the ph
     fs.writeFileSync(path.join(dir, 'stub.log.model'), ''); const long = '我检查了所有的文件，测试全部通过，没有发现新的问题。'.repeat(12);
     r = await w.ask({ id: 3, text: long, speed: 1, out: path.join(dir, 'c.wav'), ...zh }); assert.equal(r.ok, true, r.error);
     const parts = read('model'); assert.ok(parts.length > 1, 'a long Chinese line is cut at its own full stops, with no space after them');
+  } finally { w.p.kill(); }
+});
+
+test('both models disable the CPU memory arena whose growth can trap a 2 GiB Electron allocation', async () => {
+  const dir = install(true);
+  for (const m of ['pinyin-pro', 'jieba-wasm', 'opencc-js']) fs.symlinkSync(path.join(__dirname, '..', 'node_modules', m), path.join(dir, 'node_modules', m), 'junction');
+  fs.mkdirSync(path.join(dir, 'zh-voices')); fs.writeFileSync(path.join(dir, 'zh-voices', 'zf_001.bin'), Buffer.from(new Float32Array(510 * 256).fill(5).buffer));
+  const w = run(dir);
+  try {
+    await w.until(() => w.lines().some((l) => l.ready));
+    const r = await w.ask({ id: 1, text: '中文和 English in one report.', speed: 1, out: path.join(dir, 'arena.wav'), lang: 'zh', mix: [['zf_001', 1]] });
+    assert.equal(r.ok, true, r.error);
+    const options = fs.readFileSync(path.join(dir, 'stub.log.options'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+    assert.deepEqual(options.map((x) => [x.model, x.options.session_options && x.options.session_options.enableCpuMemArena]), [[MODEL, false], ['onnx-community/Kokoro-82M-v1.1-zh-ONNX', false]]);
   } finally { w.p.kill(); }
 });
 
