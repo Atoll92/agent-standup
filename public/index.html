@@ -450,6 +450,7 @@
   <div class="phead"><h2 id="prefsT" data-fr="Réglages" data-en="Settings">Réglages</h2><button class="btn" id="prefsX" data-fr="Fermer" data-en="Close">Fermer</button></div>
   <div class="pcols"><div class="pcol">
   <h4 data-fr="Son et alertes" data-en="Sound and alerts">Son et alertes</h4>
+  <button class="mi" data-t="voiceYou"><span data-fr="Lire vos messages à voix haute" data-en="Read your messages aloud">Lire vos messages à voix haute</span><i class="sw"></i></button>
   <button class="mi" data-t="office"><span data-fr="Ambiance de bureau (clavier, café…)" data-en="Office ambience (keys, coffee…)">Ambiance de bureau (clavier, café…)</span><i class="sw"></i></button>
   <div class="box" id="officeBox" style="display:none"><input id="officeVol" type="range" min="0.1" max="1" step="0.05" style="width:100%" aria-label="Ambience volume"></div>
   <button class="mi" data-t="music"><span data-fr="Musique d’ambiance (radio FIP)" data-en="Office music (FIP radio)">Musique d’ambiance (radio FIP)</span><i class="sw"></i></button>
@@ -534,7 +535,7 @@ const Q = new URLSearchParams(location.search);
 const EMBED = Q.get('embed') === '1' || window.parent !== window;
 const APP = window.AS_APP && typeof window.AS_APP === 'object' && typeof window.AS_APP.rate === 'string' ? window.AS_APP : { kind: '', rate: 'https://github.com/Atoll92/agent-standup' };   // where this page runs (appKind in server.js)
 
-let prefs = { lang: 'en', voice: true, roster: false, banter: true, reactions: false, office: false, officeVol: 0.8, vstyle: 'kokoro', notify: false, epi: false, vanish: true, music: false, station: 'fip', musicVol: 0.35, view: 'call', hideCode: false, ownNames: true, visits: true, askCard: false, followTab: true, files: true, callTr: true, voiceVol: 1 };
+let prefs = { lang: 'en', voice: true, voiceYou: false, roster: false, banter: true, reactions: false, office: false, officeVol: 0.8, vstyle: 'kokoro', notify: false, epi: false, vanish: true, music: false, station: 'fip', musicVol: 0.35, view: 'call', hideCode: false, ownNames: true, visits: true, askCard: false, followTab: true, files: true, callTr: true, voiceVol: 1 };
 const PREF_DEFAULTS = { ...prefs };   // for ⚙ → All settings → Reset to defaults
 let leadProject = null;   // the project of the loaded live call or replay, supplied by the server before naming its agents
 let prefsBase = {};   // the settings file as this page last knew it: a save sends only what changed since (prefsPatch), so another window's newer choices are not written over
@@ -1219,6 +1220,7 @@ function warmTTS(i) {   // called by run() before each line (i is that line) and
     else if (isSub(e.agent)) { while (j < Math.min(len, k + 28) && group.length < 3) { const e2 = S.events[j]; if (quiet(e2)) j++; else if (e2.kind !== 'order' && isSub(e2.agent) && !group.some((g) => g.agent === e2.agent)) { group.push(e2); j++; } else break; } }
     const pl = paceAt(k), many = e.kind === 'order' && group.length > 1, rate = TTS.rateAt(many || !S.live ? k : j - 1, pl.boost);
     for (const g of many ? [e] : group) {   // orders in a row: only the first is read out
+      if (g.agent === 'user' && !prefs.voiceYou) continue;
       n++; const p = S.agents[g.agent], bt = baseText(g); if ((pl.hurry && g.kind !== 'user') || !p || (TRL() && !trMem.has(bt) && langOf(bt) !== CALL())) continue;   // not translated yet: what will be said is not known
       const said = clipSpeech(talkLine(g), pl.pace), text = speakable(said), voice = TTS.voiceFor(p, sessVoice(said, g)); if (text && voice) jobs.push({ k, text, voice, rate });
     }
@@ -1370,8 +1372,9 @@ function sessVoice(text, ev) {   // for the lines that come from the session (ev
   }
   return inCall(lo ?? sessLang());
 }
-async function speakLine(text, p, primary, token, lo = voiceLang(text), always = false) {   // always: your own lines are voiced even when the call is behind
+async function speakLine(text, p, primary, token, lo = voiceLang(text), always = false) {   // always: your own lines are voiced even when the call is behind, if their voice is on
   captionRun(p.id, text, estMs(text));
+  if (p.id === 'user' && !prefs.voiceYou) return sleep(estMs(text));
   if (AUD.calm() || !prefs.voice) { if (!AUD.calm() && prefs.office) AUD.murmur(0.5 + (p.vi % 5) / 10, estMs(text) / 1000); return sleep(estMs(text)); }
   if (S.hurry && !always) return sleep(estMs(text));
   const bab = babbles() || noNatural(lo); if (bab && AUD.ctx) { try { await speakBabble(text, p, primary ? 1 : 0.5, token); return; } catch {} }
@@ -3649,7 +3652,7 @@ function openPrefs(target) {   // ⚙ → All settings; target: one of its setti
   $('#menu').classList.remove('on'); $('#prefs').classList.add('on'); syncSwitches(); subField(); document.querySelectorAll('#prefs .mi[data-t]').forEach((b) => b.querySelector('.sw').classList.toggle('on', !!prefs[b.dataset.t]));
   if (target) { target.scrollIntoView({ block: 'center' }); target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash'); (target.matches('.mi') ? target : target.querySelector('select, input, textarea, button') || target).focus(); } else $('#prefsX').focus();
 }
-const PANEL_KEYS = ['office', 'officeVol', 'music', 'station', 'musicVol', 'voiceVol', 'notify', 'customLaptop', 'ownNames', 'roster', 'reactions', 'banter', 'chat', 'vanish', 'epi', 'files', 'artNet', 'visits', 'askCard', 'followTab', 'leadName', 'subNames'];   // what the panel holds, and so what Reset puts back
+const PANEL_KEYS = ['voiceYou', 'office', 'officeVol', 'music', 'station', 'musicVol', 'voiceVol', 'notify', 'customLaptop', 'ownNames', 'roster', 'reactions', 'banter', 'chat', 'vanish', 'epi', 'files', 'artNet', 'visits', 'askCard', 'followTab', 'leadName', 'subNames'];   // what the panel holds, and so what Reset puts back
 $('#prefsReset').onclick = async () => {
   const b = $('#prefsReset'); if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = L('Cliquez encore pour tout remettre', 'Click again to reset them all'); setTimeout(() => { b.classList.remove('sure'); b.textContent = L('Réglages par défaut', 'Reset to defaults'); }, 4000); return; }   // two clicks: nothing is lost by a stray one
   const keys = [...PANEL_KEYS, ...(projectLeadKey() ? [projectLeadKey()] : [])];   // reset the displayed project override, leaving other projects alone
