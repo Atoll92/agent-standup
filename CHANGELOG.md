@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.49.0
+- **Your own messages are no longer read aloud in the live call.** You have just typed them: they still show in your bubble, and the call keeps its pace. To hear them again, turn on ⚙ → Sound and alerts → Read your messages aloud. A replay and the demo still read them, since whoever listens there did not type them. By ajunjunandtmac (#22).
+- **The natural voices no longer crash in VS Code and the Mac app.** On a Mac with Apple silicon, the English and Chinese voices could stop when ONNX Runtime's memory pool grew to 2 GB, which the editor's runtime refuses. They now run without that pool, at the same speed. By ajunjunandtmac (#23).
+
 ## 1.48.0
 - **Your plan limits at the top of the call.** A small ⏳ badge shows how much of your 5-hour and weekly windows you have used, for Claude or Codex depending on the session the call follows, and its tooltip says when each resets. It turns yellow from 70 % and red from 90 %. It is read from files already on your computer: for Claude, the copy Claude Code keeps in `~/.claude.json`, and, if `agent-standup statusline` is your Claude Code status line, the fresher numbers Claude Code hands it after each answer; for Codex, its session files. Nothing is fetched.
 - **A new look for the cast: Two-ink print.** In ⚙ → Characters, the app's characters redrawn as a print in two inks, with grain and offset colours: Margot with her headset, the sub-agents with their own hair, skin, tops and rooms. Their faces, arms and heads follow what each agent does: hand up when it needs you, chin in hand while it waits, a laptop while it works, a cheer when it is done. The drawn characters stay the default; this one is new and still being refined.

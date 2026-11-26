@@ -10,7 +10,7 @@ The user asked to credit the agents of this session in a pull request (or a comm
 Run this from the session that did the work. It reads local session files only, starts no server, sends nothing, and needs Node.js 18 or later.
 
 ```bash
-npx -y @double_geste/agent-standup@1.48.0 credits --json
+npx -y @double_geste/agent-standup@1.49.0 credits --json
 ```
 
 - It credits the Claude Code session it runs in (`$CLAUDE_CODE_SESSION_ID`). If it says `No session to credit` (an older Claude Code that does not set it), run it again with `--here`: the latest session of the current folder.
@@ -26,7 +26,7 @@ The names are the ones the user sees in the call, from their own settings. Use t
 - **A commit message:** add `text` as the last paragraph, before any `Co-Authored-By` lines.
 - If the description is in another language, you may translate the words of the line ("Built on an Agent Standup call by", "of work", "commands", "edits", "files"); keep the names, numbers, picture and link as they are.
 
-If the user wants it on every pull request from now on, offer to add one line to their `CLAUDE.md` (the project's, or `~/.claude/CLAUDE.md` for all): "When you open a pull request, end its description with the line from `npx -y @double_geste/agent-standup@1.48.0 credits`." Add it only if they say yes.
+If the user wants it on every pull request from now on, offer to add one line to their `CLAUDE.md` (the project's, or `~/.claude/CLAUDE.md` for all): "When you open a pull request, end its description with the line from `npx -y @double_geste/agent-standup@1.49.0 credits`." Add it only if they say yes.
 
 ## 3. Tell the user
 
