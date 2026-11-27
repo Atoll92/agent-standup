@@ -10,7 +10,7 @@ const path = require('path'), { spawn } = require('child_process');
 const pkg = require('../package.json');
 const argv = process.argv.slice(2), flags = {}, rest = [];
 for (let i = 0; i < argv.length; i++) {
-  const a = argv[i], val = () => argv[++i];
+  const a = argv[i], val = () => { if (argv[i + 1] === undefined || argv[i + 1].startsWith('--') || argv[i + 1] === '-h' || argv[i + 1] === '-v') { console.error(`Missing value for ${a}.`); process.exit(2); } return argv[++i]; };
   if (a === '--port') flags.port = val(); else if (a === '--projects') flags.projects = val(); else if (a === '--codex') flags.codex = val(); else if (a === '--vibe') flags.vibe = val(); else if (a === '--cowork') flags.cowork = val(); else if (a === '--characters') flags.characters = val(); else if (a === '--config-dir') flags.config = val();
   else if (a === '--reply') flags.reply = /^(0|1|on|off|yes|no|true|false)$/i.test(argv[i + 1] || '') ? val() : 'on';   // alone or followed by on / off
   else if (a === '--from') flags.from = val(); else if (a === '--open') flags.open = true; else if (a === '--here') flags.here = true; else if (a === '--json') flags.json = true; else if (a === '--titles') flags.titles = true; else if (a === '--config') flags.config = val(); else if (a === '--day') flags.day = val(); else if (a === '--session') flags.session = val();

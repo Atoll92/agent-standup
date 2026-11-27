@@ -1,5 +1,5 @@
 // test/stops.test.js: a session stopped by your usage limit or by a login that is gone, said as such and not as "gave up"; a lead waiting on a background workflow, which is not your turn;
-// the live Claude Code sessions whose transcript is not where the call reads (/api/missing); the title of a Cowork session in the desktop app's newer folder layout; what the command line says of all that.
+// the live Claude Code sessions whose transcript is not where the call reads (/api/missing); the title of a Cowork session in the desktop app's newer folder layout; what the command line says of all that; an option of the command line given without its value.
 const test = require('node:test'), assert = require('node:assert'), fs = require('fs'), os = require('os'), path = require('path'), http = require('http'), { spawnSync } = require('child_process');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-stops-')), PROJECTS = path.join(tmp, 'projects'), SESSIONS = path.join(tmp, 'sessions'), CW = path.join(tmp, 'cowork');
 Object.assign(process.env, { AGENT_STANDUP_ANSWER: 'dry', AGENT_STANDUP_PREFS: path.join(tmp, 'prefs.json'), AGENT_STANDUP_KOKORO_DIR: path.join(tmp, 'kokoro'), AGENT_STANDUP_PROJECTS: PROJECTS, AGENT_STANDUP_CC_SESSIONS: SESSIONS, AGENT_STANDUP_COWORK: CW, AGENT_STANDUP_CODEX: 'off', AGENT_STANDUP_VIBE: 'off' });
@@ -115,4 +115,13 @@ test('the command line says your usage limit and when it resets, ahead of your t
   assert.equal(JSON.parse(cli('status', '--json').stdout).sessions.find((s) => s.id === id(1)).auth, 1);
   const sl = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'agent-standup.js'), 'statusline', '--projects', P, '--codex', 'off', '--vibe', 'off'], { env, encoding: 'utf8', input: '{}' });
   assert.equal(sl.stdout.trim(), '✋1 ⚠login');
+});
+
+test('an option given without its value says so and stops, instead of taking the next option as its value or reading your real sessions', () => {
+  const T = fs.mkdtempSync(path.join(os.tmpdir(), 'as-stops-missing-')), env = { ...process.env, HOME: T, USERPROFILE: T, AGENT_STANDUP_PREFS: path.join(T, 'prefs.json'), AGENT_STANDUP_PROJECTS: path.join(T, 'projects'), AGENT_STANDUP_CC_SESSIONS: path.join(T, 'sessions'), AGENT_STANDUP_CODEX: 'off', AGENT_STANDUP_VIBE: 'off', AGENT_STANDUP_COWORK: 'off' };
+  const cli = (...a) => spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'agent-standup.js'), ...a], { env, encoding: 'utf8' });
+  const followed = cli('status', '--codex', '--json'); assert.equal(followed.status, 2); assert.equal(followed.stderr.trim(), 'Missing value for --codex.'); assert.equal(followed.stdout, '');
+  const short = cli('status', '--projects', '-h'); assert.equal(short.status, 2); assert.equal(short.stderr.trim(), 'Missing value for --projects.'); assert.equal(short.stdout, '');
+  const ver = cli('status', '--day', '-v'); assert.equal(ver.status, 2); assert.equal(ver.stderr.trim(), 'Missing value for --day.'); assert.equal(ver.stdout, '');
+  const last = cli('status', '--projects'); assert.equal(last.status, 2); assert.equal(last.stderr.trim(), 'Missing value for --projects.'); assert.equal(last.stdout, '');
 });
