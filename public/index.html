@@ -970,6 +970,9 @@ function slashSay(m, pre, lead, body) {   // word/word (pre: the character befor
 }
 const speakable = (t) => t.replace(/https?:\/\/(?:www\.)?([\w-]+(?:\.[\w-]+)*)\S*?(?=[.,;:!?)\]]*(?:\s|$))/g, '$1').replace(/(^|[^\wÀ-ÿ/.~@+-])((?:~|\.\.?|[A-Za-z]:)?\/)?((?:[\wÀ-ÿ.@+-]+\/)+[\wÀ-ÿ.+-]*)/g, slashSay).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_`*#<>{}\[\]|\\=~^]/g, ' ')
   .replace(/\s*[—–]\s*/g, ', ').replace(/\(([^)]{0,40})\)/g, ', $1,').replace(/\s+/g, ' ').trim();
+/* A voice of a Latin-script language (English, French…) handed Chinese characters spells each one out ("Chinese letter"): they are left out, and their punctuation becomes ours. Empty: nothing that voice can say */
+const noHan = (t) => t.replace(/[㐀-䶿一-鿿豈-﫿]+/g, ' ').replace(/[。！？]/g, '. ').replace(/[，、；：]/g, ', ').replace(/[　-〿（）]/g, ' ')
+  .replace(/\s+([.,!?])/g, '$1').replace(/([.,!?])(?:\s*[.,])+/g, '$1').replace(/^[\s.,]+/, '').replace(/\s+/g, ' ').trim();
 
 // ---------- translation (local claude CLI) ----------
 const trMaps = {}, trMap = (l = TLANG()) => (trMaps[l] = trMaps[l] || new Map()), trPending = new Map();
@@ -1183,7 +1186,8 @@ const TTS = {
   rate() { return Math.round(Math.max(120, Math.min(330, 178 * (S.live ? 1.12 * lagFactor() * (S.boost > 1 ? 1.25 : 1) : +$('#speed').value))) / 10) * 10; },
   rateAt(k, boost) { const i = S.idx, b = S.boost; S.idx = k; S.boost = boost; const r = this.rate(); S.idx = i; S.boost = b; return r; },   // the rate rate() will give once playback is at event k
   buf(text, voice, rate, ahead) {   // ahead: made in advance (see warmTTS); otherwise the line is wanted now
-    const eng = this.kv.has(voice) ? 'kokoro' : 'system', vl = VLANGS.find((l) => this.pool[l].includes(voice)) || 'en', fb = eng === 'kokoro' && this.sys[vl].length ? this.sys[vl][Math.max(0, this.pool[vl].indexOf(voice)) % this.sys[vl].length] : '';   /* fb: the system voice of the same language that reads the line if Kokoro cannot */
+    const vl0 = VLANGS.find((l) => this.pool[l].includes(voice)) || 'en'; if (!/^(zh|ja|ko)$/.test(vl0) && /[㐀-䶿一-鿿豈-﫿]/.test(text)) { text = noHan(text); if (!/[\p{L}\p{N}]/u.test(text)) return Promise.reject(new Error('nothing to say')); }   /* Chinese characters to a voice that cannot read them, i.e. no Chinese voice installed (see voiceTextLang) */
+    const eng = this.kv.has(voice) ? 'kokoro' : 'system', vl = vl0, fb =eng === 'kokoro' && this.sys[vl].length ? this.sys[vl][Math.max(0, this.pool[vl].indexOf(voice)) % this.sys[vl].length] : '';   /* fb: the system voice of the same language that reads the line if Kokoro cannot */
     const vt = eng + '|' + voice + '|' + text, K = (r) => eng + '|' + voice + '|' + r + '|' + text, key = K(rate), got = this.made.get(vt) || [];   // got: the rates at which this text is ready in this voice
     if (!ahead && S.live && !got.includes(rate)) { const r = got.find((x) => Math.abs(x - rate) <= rate * 0.2 && this.cache.has(K(x))); if (r) return this.cache.get(K(r)); }   // made ahead at the rate of a moment ago (the call fell behind or caught up since): played as it is, a second of silence is worse than a slightly different pace
     if (!this.cache.has(key)) {

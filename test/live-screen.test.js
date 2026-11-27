@@ -127,6 +127,12 @@ test('live call: what the call shows, its languages and voices', { skip: missing
       TTS.pool.zh = ['zh_heart']; TTS.kv.add('zh_heart');
       return [routes, [fallback, TTS.voiceFor({ id: 'a1', vi: 4 }, fallback)], voiceTextLang('Status: DONE. The build and every test 完了です。')];
     }), [[['zh', 'zh_heart'], ['zh', 'zh_heart'], ['zh', 'zh_heart']], ['en', 'af_heart'], 'en'], 'Chinese among English code uses an installed Chinese voice; without one the old fallback stays, and Japanese kana is not sent to Chinese');
+    assert.deepEqual(await c.page.evaluate(async () => {
+      const asked = [], real = window.fetch; window.fetch = (u) => { asked.push(new URL(u, location.href).searchParams.get('text')); return Promise.reject(new Error('stub')); };
+      TTS.pool.en = ['af_heart']; TTS.pool.zh = ['zh_heart']; TTS.kv = new Set(['af_heart', 'zh_heart']); TTS.cache.clear(); TTS.made.clear();
+      const out = await Promise.all([['修复完成。Status: DONE. The 中 timer works，all tests pass。', 'af_heart'], ['修复完成，测试通过。', 'af_heart'], ['修复完成。Status: DONE.', 'zh_heart']].map(([t, v]) => TTS.buf(t, v, 180, true).then(() => 'ok', (e) => e.message)));
+      window.fetch = real; return [noHan('修复完成。Status: DONE. The 中 timer works，all tests pass。'), out, asked];
+    }), ['Status: DONE. The timer works, all tests pass.', ['stub', 'nothing to say', 'stub'], ['Status: DONE. The timer works, all tests pass.', '修复完成。Status: DONE.']], 'with no Chinese voice, an English voice is never handed Chinese characters, and a line of nothing else is not sent at all; a Chinese voice gets the line as it is');
     await c.close();
   });
 });
