@@ -115,6 +115,18 @@ test('live call: what the call shows, its languages and voices', { skip: missing
     assert.equal(await c.page.evaluate(async () => { const g = document.querySelector('#empty'), o = document.querySelector('#vOffer'); o.style.display = ''; g.classList.add('on'); const under = getComputedStyle(o).display; g.classList.remove('on'); const after = getComputedStyle(o).display; o.style.display = 'none'; return under + ' ' + after; }), 'none flex', 'a line that offers something is not shown over the empty state: it waits for a call');
     assert.deepEqual(await c.page.evaluate(() => ['Ich habe die Funktion korrigiert und die Tests laufen jetzt alle durch.', '関数を修正し、テストはすべて通りました。', '함수를 수정했고 테스트가 모두 통과합니다.', '我修复了函数，所有测试都通过了。', 'Jeg har rettet funktionen, og alle testene kører nu igennem.', 'I fixed the function and all the tests pass now.'].map(langOf)), ['de', 'ja', 'ko', 'zh', 'da', 'en']);
     assert.deepEqual(await c.page.evaluate(() => { TTS.engine = 'kokoro'; TTS.pool.en = ['af_heart']; TTS.pool.de = ['Anna']; TTS.pool.ja = []; const p = { id: 'main', vi: 0 }; return [babbles(), TTS.voiceFor(p, 'de'), TTS.voiceFor(p, 'ja'), TTS.voiceFor(p, 'en')]; }), [false, 'Anna', 'af_heart', 'af_heart'], 'once the real voices are there: a German line to a German system voice, a language with no voice at all to the English one');
+    assert.deepEqual(await c.page.evaluate(async () => {
+      prefs.lang = 'zh-CN'; prefs.callNew = false; await loadLocale('zh-CN'); TTS.pool.en = ['af_heart']; TTS.pool.zh = ['zh_heart']; TTS.kv = new Set(['af_heart', 'zh_heart']);
+      const reports = [
+        { ts: 1, agent: 'a1', kind: 'report', text: 'Status: DONE. The build passed and every test is green.' },
+        { ts: 2, agent: 'a1', kind: 'report', text: '修复完成。Status: DONE. The function setTimeout and clearTimeout now share the same timer table in SDMLogicEngine.swift.' },
+      ];
+      const routes = reports.map((g) => { const said = talkLine(g), lo = sessVoice(said, g); return [lo, TTS.voiceFor({ id: 'a1', vi: 4 }, lo)]; });
+      const body = sessVoice(reports[1].text, reports[1]); routes.push([body, TTS.voiceFor({ id: 'a1', vi: 4 }, body)]);
+      TTS.pool.zh = ['Tingting']; TTS.kv = new Set(['af_heart']); const said = talkLine(reports[0]), fallback = sessVoice(said, reports[0]);
+      TTS.pool.zh = ['zh_heart']; TTS.kv.add('zh_heart');
+      return [routes, [fallback, TTS.voiceFor({ id: 'a1', vi: 4 }, fallback)], voiceTextLang('Status: DONE. The build and every test 完了です。')];
+    }), [[['zh', 'zh_heart'], ['zh', 'zh_heart'], ['zh', 'zh_heart']], ['en', 'af_heart'], 'en'], 'Chinese among English code uses an installed Chinese voice; without one the old fallback stays, and Japanese kana is not sent to Chinese');
     await c.close();
   });
 });
