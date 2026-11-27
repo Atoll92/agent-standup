@@ -131,12 +131,16 @@ test('the day report counts every session of a busy day, not only the most recen
   assert.throws(() => execFileSync(process.execPath, [path.join(__dirname, '..', 'bin', 'agent-standup.js'), 'report', '--day', '2026-02-31'], { env: { ...process.env, ...ENV }, stdio: 'pipe' }), /no such day/);
 });
 
-test('a Sheet drawn again: a delete takes away the rows and columns it names, and thousands of new sheets cost little', () => {
+test('a Sheet drawn again: a delete takes away the rows and columns it names, the column widths move with their columns when columns are inserted or deleted, and thousands of new sheets cost little', () => {
   const { _draw } = require('../boards.js'), w = (edits) => ({ op: 'write', i: { payload: { edits } } });
   const rows = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['r1', 'b1', 'c1'], ['r2', 'b2', 'c2'], ['r3', 'b3', 'c3'], ['r4', 'b4', 'c4']] }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '2:2' }])]);
   assert.match(rows, /<th>1<\/th><td>r1<\/td>/); assert.match(rows, /<th>2<\/th><td>r3<\/td>/); assert.match(rows, /<th>3<\/th><td>r4<\/td>/); assert.ok(!/r2/.test(rows));
   const cols = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['a', 'b', 'c']] }, { kind: 'deleteColumns', sheet: 'Sheet1', columns: 'B:B' }])]);
   assert.match(cols, /<td>a<\/td><td>c<\/td>/); assert.ok(!/>b</.test(cols));
+  const insertedWidths = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['a', 'b']] }, { kind: 'setColumnWidths', sheet: 'Sheet1', columns: 'B:B', widthInPixels: 250 }, { kind: 'insertColumns', sheet: 'Sheet1', besideColumn: 'A', side: 'right', count: 1 }])]);
+  assert.match(insertedWidths, /<th style="width:104px">B<\/th><th style="width:250px">C<\/th>/);
+  const deletedWidths = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['a', 'b', 'c']] }, { kind: 'setColumnWidths', sheet: 'Sheet1', columns: 'B:B', widthInPixels: 250 }, { kind: 'setColumnWidths', sheet: 'Sheet1', columns: 'C:C', widthInPixels: 300 }, { kind: 'deleteColumns', sheet: 'Sheet1', columns: 'B:B' }])]);
+  assert.match(deletedWidths, /<th style="width:300px">B<\/th><th style="width:104px">C<\/th>/);
   const t0 = Date.now(), many = _draw.sheet([w(Array.from({ length: 64 }, (_, n) => ({ kind: 'addSheet', name: 'S' + n })))].concat(Array.from({ length: 50 }, (_, k) => w(Array.from({ length: 64 }, (_, n) => ({ kind: 'addSheet', name: `T${k}-${n}` }))))));
   assert.equal((many.match(/<span /g) || []).length, 30, 'the picture shows 30 tabs'); assert.ok(Date.now() - t0 < 1000, '3,264 new sheets asked: ' + (Date.now() - t0) + ' ms');
 });
