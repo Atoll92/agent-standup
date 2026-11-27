@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.49.1
+- **Chinese inside an English line no longer turns into “Chinese character, Chinese character…”.** A sub-agent's report that mixes Chinese with English and code is read by the Chinese voice when you have installed it, which says the English words too. By ajunjunandtmac (#25). Without the Chinese voice, the line is read without its Chinese characters, and a line of Chinese alone is no longer spelled out.
+- **The command line says when an option has no value.** `agent-standup status --codex --json` used to take `--json` as the Codex folder, and `--projects` with its folder forgotten read your usual sessions. Both now stop with “Missing value for --codex.” (exit code 2), like a wrong `--port` already did. By leninworld (#24).
+
 ## 1.49.0
 - **Your own messages are no longer read aloud in the live call.** You have just typed them: they still show in your bubble, and the call keeps its pace. To hear them again, turn on ⚙ → Sound and alerts → Read your messages aloud. A replay and the demo still read them, since whoever listens there did not type them. By ajunjunandtmac (#22).
 - **The natural voices no longer crash in VS Code and the Mac app.** On a Mac with Apple silicon, the English and Chinese voices could stop when ONNX Runtime's memory pool grew to 2 GB, which the editor's runtime refuses. They now run without that pool, at the same speed. By ajunjunandtmac (#23).
