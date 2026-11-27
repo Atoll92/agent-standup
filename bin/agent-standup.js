@@ -69,8 +69,8 @@ const projKey = (dir) => String(dir || '').replace(/[^a-zA-Z0-9]/g, '-'), fold =
 function snapshot(dir) {
   const now = Date.now(), all = server.boardRows(), rows = dir ? all.filter((r) => fold(r.proj) === fold(projKey(dir)) || (!!r.dir && fold(r.dir) === fold(projKey(dir)))) : all;   // dir: the folder a Codex session was started in, named the same way
   const act = rows.filter((r) => r.state !== 'idle' || now - r.mtime < 15 * 60e3), n = (st) => act.filter((r) => r.state === st).length;
-  const turn = act.filter((r) => r.state === 'turn'), lim = turn.find((r) => r.limit);   // a session stopped on your usage limit, or on a login that is gone: not a turn you can take
-  return { rows: act, needsYou: n('blocked'), working: n('working') + n('waiting'), yourTurn: turn.length, idle: rows.length - act.length, limit: lim ? (turn.every((r) => !r.limit || r.limit.resets === lim.limit.resets) ? lim.limit.resets || '' : '') : null, auth: turn.some((r) => r.auth), free: turn.some((r) => !r.limit && !r.auth) };
+  const turn = act.filter((r) => r.state === 'turn'), free = turn.filter((r) => !r.limit && !r.auth), lim = turn.find((r) => r.limit);   // a session stopped on your usage limit, or on a login that is gone: not a turn you can take
+  return { rows: act, needsYou: n('blocked'), working: n('working') + n('waiting'), yourTurn: free.length, idle: rows.length - act.length, limit: lim ? (turn.every((r) => !r.limit || r.limit.resets === lim.limit.resets) ? lim.limit.resets || '' : '') : null, auth: turn.some((r) => r.auth), free: !!free.length };
 }
 const line = (s, short) => {
   const p = []; if (s.needsYou) p.push(short ? `✋${s.needsYou}` : `✋ ${s.needsYou} needs you`); if (s.working) p.push(short ? `⚙${s.working}` : `⚙ ${s.working} working`);

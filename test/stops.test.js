@@ -103,7 +103,7 @@ test('the command line says your usage limit and when it resets, ahead of your t
   const env = { ...process.env, AGENT_STANDUP_PREFS: path.join(T, 'prefs.json') }; for (const k of ['AGENT_STANDUP_CC_SESSIONS', 'AGENT_STANDUP_PROJECTS', 'AGENT_STANDUP_COWORK', 'AGENT_STANDUP_HOST']) delete env[k];
   const cli = (...a) => spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'agent-standup.js'), ...a, '--projects', P, '--codex', 'off', '--vibe', 'off'], { env, encoding: 'utf8' });
   assert.equal(cli('status').stdout.trim(), '⏳ usage limit · resets 7:20pm (Europe/Paris) · ✓ your turn');
-  const j = JSON.parse(cli('status', '--json').stdout); assert.deepEqual(j.sessions.find((s) => s.id === id(1)).limit, { resets: '7:20pm (Europe/Paris)' });
+  const j = JSON.parse(cli('status', '--json').stdout); assert.equal(j.yourTurn, 1); assert.deepEqual(j.sessions.find((s) => s.id === id(1)).limit, { resets: '7:20pm (Europe/Paris)' });
   write(path.join(P, '-work-a', id(3) + '.jsonl'), [user('Build it', 120e3), call('toolu_b', 'Bash', { command: 'npm run build', description: 'Build for production' }, 40e3)], 40e3);
   fs.writeFileSync(path.join(S, '301.json'), JSON.stringify({ pid: process.pid, sessionId: id(3), status: 'waiting', waitingFor: 'permission prompt', statusUpdatedAt: now - 35e3 }));   // only the sessions folder beside the projects one says a menu is open
   const k = JSON.parse(cli('status', '--json').stdout), b = k.sessions.find((s) => s.id === id(3));
@@ -112,9 +112,11 @@ test('the command line says your usage limit and when it resets, ahead of your t
   assert.equal(cli('status').stdout.trim(), '✋ 1 needs you · ⏳ usage limit · resets 7:20pm (Europe/Paris)');
   write(path.join(P, '-work-a', id(1) + '.jsonl'), [user('Ship it', 120e3), fail('Not logged in · Please run /login', 30e3, 'authentication_failed')], 30e3);
   assert.equal(cli('status').stdout.trim(), '✋ 1 needs you · ⚠ logged out: run /login');
-  assert.equal(JSON.parse(cli('status', '--json').stdout).sessions.find((s) => s.id === id(1)).auth, 1);
+  const loggedOut = JSON.parse(cli('status', '--json').stdout); assert.equal(loggedOut.yourTurn, 1); assert.equal(loggedOut.sessions.find((s) => s.id === id(1)).auth, 1);
   const sl = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'agent-standup.js'), 'statusline', '--projects', P, '--codex', 'off', '--vibe', 'off'], { env, encoding: 'utf8', input: '{}' });
   assert.equal(sl.stdout.trim(), '✋1 ⚠login');
+  write(path.join(P, '-work-a', id(2) + '.jsonl'), [user('Notes', 120e3), fail("You've hit your limit · resets 7:20pm (Europe/Paris)", 60e3, 'rate_limit')], 60e3);
+  assert.equal(JSON.parse(cli('status', '--json').stdout).yourTurn, 0);
 });
 
 test('an option given without its value says so and stops, instead of taking the next option as its value or reading your real sessions', () => {
