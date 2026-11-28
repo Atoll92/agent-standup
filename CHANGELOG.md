@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.49.2
+- **A session stopped on your usage limit, or logged out, is no longer “your turn” in `agent-standup status --json`.** Its `yourTurn` count now agrees with the one-line status, so a menu bar built on it (such as the Raycast extension, once it moves to this version) stops showing ✓ while you are rate-limited. By leninworld (#26).
+- **A Claude Sheet on the shared screen keeps its column widths on the right columns.** After columns were inserted or deleted, the cells moved but the widths stayed on the old letters. By leninworld (#27).
+
 ## 1.49.1
 - **Chinese inside an English line no longer turns into “Chinese character, Chinese character…”.** A sub-agent's report that mixes Chinese with English and code is read by the Chinese voice when you have installed it, which says the English words too. By ajunjunandtmac (#25). Without the Chinese voice, the line is read without its Chinese characters, and a line of Chinese alone is no longer spelled out.
 - **The command line says when an option has no value.** `agent-standup status --codex --json` used to take `--json` as the Codex folder, and `--projects` with its folder forgotten read your usual sessions. Both now stop with “Missing value for --codex.” (exit code 2), like a wrong `--port` already did. By leninworld (#24).
