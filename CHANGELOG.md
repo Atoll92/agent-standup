@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.49.3
+- **`agent-standup report --here` lists the Codex and Mistral Vibe sessions of this folder from past days too.** It found them only while they were still on the live call, so the timesheet and whiteboard skills could leave out yesterday's Codex or Vibe work in the project. By leninworld (#29).
+- **A Claude Sheet on the shared screen keeps its header row on the header.** When rows were inserted or deleted above a table's header, the new empty row was drawn as the header and the real one as data. By leninworld (#28).
+
 ## 1.49.2
 - **A session stopped on your usage limit, or logged out, is no longer “your turn” in `agent-standup status --json`.** Its `yourTurn` count now agrees with the one-line status, so a menu bar built on it (such as the Raycast extension, once it moves to this version) stops showing ✓ while you are rate-limited. By leninworld (#26).
 - **A Claude Sheet on the shared screen keeps its column widths on the right columns.** After columns were inserted or deleted, the cells moved but the widths stayed on the old letters. By leninworld (#27).
