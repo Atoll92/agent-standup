@@ -24,7 +24,7 @@ Usage
   agent-standup status [--here] [--json]          what is going on right now (--here: only the current folder)
   agent-standup statusline                        one short line for a status bar (reads Claude Code's JSON on stdin)
   agent-standup report [--day D] [--json]         what each session did that day: time worked, waits for you, calls, files
-  agent-standup credits [--session ID] [--json]   a credits line for a pull request: the lead and sub-agents of a session, its time and calls
+  agent-standup credits [--session ID] [--here] [--json]   a credits line for a pull request: the lead and sub-agents of a session, its time and calls
 
 Options
   --port N          port of the local server (default 4747)
@@ -41,8 +41,8 @@ Options
   --characters DIR  folder with your own pixel-art characters (default ~/.agent-standup/characters)
   --from plugin     how the Claude Code plugin starts it (its usage, if you agree to share it, is counted apart); also AGENT_STANDUP_FROM=plugin,
                     which older versions ignore instead of refusing
-  --here            status, report: only sessions of the current folder (matched on its real path, as Claude Code names it)
-  --json            status, report: machine-readable output
+  --here            status, report, credits: only sessions of the current folder (matched on its real path, as Claude Code names it)
+  --json            status, report, credits: machine-readable output
   --day D           report: the day to tell, YYYY-MM-DD, today (the default) or yesterday, in local time
   --titles          include session titles, questions, commands and errors
   --session ID      credits: the session to credit (default: the Claude Code session it runs in, $CLAUDE_CODE_SESSION_ID;
@@ -150,7 +150,7 @@ function castOf(agents, prefs, key) {
 }
 const SITE = 'https://agent-standup.com';
 function credits(id, dir) {
-  const want = (r) => (id ? r.id === id : !dir || fold(r.proj) === fold(projKey(dir)));
+  const want = (r) => (id ? r.id === id : !dir || fold(r.proj) === fold(projKey(dir)) || (r.dir && fold(r.dir) === fold(projKey(dir))));
   let r = server.sessionRows().filter(want).sort((a, b) => b.mtime - a.mtime)[0];
   if (!r && server.sessionsSince) r = server.sessionsSince(0).filter(want).sort((a, b) => b.mtime - a.mtime)[0];   // an older session than the recent list holds
   if (!r) return null;
@@ -173,9 +173,12 @@ function credits(id, dir) {
 if (cmd === 'credits') {
   const id = flags.session || (flags.here ? '' : process.env.CLAUDE_CODE_SESSION_ID || '');
   if (!id && !flags.here) { console.error('No session to credit: run it from inside a Claude Code session, or pass --session <id> or --here (the current folder\'s latest session).'); process.exit(2); }
-  let c; try { c = credits(id, flags.here ? process.cwd() : ''); } catch (e) { console.error('Could not read that session: ' + (e && e.message)); process.exit(1); }
-  if (!c) { console.error(id ? `No session ${id} in the session files.` : 'No session in this folder.'); process.exit(1); }
-  process.stdout.write((flags.json ? JSON.stringify(c, null, 2) : c.markdown) + '\n', () => process.exit(0));
+  (async () => {
+    if (server.sessionsSince) { server.sessionsSince(0); for (let i = 0; i < 600 && server.codexPending && server.codexPending(); i++) await new Promise((r) => setTimeout(r, 100)); }
+    let c; try { c = credits(id, flags.here ? process.cwd() : ''); } catch (e) { console.error('Could not read that session: ' + (e && e.message)); process.exit(1); }
+    if (!c) { console.error(id ? `No session ${id} in the session files.` : 'No session in this folder.'); process.exit(1); }
+    process.stdout.write((flags.json ? JSON.stringify(c, null, 2) : c.markdown) + '\n', () => process.exit(0));
+  })();
 } else if (cmd === 'status') {
   const s = snapshot(flags.here ? process.cwd() : '');
   if (flags.json) console.log(JSON.stringify({ needsYou: s.needsYou, working: s.working, yourTurn: s.yourTurn, idle: s.idle, sessions: s.rows.map((r) => ({ project: r.proj, id: r.id, state: r.state, tool: r.tool, ageMs: Math.round(r.ageMs), subAgentsActive: r.subActive, subAgents: r.subTotal, ...(r.since ? { since: r.since } : {}), ...(r.ran ? { ran: r.ran } : {}), ...(r.limit ? { limit: r.limit } : {}), ...(r.auth ? { auth: 1 } : {}), ...(flags.titles ? { title: r.title, ...(r.ask ? { ask: r.ask } : {}), ...(r.menu && r.menu.about ? { about: r.menu.about } : {}), ...(r.gave ? { gave: r.gave } : {}) } : {}) })) }, null, 2));   // since: when it started to wait, ran: how long it worked before · with --titles only, what the sessions say (it can hold a path, a command or a secret): ask, the question or command that waits for you, about, what that command is for, gave, the error it stopped on
