@@ -4,10 +4,10 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-credits-here-')), PROJECTS
 fs.mkdirSync(PROJECTS); fs.mkdirSync(EMPTY_PROJECTS); fs.mkdirSync(X0); fs.mkdirSync(Y0); fs.mkdirSync(Z0); fs.mkdirSync(W0); const X = fs.realpathSync(X0), Y = fs.realpathSync(Y0), Z = fs.realpathSync(Z0), W = fs.realpathSync(W0);
 assert.ok(fs.existsSync(X)); assert.ok(fs.existsSync(Y)); assert.ok(fs.existsSync(Z)); assert.ok(fs.existsSync(W));
 const NOW = Date.now(), AT = new Date(NOW - 120000).toISOString(), LATER = new Date(NOW - 60000).toISOString(), RECENT = new Date(NOW - 30000), OLD = new Date(2026, 0, 2, 13, 0), CLI = path.join(__dirname, '..', 'bin', 'agent-standup.js'), SERVER = path.join(__dirname, '..', 'server.js');
-const ENV = { ...process.env, CLAUDE_CODE_SESSION_ID: '', AGENT_STANDUP_PREFS: path.join(tmp, 'prefs.json'), AGENT_STANDUP_CC_SESSIONS: path.join(tmp, 'cc-sessions'), AGENT_STANDUP_CLAUDE_DIRS: 'off' };
+const ENV = { ...process.env, CLAUDE_CODE_SESSION_ID: '', CLAUDECODE: '', AGENT_STANDUP_PREFS: path.join(tmp, 'prefs.json'), AGENT_STANDUP_CC_SESSIONS: path.join(tmp, 'cc-sessions'), AGENT_STANDUP_CLAUDE_DIRS: 'off' };
 const projectKey = (dir) => dir.replace(/[^a-zA-Z0-9]/g, '-');
-const credits = (cwd, codex, vibe, projects = PROJECTS) => spawnSync(process.execPath, [CLI, 'credits', '--here', '--json', '--projects', projects, '--codex', codex, '--vibe', vibe, '--cowork', 'off'], { cwd, env: ENV, encoding: 'utf8' });
-const creditedId = (cwd, codex, vibe, projects) => { const r = credits(cwd, codex, vibe, projects); assert.equal(r.status, 0, r.stderr || r.stdout); const c = JSON.parse(r.stdout); assert.ok(c.session, r.stdout); return c.session; };
+const credits = (cwd, codex, vibe, projects = PROJECTS, env = ENV) => spawnSync(process.execPath, [CLI, 'credits', '--here', '--json', '--projects', projects, '--codex', codex, '--vibe', vibe, '--cowork', 'off'], { cwd, env, encoding: 'utf8' });
+const creditedId = (cwd, codex, vibe, projects, env) => { const r = credits(cwd, codex, vibe, projects, env); assert.equal(r.status, 0, r.stderr || r.stdout); const c = JSON.parse(r.stdout); assert.ok(c.session, r.stdout); return c.session; };
 const assertNotCredited = (cwd, codex, vibe, projects) => { const r = credits(cwd, codex, vibe, projects); assert.equal(r.status, 1, r.stderr || r.stdout); assert.match(r.stderr, /No session in this folder\./); };
 const sessionRow = (id, codex, vibe, projects = PROJECTS) => JSON.parse(spawnSync(process.execPath, ['-e', `const r = require(${JSON.stringify(SERVER)}).sessionRows().find((x) => x.id === ${JSON.stringify(id)}); process.stdout.write(JSON.stringify(r || null));`], { env: { ...ENV, AGENT_STANDUP_PROJECTS: projects, AGENT_STANDUP_CODEX: codex, AGENT_STANDUP_VIBE: vibe, AGENT_STANDUP_COWORK: 'off' }, encoding: 'utf8' }).stdout);
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -76,4 +76,9 @@ test('credits --here does not treat Vibe storage as the folder of a session with
 test('credits --here still credits a recent Claude Code session only in its folder', () => {
   assert.equal(creditedId(X, 'off', 'off'), CLAUDE_ID);
   assertNotCredited(Y, 'off', 'off');
+});
+
+test('inside Claude Code, credits --here credits the folder\'s Claude Code session even when a Codex session of that folder wrote last', () => {
+  assert.equal(creditedId(W, CODEX, 'off', PROJECTS, { ...ENV, CLAUDECODE: '1' }), oldClaudeId);
+  const r = credits(X, CODEX, VIBE, EMPTY_PROJECTS, { ...ENV, CLAUDECODE: '1' }); assert.equal(r.status, 1, r.stdout); assert.match(r.stderr, /No session in this folder\./);
 });

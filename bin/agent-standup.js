@@ -149,8 +149,8 @@ function castOf(agents, prefs, key) {
   return { lead, names };
 }
 const SITE = 'https://agent-standup.com';
-function credits(id, dir) {
-  const want = (r) => (id ? r.id === id : !dir || fold(r.proj) === fold(projKey(dir)) || (r.dir && fold(r.dir) === fold(projKey(dir))));
+function credits(id, dir, ccOnly) {   // ccOnly: Claude Code sessions only (run inside Claude Code, see below)
+  const want = (r) => (id ? r.id === id : (!ccOnly || !r.source) && (!dir || fold(r.proj) === fold(projKey(dir)) || (!ccOnly && r.dir && fold(r.dir) === fold(projKey(dir)))));
   let r = server.sessionRows().filter(want).sort((a, b) => b.mtime - a.mtime)[0];
   if (!r && server.sessionsSince) r = server.sessionsSince(0).filter(want).sort((a, b) => b.mtime - a.mtime)[0];   // an older session than the recent list holds
   if (!r) return null;
@@ -173,9 +173,12 @@ function credits(id, dir) {
 if (cmd === 'credits') {
   const id = flags.session || (flags.here ? '' : process.env.CLAUDE_CODE_SESSION_ID || '');
   if (!id && !flags.here) { console.error('No session to credit: run it from inside a Claude Code session, or pass --session <id> or --here (the current folder\'s latest session).'); process.exit(2); }
+  // Inside Claude Code (CLAUDECODE is set), --here credits that folder's latest Claude Code session: the plugin's credits skill falls back to it when an older Claude Code gives no session id, and a Codex or Vibe session of the same folder must not take the credit.
+  // Codex's compressed threads are read in the background: credits waits for them only when the session may be one of them, i.e. a --session not found at once, or --here outside Claude Code (a newer Codex thread may be the latest).
+  const ccOnly = !id && !!process.env.CLAUDECODE, pick = () => { try { return credits(id, flags.here ? process.cwd() : '', ccOnly); } catch (e) { console.error('Could not read that session: ' + (e && e.message)); process.exit(1); } };
   (async () => {
-    if (server.sessionsSince) { server.sessionsSince(0); for (let i = 0; i < 600 && server.codexPending && server.codexPending(); i++) await new Promise((r) => setTimeout(r, 100)); }
-    let c; try { c = credits(id, flags.here ? process.cwd() : ''); } catch (e) { console.error('Could not read that session: ' + (e && e.message)); process.exit(1); }
+    let c = id || ccOnly ? pick() : null;
+    if (!c && !ccOnly && server.sessionsSince) { server.sessionsSince(0); for (let i = 0; i < 600 && server.codexPending && server.codexPending(); i++) await new Promise((r) => setTimeout(r, 100)); c = pick(); }
     if (!c) { console.error(id ? `No session ${id} in the session files.` : 'No session in this folder.'); process.exit(1); }
     process.stdout.write((flags.json ? JSON.stringify(c, null, 2) : c.markdown) + '\n', () => process.exit(0));
   })();
