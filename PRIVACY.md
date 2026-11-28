@@ -19,8 +19,8 @@ Agent Standup runs on your own computer. It reads files that are already there, 
 ## What it keeps on your computer
 
 - **Your settings**, in one small file in your user configuration folder. In every form, it also holds, for the one time the call asks for a coffee, the first day the call was in view and the day it asked. In the desktop app and from the command line, it also holds, for the one time the app asks for a star on GitHub, the number of days the page was in view, the last of those days and your answer.
-- **Spoken lines, for a day.** When voices are on, each line is turned into a sound file in a private folder (a temporary one on macOS and Windows, `~/.cache/agent-standup/tts` on Linux) so it does not have to be made twice. Files older than a day are deleted.
-- **The natural voice model**, only if you install it.
+- **Spoken lines, for a day.** When voices are on, each line is turned into a sound file in a private folder (a temporary one on macOS and Windows, `agent-standup/tts` under `XDG_CACHE_HOME` or `~/.cache` on Linux) so it does not have to be made twice. Files older than a day are deleted.
+- **The natural voice model**, only if you install it (`agent-standup/kokoro` under `XDG_CACHE_HOME` or `~/.cache` on Linux, keeping `~/.cache/agent-standup/kokoro` if it already exists; `~/.cache/agent-standup/kokoro` on macOS; `%LOCALAPPDATA%\agent-standup\kokoro` on Windows).
 - **Which window plays sound**, in a file named `audio.json` beside your settings: a random name for that window and a time.
 - **The sessions you put away as done**, in a file named `done.json` beside your settings: for each one, the name of its project folder, its id and a time. Nothing of what was said in it.
 - **Your plan limits, if you use `agent-standup statusline` as Claude Code's status line**: the last ones Claude Code handed it (percentages and reset times, nothing else), in a file named `limits.json` beside your settings, so the call can show them.

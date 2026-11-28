@@ -8,7 +8,12 @@
 const fs = require('fs'), os = require('os'), path = require('path'), http = require('http'), https = require('https'), crypto = require('crypto'), { spawn } = require('child_process');
 
 const WIN = process.platform === 'win32';
-const DIR = process.env.AGENT_STANDUP_KOKORO_DIR || (WIN ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'agent-standup', 'kokoro') : path.join(os.homedir(), '.cache', 'agent-standup', 'kokoro'));
+function defaultDir() {
+  if (WIN) return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'agent-standup', 'kokoro');
+  const old = path.join(os.homedir(), '.cache', 'agent-standup', 'kokoro');   // kept when already there, so setting XDG_CACHE_HOME does not trigger another download
+  return process.platform === 'linux' && process.env.XDG_CACHE_HOME && !fs.existsSync(old) ? path.join(process.env.XDG_CACHE_HOME, 'agent-standup', 'kokoro') : old;
+}
+const DIR = process.env.AGENT_STANDUP_KOKORO_DIR || defaultDir();
 const PKG = 'kokoro-js@1.2.1', G2P = 'espeak-ng@1.0.2', G2P_MB = 18, DTYPE = 'q4', SIZE_MB = 750, MAX_RESTARTS = 3;
 const WORKER = process.env.AGENT_STANDUP_KOKORO_WORKER || path.join(__dirname, 'kokoro-worker.js'), LOG = path.join(DIR, 'install.log');
 const ST_WORKER = process.env.AGENT_STANDUP_ST_WORKER || path.join(__dirname, 'supertonic-worker.js'), ST_DIR = path.join(DIR, 'supertonic-3');
