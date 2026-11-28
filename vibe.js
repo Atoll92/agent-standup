@@ -193,6 +193,7 @@ const UNI_TOOLS = { 'file_system.bash': 'Bash', 'file_system.read_file': 'Read',
 const OPEN = /^(pending|queued|running|in_progress|awaiting|waiting|blocked|started)/;
 const usageMemo = new Map();   // session folder → { p, c, r, list }: the lines of usage already given out. A line never changes once the page has it, so the totals Vibe keeps are handed out as what was added since the last look
 let helpers = { toolLabel: (b, ts) => ({ id: b.id, ts, name: b.name, arg: '' }), clip: (t, n) => String(t).slice(0, n), resultMax: {} };   // set by parser(): the server's own way of describing a tool call
+const childStates = new Map();   // Vibe 3 sub-agent folder → { sig, cs (its state), waits }
 const childSig = (kids) => kids.map((k) => { const cr = k.cid && row(k.cid); return cr && cr.uni ? uniSig(cr) : ''; }).join('|');   // Vibe 3: a sub-agent writes in its own folder while its lead's may not move
 function uniState(r, depth = 0) {
   const u = uniLoad(r); if (u.state && u.state.csig === childSig(u.state.kids)) return u.state;
@@ -235,9 +236,12 @@ function uniState(r, depth = 0) {
   for (const e of u.entries) { try { one(e); } catch {} }   // an entry in a shape this reader does not expect is left out: it must never stop the rest, nor the sessions of the other tools
   // Vibe 3 gives each sub-agent a folder of its own (unified/child-<id>/, named by the spawn as childSessionId): its commands, files, words and tokens become the sub-agent's in the call.
   // Its first message is the task the lead gave it, already shown as the lead's order; its own sub-agents are not followed (depth: one level, and never the lead's own folder).
+  let kidWaits = 0;   // what the sub-agents themselves wait on the person for (a sub-agent's permission prompt is in its own journal)
   if (depth < 1) for (const k of kids.values()) {
     const cr = k.cid && row(k.cid); if (!cr || !cr.uni || cr.dir === r.dir) continue;
-    let cs; try { cs = uniState(cr, depth + 1); } catch { continue; }
+    const csg = uniSig(cr), was = childStates.get(cr.dir); let cs, cw;   // kept apart from uniCache: a lead with many sub-agents would push itself out of it and be read again at every poll
+    if (was && was.sig === csg) { cs = was.cs; cw = was.waits; } else { try { cs = uniState(cr, depth + 1); cw = uniLoad(cr).waits || 0; } catch { continue; } childStates.delete(cr.dir); if (childStates.size >= 64) childStates.delete(childStates.keys().next().value); childStates.set(cr.dir, { sig: csg, cs, waits: cw }); }
+    kidWaits += cw;
     const ks = k.st;
     for (const ev of cs.main.raw) { if (ev.kind === 'user' || ev.kind === 'agentcall' || ev.kind === 'agentdone' || ev.kind === 'order' || ev.to) continue; const c = JSON.parse(JSON.stringify(ev)); c.agent = k.aid; c.k = k.aid + ':' + String(ev.k || '').replace(/^main:/, ''); ks.raw.push(c); if (c.ts > ks.lastTs) ks.lastTs = c.ts; if (c.kind === 'say') k.said = c.text; }
     Object.assign(ks.toolName, cs.main.toolName); for (const [key, v] of cs.main.msgUsage) ks.msgUsage.set(key, v);
@@ -260,13 +264,13 @@ function uniState(r, depth = 0) {
     }
     for (const [k, v] of m.list) st.msgUsage.set(k, v);
   }
-  u.state = { main: st, kids: [...kids.values()], env, waiting }; u.state.csig = childSig(u.state.kids); return u.state;
+  u.state = { main: st, kids: [...kids.values()], env, waiting, kidWaits }; u.state.csig = childSig(u.state.kids); return u.state;
 }
 const uniLight = new Map();   // session folder → what the lists need of a session (title, state, how many sub-agents), kept after its history has been let go
 function uniSummary(r) {
   const own = uniSig(r), hit = uniLight.get(r.dir), sig = own + '#' + childSig((hit && hit.cids) || []); if (hit && hit.sig === sig) return hit;   // a Vibe 3 sub-agent's folder counts too: its lead can sit still while it works
   let v = { sig, title: '', status: '', kids: 0, live: 0, waiting: false, asked: (hit && hit.asked) || 0 }, read = false;
-  try { const u = uniLoad(r), st = uniState(r), se = (st.env && st.env.session) || {}; read = u.sig === own; const cids = st.kids.filter((k) => k.cid).map((k) => ({ cid: k.cid })); v = { sig: own + '#' + childSig(cids), cids, title: str(se.title).trim() || str(se.preview).replace(/\s+/g, ' ').trim().slice(0, 90), status: u.waits > 0 && str(se.status && se.status.type) === 'running' ? 'blocked' : str(se.status && se.status.type), kids: st.kids.length, live: st.kids.filter((k) => !k.done).length, waiting: !!st.waiting, asked: st.main.raw.reduce((m, e) => (e.kind === 'user' && e.ts > m ? e.ts : m), 0) }; } catch {}   // asked: when the person last typed something there, which is what moves the live call (see currentSession in server.js)
+  try { const u = uniLoad(r), st = uniState(r), se = (st.env && st.env.session) || {}; read = u.sig === own; const cids = st.kids.filter((k) => k.cid).map((k) => ({ cid: k.cid })); v = { sig: own + '#' + childSig(cids), cids, title: str(se.title).trim() || str(se.preview).replace(/\s+/g, ' ').trim().slice(0, 90), status: (u.waits > 0 || st.kidWaits > 0) && str(se.status && se.status.type) === 'running' ? 'blocked' : str(se.status && se.status.type), kids: st.kids.length, live: st.kids.filter((k) => !k.done).length, waiting: !!st.waiting, asked: st.main.raw.reduce((m, e) => (e.kind === 'user' && e.ts > m ? e.ts : m), 0) }; } catch {}   // asked: when the person last typed something there, which is what moves the live call (see currentSession in server.js)
   if (read) { if (uniLight.size > 500) uniLight.delete(uniLight.keys().next().value); uniLight.set(r.dir, v); }   // not kept when the session could not be read (caught in the middle of a write): asked again next time
   return v;
 }

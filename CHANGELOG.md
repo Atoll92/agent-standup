@@ -2,7 +2,7 @@
 
 ## 1.50.0
 - **Mistral Vibe 3 sessions, fully in the call.** Vibe 3 gives each sub-agent a history of its own: its commands with their output, the files it reads and writes, its answer and its tokens now appear in the call under its name, while the lead shows “waiting on” it. Before, each Vibe 3 sub-agent was listed as a session of its own and its lead counted none. Checked against real sessions of Vibe 3.1.5; Vibe 2.26 sessions read as before.
-- **A Vibe 3 session that waits for your approval or your answer needs you again.** Vibe 3 no longer marks such a session as blocked; the app now reads the wait from its journal, so the board, the status bar and the call show “needs you” until you answer, and “idle” once that Vibe is closed.
+- **A Vibe 3 session that waits for your approval or your answer needs you again**, whether the lead or one of its sub-agents asks. Vibe 3 no longer marks such a session as blocked; the app now reads the wait from its journal, so the board, the status bar and the call show “needs you” until you answer, and “idle” once that Vibe is closed.
 - **`agent-standup credits --here` credits Codex and Mistral Vibe sessions too**, the latest one started in the current folder. Inside Claude Code it keeps to Claude Code sessions, so the plugin's credits skill never credits a Codex session of the same folder, and crediting a Claude Code session no longer waits for Codex's compressed sessions to be read. By leninworld (#30).
 
 ## 1.49.3

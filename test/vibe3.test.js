@@ -56,8 +56,23 @@ test('a Vibe 3 session waiting on a permission needs you; once answered it works
   assert.equal(state(), 'working');
 });
 
+// A sub-agent that stops on a permission: the wait is in the sub-agent's own journal, and its lead (running, in self.wait) needs you for it.
+const LEAD2 = 'b6000000-0000-4000-8000-000000000006', CHILD2 = 'child-0000000000000000000000b2';
+const L2DIR = store(LEAD2, [msg(LEAD2, 'turn-a', 'b-user', 'user', 'Clean up with a helper.', 0), eff(LEAD2, 'turn-a', 'b-spawn', 'agents.spawn', { agent: 'generic', task: 'Delete build/.' }, done({ type: 'success' }, { _meta: { 'mistral.vibe.subagent': { agentName: 'cleaner', childSessionId: CHILD2 } } }), 100, 150, { kind: 'subagent', agentName: 'cleaner', childSessionId: CHILD2 }), eff(LEAD2, 'turn-a', 'b-wait', 'self.wait', { timeout_ms: 120000 }, { status: 'running' }, 200, 200)], running(LEAD2), { session_id: LEAD2, parent_session_id: null, start_time: new Date(T0).toISOString(), environment: { working_directory: WORK }, child_sessions: [] });
+const C2DIR = store(CHILD2, [msg(CHILD2, 'turn-c', 'c2-user', 'user', 'Delete build/.', 150), eff(CHILD2, 'turn-c', 'c2-bash', 'file_system.bash', { command: 'rm -rf build' }, { status: 'running' }, 300, 300)], running(CHILD2), null);
+
+test('a Vibe 3 sub-agent waiting on a permission makes its session need you', () => {
+  fresh(L2DIR); fresh(C2DIR);
+  const state = () => vibe.boardRow(vibe.row(LEAD2), Date.now()).state;
+  assert.equal(state(), 'waiting', 'the lead waits on its sub-agent');
+  journal(C2DIR, { type: 'callback_registered', sequence: 10, payload: { callback_id: 'approval-c2', kind: 'approval', routing: {} } });
+  assert.equal(state(), 'blocked');
+  journal(C2DIR, { type: 'callback_resolved', sequence: 11, payload: { callback_id: 'approval-c2', state: 'resolved', result: {} } });
+  assert.equal(state(), 'waiting');
+});
+
 test('a Vibe 3 sub-agent folder is not listed as a session; its lead counts it', () => {
-  const ids = vibe.sessions().map((r) => r.id).filter((id) => id !== ASK);
+  const ids = vibe.sessions().map((r) => r.id).filter((id) => id !== ASK && id !== LEAD2);
   assert.deepEqual(ids, [LEAD]);
   assert.equal(vibe.subCount(LEAD), 1);
   assert.equal(vibe.boardRow(vibe.row(LEAD), Date.now()).subTotal, 1);
