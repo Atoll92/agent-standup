@@ -143,6 +143,7 @@ footer a { color: var(--soft) }
 .doc ul { padding-left: 22px; margin: 0 0 14px } .doc li { margin: 6px 0 }
 .doc a { color: var(--gold) }
 .doc code { font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px }
+.doc img { display: block; max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line) }
 .doc pre { margin: 0 0 18px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto }
 .doc pre code { background: none; border: 0; padding: 0; font-size: 13px; line-height: 1.55; white-space: pre }
 .tbl { overflow-x: auto; margin: 0 0 14px }

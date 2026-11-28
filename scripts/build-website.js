@@ -29,7 +29,7 @@ function trackClicks() {
     if (u.origin === location.origin) {
       if (u.pathname === location.pathname && u.hash) return ['Jump', u.hash];
       const p = u.pathname.replace(/^\/[a-z]{2}(-[a-z]{2,4})?\//i, '/');
-      return /^\/shop\//.test(p) ? ['Shop', u.searchParams.get('ref') || ''] : /^\/(claude-code-subagents|codex-sessions|mistral-vibe-sessions|claude-code-session-files)\//.test(p) ? ['Guide', p.split('/')[1]] : null;
+      return /^\/shop\//.test(p) ? ['Shop', u.searchParams.get('ref') || ''] : /^\/(claude-code-subagents|codex-sessions|mistral-vibe-sessions|claude-code-session-files|claude-code-notifications|codex-notifications|claude-code-multiple-sessions)\//.test(p) ? ['Guide', p.split('/')[1]] : null;
     }
     if (/marketplace\.visualstudio\.com$/.test(u.hostname)) return ['Install VS Code', ''];
     if (/open-vsx\.org$/.test(u.hostname)) return ['Install Open VSX', ''];
@@ -104,10 +104,11 @@ function markdown(md) {
     const l = lines[i];
     if (!l.trim()) { i++; continue; }
     if (/^```/.test(l)) { const code = []; i++; while (i < lines.length && !/^```/.test(lines[i])) code.push(lines[i++]); i++; out.push('<pre><code>' + esc(code.join('\n')) + '</code></pre>'); continue; }   // a fenced block, shown as written
+    const im = /^!\[([^\]]*)\]\(([^)\s]+)\)$/.exec(l.trim()); if (im) { out.push(`<p><img src="${esc(im[2])}" alt="${esc(im[1])}" loading="lazy"></p>`); i++; continue; }   /* a picture on a line of its own */
     const h = /^(#{1,3}) (.+)$/.exec(l); if (h) { out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); i++; continue; }
     if (/^- /.test(l)) { const li = []; while (i < lines.length && /^- /.test(lines[i])) li.push('<li>' + inline(lines[i++].slice(2)) + '</li>'); out.push('<ul>' + li.join('') + '</ul>'); continue; }
     if (/^\|/.test(l) && /^\|[\s:|-]+\|$/.test((lines[i + 1] || '').trim())) { const head = cells(l), rows = []; i += 2; while (i < lines.length && /^\|/.test(lines[i])) rows.push(cells(lines[i++])); out.push('<div class="tbl"><table><thead><tr>' + head.map((c) => `<th>${c}</th>`).join('') + '</tr></thead><tbody>' + rows.map((r) => '<tr>' + r.map((c) => `<td>${c}</td>`).join('') + '</tr>').join('') + '</tbody></table></div>'); continue; }
-    const p = []; while (i < lines.length && lines[i].trim() && !/^(#{1,3} |- |\||```)/.test(lines[i])) p.push(lines[i++]); out.push('<p>' + inline(p.join(' ')) + '</p>');
+    const p = []; while (i < lines.length && lines[i].trim() && !/^(#{1,3} |- |\||```|!\[)/.test(lines[i])) p.push(lines[i++]); out.push('<p>' + inline(p.join(' ')) + '</p>');
   }
   return out.join('\n');
 }
@@ -135,7 +136,7 @@ ${analytics}
 ${markdown(read(file).replace(/^# .+\n/, ''))}
   </main>
 </div>
-<footer><div class="wrap"><nav><a href="../">Agent Standup</a><a href="../privacy/">Privacy</a><a href="../name-and-logo/">Name and logo</a><a href="../claude-code-subagents/">Claude Code sub-agents</a><a href="../codex-sessions/">Codex sessions</a><a href="../mistral-vibe-sessions/">Mistral Vibe sessions</a><a href="https://github.com/Atoll92/agent-standup" rel="noopener">GitHub</a></nav></div></footer>
+<footer><div class="wrap"><nav><a href="../">Agent Standup</a><a href="../privacy/">Privacy</a><a href="../name-and-logo/">Name and logo</a><a href="../claude-code-subagents/">Claude Code sub-agents</a><a href="../codex-sessions/">Codex sessions</a><a href="../mistral-vibe-sessions/">Mistral Vibe sessions</a><a href="../claude-code-notifications/">Claude Code notifications</a><a href="../codex-notifications/">Codex notifications</a><a href="../claude-code-multiple-sessions/">Multiple Claude Code sessions</a><a href="https://github.com/Atoll92/agent-standup" rel="noopener">GitHub</a></nav></div></footer>
 </body>
 </html>
 `);
@@ -145,6 +146,9 @@ page('website/guides/claude-code-subagents.md', 'claude-code-subagents', 'Claude
 page('website/guides/codex-sessions.md', 'codex-sessions', 'Codex session viewer', 'Follow and replay your OpenAI Codex sessions (desktop app and CLI) as a live call: prompts, commands with their output, file changes. Free, local, zero tokens.');
 page('website/guides/mistral-vibe-sessions.md', 'mistral-vibe-sessions', 'Mistral Vibe session viewer', 'Follow and replay your Mistral Vibe sessions and sub-agents as a live call, in both of Vibe\'s log formats. Free, local, zero tokens.');
 page('website/guides/claude-code-session-files.md', 'claude-code-session-files', 'What Claude Code writes to disk while it works', 'Where Claude Code keeps its transcripts, sub-agents, live status and background output, and how to tell from them whether an agent is done, stuck or waiting for you.');
+page('website/guides/claude-code-notifications.md', 'claude-code-notifications', 'Claude Code notifications: when it\'s done or waiting for you', 'Get a desktop notification or a sound when Claude Code finishes or needs your permission: the built-in setting, hooks for macOS, Linux and Windows, fixes when nothing shows, and a view of every session.');
+page('website/guides/codex-notifications.md', 'codex-notifications', 'Codex notifications: know when Codex is done or needs you', 'Get notified when the Codex CLI finishes a turn or waits for your approval: tui.notifications, the notify program (with a script to copy), and a view of every Codex session.');
+page('website/guides/claude-code-multiple-sessions.md', 'claude-code-multiple-sessions', 'Run several Claude Code sessions in parallel', 'How to run several Claude Code sessions at once without them stepping on each other (worktrees, background sessions, agent teams), and how to see which one needs you.');
 page('TRADEMARKS.md', 'name-and-logo', 'Name and logo', 'The code of Agent Standup is MIT licensed. What you may and may not do with its name, its logo and its characters.');
 // ---- /review/: the agents give the person their performance review, read from their Claude Code sessions in their own browser (website/src/review-stats.js); nothing is sent.
 // The cast is the app's own drawing code, cut out of public/index.html as the landing page does (scripts/build-landing.js).
@@ -157,6 +161,6 @@ page('TRADEMARKS.md', 'name-and-logo', 'Name and logo', 'The code of Agent Stand
     .replace(/__SITE__/g, site).replace('<!--ANALYTICS-->', () => analytics));
 }
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${site}sitemap.xml\n`);
-write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...LANGS.map((l) => l[4]), ...LANGS.map((l) => l[4] + 'shop/'), 'claude-code-subagents/', 'codex-sessions/', 'mistral-vibe-sessions/', 'claude-code-session-files/', 'review/', 'privacy/', 'terms/', 'name-and-logo/'].map((p) => `  <url><loc>${site}${p}</loc></url>`).join('\n')}\n</urlset>\n`);
+write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...LANGS.map((l) => l[4]), ...LANGS.map((l) => l[4] + 'shop/'), 'claude-code-subagents/', 'codex-sessions/', 'mistral-vibe-sessions/', 'claude-code-session-files/', 'claude-code-notifications/', 'codex-notifications/', 'claude-code-multiple-sessions/', 'review/', 'privacy/', 'terms/', 'name-and-logo/'].map((p) => `  <url><loc>${site}${p}</loc></url>`).join('\n')}\n</urlset>\n`);
 const size = (d) => fs.readdirSync(d, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? size(path.join(d, e.name)) : fs.statSync(path.join(d, e.name)).size), 0);
 console.log(`website built for ${site} in website/dist (v${version}, ${(size(dist) / 1048576).toFixed(1)} MB${waitlist ? ', waitlist on' : ', no waitlist form yet'}, ${people} supporter(s))`);
