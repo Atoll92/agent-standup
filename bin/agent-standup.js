@@ -3,7 +3,7 @@
 //   agent-standup [serve] [--port 4747] [--open]   start the local server and (optionally) open the page
 //   agent-standup status [--here] [--json] [--titles]  counts of working / needs you / your turn
 //   agent-standup statusline                        same, one short line; reads Claude Code's statusLine JSON on stdin
-//   agent-standup report [--day D] [--here] [--json] [--titles]  what each session did that day: time worked, time it waited for you, calls, files (the plugin's whiteboard and timesheet skills read it)
+//   agent-standup report [--day D] [--here] [--json] [--titles]  what each session did that day: time worked, time it waited for you, calls (and their kinds: read, test, delete…), test runs, files (the plugin's whiteboard and timesheet skills read it)
 //   agent-standup credits [--session ID] [--here] [--json]  a line for a pull request: who was on the call (the lead and its sub-agents, named as the call names them) and what they did (the plugin's credits skill)
 // Everything reads the local session files Claude Code already writes. Nothing is sent anywhere unless the call is in French, Spanish or Brazilian Portuguese (or German, Danish, Japanese, Korean or Chinese, once you say yes) or you turn on the jokes (they use your own Claude login or ANTHROPIC_API_KEY).
 const path = require('path'), { spawn } = require('child_process');
@@ -23,7 +23,7 @@ Usage
   agent-standup [serve] [--port 4747] [--open]   start the local server (http://localhost:4747)
   agent-standup status [--here] [--json]          what is going on right now (--here: only the current folder)
   agent-standup statusline                        one short line for a status bar (reads Claude Code's JSON on stdin)
-  agent-standup report [--day D] [--json]         what each session did that day: time worked, waits for you, calls, files
+  agent-standup report [--day D] [--json]         what each session did that day: time worked, waits for you, calls, test runs, files
   agent-standup credits [--session ID] [--here] [--json]   a credits line for a pull request: the lead and sub-agents of a session, its time and calls
 
 Options
@@ -63,7 +63,7 @@ if (flags.port !== undefined) {   // a real port number or nothing: no silent fa
   process.env.PORT = String(+flags.port);
 }
 process.env.AGENT_STANDUP_HOST = (flags.from || process.env.AGENT_STANDUP_FROM) === 'plugin' ? 'claude code plugin' : 'command line';   // named in a problem report (⚙ › Report a problem), and what the usage count counts (--from plugin or AGENT_STANDUP_FROM=plugin: the Claude Code plugin's commands; the plugin uses the variable, since a version without --from refuses the flag)
-const server = require('../server.js');
+const server = require('../server.js'), steps = require('../steps.js');
 const projKey = (dir) => String(dir || '').replace(/[^a-zA-Z0-9]/g, '-'), fold = (k) => (process.platform === 'win32' ? String(k || '').toLowerCase() : k);   // Claude Code's project folder naming · fold: on Windows a folder is the same whatever its case (c: or C:)
 
 function snapshot(dir) {
@@ -103,18 +103,19 @@ async function report(day, dir, titles) {
     if (dir && !(fold(r.proj) === fold(projKey(dir)) || (r.dir && fold(r.dir) === fold(projKey(dir))) || (b && b.dir && fold(b.dir) === fold(projKey(dir))))) continue;
     let tl; try { tl = server.timeline(r.proj, r.id); } catch { continue; }   // a session that cannot be read costs that session only
     const ev = tl.events.filter((e) => e.ts >= from && e.ts < to).sort((x, y) => x.ts - y.ts); if (!ev.length) continue;
-    let work = 0, wait = 0, turns = 0, asked = '', said = ''; const calls = {}, files = new Set(), subs = new Set(), arts = new Map();
+    let work = 0, wait = 0, turns = 0, asked = '', said = ''; const calls = {}, files = new Set(), subs = new Set(), arts = new Map(), kinds = {}, runs = [], answers = new Map();
     ev.forEach((e, i) => {
       if (e.kind === 'user') { turns++; if (!asked) asked = e.text; }
       if (e.kind === 'say' && e.agent === 'main') said = e.text;
       if (e.agent !== 'main' && e.agent !== 'user') subs.add(e.agent);
-      if (e.kind === 'tools') for (const t of e.tools) { const k = CALLS[t.d && t.d.kind] || 'other'; calls[k] = (calls[k] || 0) + 1; if (t.d && (t.d.kind === 'edit' || t.d.kind === 'write') && typeof t.d.file === 'string' && t.d.file) files.add(short(t.d.file)); }
-      if (e.kind === 'results') for (const it of e.items) if (it.art && it.art.url) arts.set(it.art.url, it.art.title || (arts.get(it.art.url) || ''));
+      if (e.kind === 'tools') for (const t of e.tools) { const k = CALLS[t.d && t.d.kind] || 'other'; calls[k] = (calls[k] || 0) + 1; if (t.step) kinds[t.step] = (kinds[t.step] || 0) + 1; if (t.tr != null) runs.push(t); if (t.d && (t.d.kind === 'edit' || t.d.kind === 'write') && typeof t.d.file === 'string' && t.d.file) files.add(short(t.d.file)); }
+      if (e.kind === 'results') for (const it of e.items) { answers.set(it.id, it); if (it.art && it.art.url) arts.set(it.art.url, it.art.title || (arts.get(it.art.url) || '')); }
       if (i) { const gap = ev[i].ts - ev[i - 1].ts; if (e.kind === 'user' || gap > GAP_WORK) wait += Math.min(gap, GAP_WAIT); else work += gap; }
     });
     const tool = TOOLS[r.source] || r.source || (r.project === 'Cowork' ? 'Cowork' : 'Claude Code');
+    const outs = runs.map((t) => steps.testOutcome(t, answers.get(t.id))), lt = outs[outs.length - 1], tests = runs.length ? { runs: runs.length, failed: outs.filter((o) => o.st === 'fail').length, last: lt.st, ...(lt.tests ? { pass: lt.tests.pass, fail: lt.tests.fail, total: lt.tests.total } : {}) } : null;   // the day's test runs: how many, how many failed, and the last one (ran: its outcome is not in the record)
     rows.push({ project: projLabel(String(r.project || r.proj).replace(/^(Codex|Mistral Vibe|Vibe) · /, '')), tool, id: r.id, state: b ? b.state : 'idle', start: hm(ev[0].ts), end: hm(ev[ev.length - 1].ts), t0: ev[0].ts,
-      workMin: Math.round(work / 60e3), waitMin: Math.round(wait / 60e3), turns, subAgents: subs.size, calls, filesChanged: files.size,
+      workMin: Math.round(work / 60e3), waitMin: Math.round(wait / 60e3), turns, subAgents: subs.size, calls, steps: kinds, ...(tests ? { tests } : {}), filesChanged: files.size,
       ...(titles ? { title: clipT(r.title, 120), asked: clipT(asked, 240), said: clipT(said, 400), files: [...files].slice(0, 30), artifacts: [...arts].map(([url, title]) => ({ title: clipT(title, 120), url })) } : {}) });
   }
   rows.sort((a, b) => a.t0 - b.t0); rows.forEach((r) => delete r.t0);
@@ -189,8 +190,9 @@ if (cmd === 'credits') {
 } else if (cmd === 'report') {
   report(flags.day, flags.here ? process.cwd() : '', flags.titles).then((rep) => {
   const callLine = (c) => Object.entries(c).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${n} ${n === 1 ? k.replace(/s$/, '') : k}`).join(' · ');
+  const testLine = (t) => (!t ? '' : ` · ${t.runs} test run${t.runs === 1 ? '' : 's'}${t.failed ? ` (${t.failed} failed)` : ''}, last ${t.last === 'pass' ? 'passed' + (t.total ? ` ${t.pass}/${t.pass + t.fail}` : '') : t.last === 'fail' ? 'failed' + (t.fail ? ` (${t.fail})` : '') : t.last === 'running' ? 'still running' : 'outcome unknown'}`);
   const text = flags.json ? JSON.stringify(rep, null, 2) : [`${rep.day} · ${rep.sessions} session${rep.sessions === 1 ? '' : 's'} · ${dur(rep.workMin)} worked · ${dur(rep.waitMin)} waited for you`,
-    ...rep.rows.map((r) => `  ${r.start}–${r.end}  ${(r.tool + ' · ' + r.project).padEnd(36).slice(0, 36)}  ${dur(r.workMin).padStart(5)} worked  ${dur(r.waitMin).padStart(5)} waited  ${callLine(r.calls)}${r.title ? '\n      ' + r.title : ''}`)].join('\n');
+    ...rep.rows.map((r) => `  ${r.start}–${r.end}  ${(r.tool + ' · ' + r.project).padEnd(36).slice(0, 36)}  ${dur(r.workMin).padStart(5)} worked  ${dur(r.waitMin).padStart(5)} waited  ${callLine(r.calls)}${testLine(r.tests)}${r.title ? '\n      ' + r.title : ''}`)].join('\n');
   process.stdout.write(text + '\n', () => process.exit(0));   // the timelines leave timers behind: once written, it is done
   });
 } else if (cmd === 'statusline') {

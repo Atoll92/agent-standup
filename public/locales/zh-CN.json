@@ -478,5 +478,15 @@
  "Read at": "读取于",
  "Two-ink print": "双色印刷",
  "New · the same cast, redrawn": "新 · 同一班人马，重新绘制",
- "The app’s characters, redrawn as a print in two inks. New, and still being refined.": "应用的角色，重新绘制成双色印刷的样子。这是新的，仍在打磨中。"
+ "The app’s characters, redrawn as a print in two inks. New, and still being refined.": "应用的角色，重新绘制成双色印刷的样子。这是新的，仍在打磨中。",
+ "Testing": "测试",
+ "Checking": "检查",
+ "Installing": "安装",
+ "Building": "构建",
+ "Deleting": "删除",
+ "Last test run": "最近一次测试运行",
+ "Still running…": "仍在运行…",
+ "Files were edited since.": "此后有文件被修改。",
+ "The command ended with exit code 0: only its output shows the failures.": "命令以退出码 0 结束：只有它的输出显示了失败。",
+ "Outcome unknown: its output has no summary, and its exit code may be another command’s.": "结果未知：输出里没有汇总，退出码也可能来自另一条命令。"
 }

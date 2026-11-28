@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const codex = require('./codex.js');     // Codex sessions, read as the same call (see codex.js)
 const vibe = require('./vibe.js');       // Mistral Vibe sessions, the same way (see vibe.js)
 const limits = require('./limits.js');   // plan limits (5-hour and weekly windows), read from local files only (see limits.js)
+const steps = require('./steps.js');   // what kind of step each call was (read, test, delete…), and whether a command runs tests (see steps.js)
 const boards = require('./boards.js');   // Claude Whiteboards and Sheets, drawn again from the session's writes for the shared screen (see boards.js)
 const reply = require('./reply.js');     // the human's line, typed into the session's tmux pane (see reply.js); off unless AGENT_STANDUP_REPLY=on
 const SOURCES = [codex, vibe], sourceOf = (proj) => SOURCES.find((m) => m.PROJ === proj) || null, guard = (fn, or) => { try { return fn(); } catch (e) { logError('reader', e); return or; } };   // guard: a session of another tool that cannot be read costs that session, never the list   // the tools other than Claude Code: each lists its sessions under one made-up project
@@ -220,6 +221,7 @@ const toolLabel = (b, ts) => {
       if (mcp && /(^|_)Claude_Docs$/.test(mcp[1] || '') && mcp[2] === 'batch' && i.container && i.container.create && typeof i.container.create.name === 'string') { out.d = { kind: 'artifact', file: '', title: clip(i.container.create.name, 120), note: '', doc: 1 }; break; }   // a doc of the Claude Docs connector being born (its later edits are calls like any other)
       out.d = mcp ? { kind: 'text', what: 'mcp', v: (mcp[1] || '') + ' · ' + (mcp.slice(2).join('__') || ''), text: clip(JSON.stringify(i), 400) } : { kind: 'text', text: clip(JSON.stringify(i), 300) };
   }
+  { const sp = out.d && out.d.kind === 'cmd' ? steps.shellStep(i.command) : { step: steps.toolStep(b.name) }; if (sp.step) out.step = sp.step; if (sp.tr != null) out.tr = sp.tr; }   // step: what kind of step it was · tr: it runs tests, and how sure its exit code is the runner's own (2: nothing follows the runner, 1: only &&, 0: something else may have set it)
   return out;
 };
 // What a publish answered: the link of the page on claude.ai, its title and which version this is. typed: made from an Artifact type (a deck, a design, a document), whose page is the type's and not the file that was sent.
@@ -293,7 +295,7 @@ function diffOf(files, moreFiles) {
 // task (a task created), bg (the id of a command left running in the background, whose output /api/taskout reads). The original of an edited file, which Claude Code also notes, is never kept.
 const CMD_TOOL = new Set(['Bash', 'mcp__workspace__bash', 'mcp__terminal__run_in_terminal']), taskId = (v) => (typeof v === 'string' && /^[\w-]{1,40}$/.test(v) ? v : '');
 function resultMore(n, text, u) {
-  const o = {}; if (CMD_TOOL.has(n)) { const t = testsOf(text); if (t) o.tests = t; }
+  const o = {}; if (CMD_TOOL.has(n)) { const t = testsOf(text); if (t) o.tests = t; else { const c = steps.looseTests(text); if (c) o.tcount = c; } const x = steps.printedExit(text); if (x != null) o.pexit = x; }   // tcount: counts without a whole summary, pexit: an exit code it printed (trusted only for a command known to run tests, see steps.testOutcome)
   if (!u || typeof u !== 'object' || Array.isArray(u)) return o;
   if (n === 'Bash') { const d = u.bashEditDiff, x = d && Array.isArray(d.files) && diffOf(d.files.map((f) => ({ file: f && f.filePath, hunks: f && f.hunks })), d.moreFiles); if (x) o.diff = x; if (taskId(u.backgroundTaskId)) o.bg = u.backgroundTaskId; }
   else if (n === 'Edit' || n === 'MultiEdit' || n === 'Write') { const x = Array.isArray(u.structuredPatch) && diffOf([{ file: u.filePath, hunks: u.structuredPatch }], 0); if (x) o.diff = x; }
@@ -371,7 +373,8 @@ function taskOutput(proj, id, task) {   // { text: its last whole lines (12 KB a
       text = noAnsi(text).split('\n').map((l) => { l = l.replace(/\r$/, ''); const r = l.lastIndexOf('\r'); return r >= 0 ? l.slice(r + 1) : l; }).join('\n');   // a progress bar redrawn in place: its last state
       const over = Buffer.byteLength(text) - TASKOUT_MAX; if (over > 0) { const b = Buffer.from(text), nl = b.indexOf(10, over); text = nl >= 0 && nl < b.length - 1 ? b.subarray(nl + 1).toString('utf8') : b.subarray(b.length - TASKOUT_MAX / 4).toString('utf8'); }   // cut once, at the first whole line that fits
       const m = /\[exited with code (-?\d+)\]\s*$/.exec(text);
-      return { text, done: !!m || Date.now() - st.mtimeMs > 10 * 60e3, code: m ? +m[1] : null, size, mtime: st.mtimeMs };   // done: it said so, or it has been silent for 10 minutes
+      const tests = testsOf(text), tcount = !tests && steps.looseTests(text), pexit = steps.printedExit(text.replace(/\[exited with code -?\d+\]\s*$/, ''));
+      return { text, done: !!m || Date.now() - st.mtimeMs > 10 * 60e3, code: m ? +m[1] : null, size, mtime: st.mtimeMs, ...(tests ? { tests } : {}), ...(tcount ? { tcount } : {}), ...(pexit != null ? { pexit } : {}) };   // tests, tcount, pexit: what a test run's output says of it (see resultMore)   // done: it said so, or it has been silent for 10 minutes
     }
   }
   return null;
@@ -1029,6 +1032,16 @@ function readNew(file, agent, journal, record = parseRecord) {
   if (record.after) { try { record.after(st); } catch {} }   // a format without a time on each line (Mistral Vibe) dates what was just read, once it has all of it
   return st;
 }
+// A command left running in the background said it ended (Claude Code's <task-notification>, with its exit code): written on the answer the call got when it was started, so that a test run's
+// outcome is known when the call is read again (the live page reads the command's output itself, /api/taskout). No event of its own: nothing else about the call changes.
+function bgEnded(st, text, ts) {
+  if (typeof text !== 'string' || !text.includes('<task-notification>')) return;
+  for (const m of text.matchAll(/<task-notification>([\s\S]{0,4000}?)<\/task-notification>/g)) {
+    const id = (m[1].match(/<tool-use-id>([^<]{1,80})<\/tool-use-id>/) || [])[1], status = (m[1].match(/<status>([^<]{1,40})<\/status>/) || [])[1], it = id && st.bgItem.get(id);
+    if (!it || it.bgEnd || !status || status === 'running') continue;
+    const c = /exit code (-?\d+)/i.exec(m[1]); it.bgEnd = { st: status, ts, ...(c ? { code: +c[1] } : {}) };
+  }
+}
 function parseRecord(st, r) {
   if (!st.cwd && typeof r.cwd === 'string' && r.cwd) st.cwd = r.cwd;   // the folder the session started in; later cd records do not change its project
   const agent = st.agent, ts = Date.parse(r.timestamp) || 0, push = (e) => { e.k = agent + ':' + st.raw.length; st.raw.push(e); return e; };   // k: the event's key in the live feed = whose file + its rank in it. A file is only ever appended to, so the rank never changes (and when it is not, the whole file is read again under a new number, see readNew)
@@ -1039,6 +1052,7 @@ function parseRecord(st, r) {
   if (r.type === 'queue-operation' && typeof r.content === 'string' && r.content.includes('<task-notification>')) {   // how Claude Code reports that a background sub-agent has stopped
     const id = (r.content.match(/<tool-use-id>([^<]+)<\/tool-use-id>/) || [])[1], status = (r.content.match(/<status>([^<]+)<\/status>/) || [])[1];
     if (id && status && status !== 'running') push({ ts, agent, kind: 'agentdone', toolId: id });
+    if (st.bgItem) bgEnded(st, r.content, ts);
     return;
   }
   if (r.type === 'attachment' && r.attachment && r.attachment.type === 'task_reminder' && Array.isArray(r.attachment.content)) {   // Claude Code reminds the agent of its task list now and then: the whole list as it stands, which the shared screen takes over from the calls that changed it
@@ -1061,9 +1075,10 @@ function parseRecord(st, r) {
     if (one && st.plans && r.toolUseResult && typeof r.toolUseResult.plan === 'string' && r.toolUseResult.plan.trim()) for (const b of blocks(r)) if (b.type === 'tool_result' && st.plans.has(b.tool_use_id)) st.plans.get(b.tool_use_id).d.text = clip(r.toolUseResult.plan.trim(), 4000);   // the answer names the plan exactly: the plan file holds only the latest one
     for (const b of blocks(r)) if (b.type === 'tool_result' && st.toolName[b.tool_use_id] && !NO_RESULT.has(st.toolName[b.tool_use_id])) {
       const n = st.toolName[b.tool_use_id], text = resultText(b.content), img = resultImages(b.content).length, files = n === 'Bash' && !b.is_error ? docPaths(text, false).map((f) => absPath(f, r.cwd)) : [], art = !b.is_error && st.pubs && st.pubs.has(b.tool_use_id) ? artOf(st, st.pubs.get(b.tool_use_id), r.toolUseResult, text, b.tool_use_id) : null;
-      items.push({ id: b.tool_use_id, err: !!b.is_error, out: clipOut(text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trimEnd(), RESULT_MAX[n] || (/^mcp__/.test(n) ? 900 : 600)), ...(img ? { img } : {}), ...(files.length ? { files } : {}), ...(art ? { art } : {}), ...(BROWSER_MCP.test(n) && !b.is_error ? browserSeen(text, n) : {}), ...resultMore(n, text, one ? r.toolUseResult : null) });   // img: how many pictures came back; the page fetches them from /api/media · files: the documents a command says it made
+      const it = { id: b.tool_use_id, err: !!b.is_error, out: clipOut(text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trimEnd(), RESULT_MAX[n] || (/^mcp__/.test(n) ? 900 : 600)), ...(img ? { img } : {}), ...(files.length ? { files } : {}), ...(art ? { art } : {}), ...(BROWSER_MCP.test(n) && !b.is_error ? browserSeen(text, n) : {}), ...resultMore(n, text, one ? r.toolUseResult : null) }; items.push(it); if (it.bg && CMD_TOOL.has(n)) (st.bgItem || (st.bgItem = new Map())).set(b.tool_use_id, it);   // img: how many pictures came back; the page fetches them from /api/media · files: the documents a command says it made
     }
     if (items.length) push({ ts, agent, kind: 'results', items });
+    if (st.bgItem) bgEnded(st, blocks(r).filter((b) => b.type === 'text').map((b) => b.text).join('\n'), ts);
     const typed = blocks(r).filter((b) => b.type === 'text').map((b) => b.text).join('\n').replace(HARNESS, ''), cut = /^\s*\[Request interrupted[^\]]*\]/i.test(typed);   // what the human typed, without the blocks the harness wraps around it
     if (agent !== 'main') { if (!st.prompt && typed.trim() && !st.raw.length) st.prompt = { ts, text: typed.trim() }; return; }   // a sub-agent's first user message is the order, emitted from the parent's side (kept here for the agents of a workflow, whose order is in no other file)
     if (cut && st.out) st.out.clear(); if (cut && st.act >= 0) st.raw[st.act].end = 1;   // Esc: the turn stops there, without the end_turn mark. The last thing the lead said or did closes it

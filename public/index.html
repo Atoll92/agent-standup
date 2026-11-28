@@ -26,9 +26,9 @@
   .sp { flex:1 }
   .tok { font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; background:var(--panel2); color:#c3c6d4; white-space:nowrap } .tok:hover { color:#fff }
   .tbadge { position:absolute; top:30px; right:6px; display:flex; gap:4px; z-index:2; pointer-events:none } .tbadge span { font-size:10.5px; padding:1px 7px; border-radius:99px; background:rgba(14,15,24,.78); backdrop-filter:blur(6px) }
-  .tbadge .e { color:#ff7b72 } .tbadge .w { color:#79c0ff } .tbadge .s { color:#ffb347 } .tbadge .q { color:#9aa3bd } .tbadge [data-tip] { pointer-events:auto; cursor:help }
+  .tbadge .e { color:#ff7b72 } .tbadge .w { color:#79c0ff } .tbadge .s { color:#ffb347 } .tbadge .q { color:#9aa3bd } .tbadge .t.pass { color:#7ee787 } .tbadge .t.fail { color:#ff7b72 } .tbadge .t.running, .tbadge .t.ran { color:#9aa3bd } .tbadge .t.old { opacity:.6 } .tbadge [data-tip] { pointer-events:auto; cursor:help }
   #btip { position:fixed; z-index:30; top:0; left:0; width:max-content; max-width:min(360px, calc(100vw - 16px)); padding:12px 12px 10px; border-radius:12px; background:rgba(22,25,40,.97); border:1px solid rgba(255,255,255,.09); box-shadow:0 18px 48px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.3); backdrop-filter:blur(10px); color:var(--text); font-size:12.5px; line-height:1.45; pointer-events:none; opacity:0; transform:translateY(-4px); transition:opacity .14s ease, transform .14s ease; visibility:hidden }
-  #btip.on { opacity:1; transform:none; visibility:visible } #btip.k-e { --c:#ff7b72; --cb:rgba(255,123,114,.15) } #btip.k-w { --c:#79c0ff; --cb:rgba(121,192,255,.15) } #btip.k-l { --c:#d2a8ff; --cb:rgba(210,168,255,.15) } #btip.k-s { --c:#ffb347; --cb:rgba(255,179,71,.15) } #btip.k-q { --c:#9aa3bd; --cb:rgba(154,163,189,.15) }
+  #btip.on { opacity:1; transform:none; visibility:visible } #btip.k-e { --c:#ff7b72; --cb:rgba(255,123,114,.15) } #btip.k-t { --c:#7ee787; --cb:rgba(126,231,135,.15) } #btip.k-tf { --c:#ff7b72; --cb:rgba(255,123,114,.15) } #btip.k-tq { --c:#9aa3bd; --cb:rgba(154,163,189,.15) } #btip.k-w { --c:#79c0ff; --cb:rgba(121,192,255,.15) } #btip.k-l { --c:#d2a8ff; --cb:rgba(210,168,255,.15) } #btip.k-s { --c:#ffb347; --cb:rgba(255,179,71,.15) } #btip.k-q { --c:#9aa3bd; --cb:rgba(154,163,189,.15) }
   #btip .bh { display:flex; align-items:center; gap:8px; padding:0 2px } #btip .bi { flex:none; width:24px; height:24px; border-radius:7px; display:grid; place-items:center; font-size:12.5px; background:var(--cb); color:var(--c) } #btip .bt { font-weight:650; font-size:13px; white-space:nowrap } #btip .bn { padding:0 7px; border-radius:99px; background:var(--cb); color:var(--c); font-size:11px; font-weight:700; line-height:18px } #btip .ba { margin-left:auto; padding-left:14px; color:var(--dim); font-size:11.5px; white-space:nowrap }
   #btip ul { list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:6px } #btip li { padding:7px 9px 8px; border-radius:8px; background:rgba(255,255,255,.045); box-shadow:inset 2px 0 0 var(--c); min-width:0 } #btip .r1 { display:flex; align-items:center; gap:8px } #btip .rk { font-weight:600 } #btip .rn { min-width:0; color:var(--dim); font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap } #btip .rt { margin-left:auto; padding-left:10px; color:var(--dim); font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap }
   #btip .pill { font-size:10.5px; font-weight:650; padding:1px 6px; border-radius:5px; background:rgba(255,255,255,.08); color:#cfd6e6 } #btip code { display:block; margin-top:3px; font:11.5px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:#d6dcea; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
@@ -1464,7 +1464,7 @@ const applyStatus = (ev) => {
 };
 function recomputeStatus(upTo) {
   S.files = new Map(); S.cands = new Map(); S.turnN = 0; S.turnSaid = ''; S.arts = new Map(); S.artCalls = new Map();
-  S.term = {}; S.todos = {}; S.run = {}; S.act = {}; S.usage = {}; S.errs = {}; S.lastAct = {}; S.waitOn = {}; S.orderTs = {}; S.prevState = {}; S.lastTool = {}; S.mainBusyAt = 0; S.turnOver = false; S.th = {}; S.ctx = {}; S.model = {}; S.effort = {}; S.adv = {}; S.cw = {}; S.compacts = {}; S.ctxWarned = {}; S.rep = {}; S.loops = {}; S.wst = {}; S.errList = {}; S.callById = new Map(); S.recomputing = true; document.querySelectorAll('.tile').forEach((t) => { clearTimeout(t._byeT); t.classList.remove('bye'); }); hidePresent();
+  S.term = {}; S.todos = {}; S.run = {}; S.act = {}; S.usage = {}; S.errs = {}; S.tl = {}; S.evTs = 0; S.lastAct = {}; S.waitOn = {}; S.orderTs = {}; S.prevState = {}; S.lastTool = {}; S.mainBusyAt = 0; S.turnOver = false; S.th = {}; S.ctx = {}; S.model = {}; S.effort = {}; S.adv = {}; S.cw = {}; S.compacts = {}; S.ctxWarned = {}; S.rep = {}; S.loops = {}; S.wst = {}; S.errList = {}; S.callById = new Map(); S.recomputing = true; document.querySelectorAll('.tile').forEach((t) => { clearTimeout(t._byeT); t.classList.remove('bye'); }); hidePresent();
   S.status = {}; S.tc = {}; S.doneAt = {}; S.gone.clear(); S.leaving.clear(); document.querySelectorAll('.tile.vanishing').forEach((t) => t.classList.remove('vanishing')); const doneIdx = {}; document.querySelectorAll('.ticker').forEach((x) => { x.classList.remove('on'); x.innerHTML = ''; });
   for (let i = 0; i < upTo; i++) {
     const e = S.events[i]; applyStatus(e); tally(e); if (e.kind === 'tools') S.tc[e.agent] = (S.tc[e.agent] || 0) + e.tools.length;
@@ -1484,7 +1484,7 @@ function syncUI() {
 
 // ---------- tool ticker, shared screen, flying messages ----------
 // ---------- what each agent is doing: tool calls with their real outputs ----------
-S.term = {}; S.todos = {}; S.run = {}; S.act = {}; S.usage = {}; S.errs = {}; S.lastAct = {}; S.waitOn = {}; S.orderTs = {}; S.prevState = {}; S.ctx = {}; S.model = {}; S.effort = {}; S.adv = {}; S.cw = {}; S.compacts = {}; S.ctxWarned = {}; S.rep = {}; S.loops = {}; S.wst = {}; S.errList = {}; S.callById = new Map(); S.present = null; S.camFor = null; let presentTimer = null;
+S.term = {}; S.todos = {}; S.run = {}; S.act = {}; S.usage = {}; S.errs = {}; S.tl = {}; S.evTs = 0; S.lastAct = {}; S.waitOn = {}; S.orderTs = {}; S.prevState = {}; S.ctx = {}; S.model = {}; S.effort = {}; S.adv = {}; S.cw = {}; S.compacts = {}; S.ctxWarned = {}; S.rep = {}; S.loops = {}; S.wst = {}; S.errList = {}; S.callById = new Map(); S.present = null; S.camFor = null; let presentTimer = null;
 S.files = new Map(); S.cands = new Map(); S.turnN = 0; S.turnSaid = ''; S.fgone = new Set(); S.fmade = new Map(); S.arts = new Map(); S.artCalls = new Map(); S.artOk = new Map(); S.artPin = null; S.artWhole = null; S.wholeSeen = new Set();   // files: path → the Write call that created it, in the order they were written · cands: the documents the commands name (see candFile) · turnN: how many orders you gave so far · turnSaid: what you and the lead said in this turn · fgone: the files found missing on a click · fmade: what the server answered about a document a command names
 const later = (k, fn, ms = 160) => { later.p = later.p || {}; if (later.p[k]) return; later.p[k] = setTimeout(() => { later.p[k] = 0; fn(); }, ms); };   // coalesce bursts of repaints
 const fmtTok = (n) => (n < 1000 ? String(n) : n < 1e6 ? (n / 1000).toFixed(n < 1e4 ? 1 : 0) + 'k' : (n / 1e6).toFixed(n < 1e7 ? 2 : 1) + 'M');
@@ -1544,6 +1544,11 @@ function tipHtml(k, id) {
     return head('🔁', errs ? L('Échecs répétés', 'Repeated failures') : L('Même appel répété', 'Same call repeated'), '×' + x.n) + foot((errs ? L('{0} échecs d’affilée', '{0} failures in a row') : L('{0} fois d’affilée', '{0} times in a row')).replace('{0}', () => x.n) + (x.tool ? ' · ' + toolShort(x.tool) : '')); }
   if (k === 's') { const r = S.run[id]; if (!r) return ''; const c = S.callById && S.callById.get(r.id);
     return head('⏳', L('Commande longue', 'Long-running command'), r.ts ? fmtShort(Date.now() - r.ts) : '') + `<ul>${row(r.name ? `<span class="pill">${esc(toolShort(r.name))}</span>` : '', clockOf(r.ts), callText(c) || (c && c.d && c.d.note) || '')}</ul>`; }
+  if (k === 't' || k === 'tf' || k === 'tq') { const x = S.tl[id]; if (!x) return ''; const v = testVerdict(x), c = v.tests, call = (S.callById && S.callById.get(x.tool.id)) || x.tool;
+    const counts = c ? `<div class="ro"><div>${c.pass} ${esc(L('réussis', 'passed'))} · ${c.fail} ${esc(L('en échec', 'failed'))}</div>${(c.failed || []).slice(0, 4).map((f) => `<div>✗ ${esc(f)}</div>`).join('')}</div>` : '';
+    const why = v.st === 'running' ? L('En cours…', 'Still running…') : v.st === 'ran' ? L('Issue inconnue : sa sortie n’a pas de bilan, et son code de sortie peut être celui d’une autre commande.', 'Outcome unknown: its output has no summary, and its exit code may be another command’s.') : v.hid ? L('La commande a fini avec le code de sortie 0 : seule sa sortie montre les échecs.', 'The command ended with exit code 0: only its output shows the failures.') : '';
+    return head('🧪', L('Dernier lancement des tests', 'Last test run'), c ? (v.st === 'fail' ? c.fail + ' ✗' : c.pass + '/' + (c.pass + c.fail)) : '') + `<ul>${row(`<span class="pill">${esc(toolShort(call.name || 'Bash'))}</span>` + (call.d && call.d.note ? `<span class="rn">${esc(call.d.note)}</span>` : ''), clockOf(x.ts), callText(call), counts)}</ul>`
+      + foot(why) + (x.old ? foot(L('Des fichiers ont été modifiés depuis.', 'Files were edited since.')) : '') + foot(L('Repéré dans la session elle-même, sans appel au modèle.', 'Spotted in the session itself, with no model call.')); }
   if (k === 'q') return S.lastAct[id] ? head('💤', L('Silencieux', 'Gone quiet'), '') + foot(L('Aucune activité depuis {0}.', 'No activity for {0}.').replace('{0}', () => fmtShort(Date.now() - S.lastAct[id]))) : '';
   return '';
 }
@@ -1566,7 +1571,7 @@ function tally(ev) {   // numbers that pile up over a session: token usage, erro
   noteFiles(ev);
   if (ev.kind === 'compact') { S.compacts[ev.agent] = (S.compacts[ev.agent] || 0) + 1; delete S.ctxWarned[ev.agent]; }
   if (ev.kind === 'tasks') applyTasks(ev);
-  noteCalls(ev); if (wasteStep(S.wst, ev)) later('badges', renderBadges, 300);
+  noteCalls(ev); testLight(ev); if (wasteStep(S.wst, ev)) later('badges', renderBadges, 300);
   const det = loopStep(S.rep, ev); if (det) { S.loops[ev.agent] = det; later('badges', renderBadges, 300); } else if (S.loops[ev.agent] && (ev.kind === 'results' ? (S.loops[ev.agent].kind === 'errors' && ev.items.every((it) => !it.err)) : (ev.kind === 'tools' && S.rep[ev.agent].n < 2))) { delete S.loops[ev.agent]; later('badges', renderBadges, 300); }
   if (ev.kind === 'usage') { const c = ev.u.i + ev.u.r + ev.u.w; if (c > 0 && ev.model !== '<synthetic>') { S.ctx[ev.agent] = c; S.model[ev.agent] = ev.model; if (ev.cw) S.cw[ev.agent] = ev.cw; if (ev.ef) S.effort[ev.agent] = ev.ef; if (ev.adv) S.adv[ev.agent] = ev.adv; } const u = (S.usage[ev.agent] = S.usage[ev.agent] || { i: 0, o: 0, r: 0, w: 0 }); u.i += ev.u.i; u.o += ev.u.o; u.r += ev.u.r; u.w += ev.u.w; later('tok', renderTokens, 300); }   // which also redraws the context chips. Asking for those first, under the same name, left this one unasked: the counts on the tiles and in the header stood still during a live call
   else if (ev.kind === 'results') ev.items.forEach((it) => { if (it.err) { S.errs[ev.agent] = (S.errs[ev.agent] || 0) + 1; later('badges', renderBadges, 300); oops(ev.agent); noteTrouble(ev.agent, false); } else noteTrouble(ev.agent, true); });
@@ -1742,10 +1747,38 @@ function paintRoster(ros) {   // a fixed list beside the call: who is doing what
 $('#roster').onclick = (e) => { if (e.target.closest('.rnm')) return openPrefs($('#subNamesBox')); const r = e.target.closest('.rr'); if (!r) return; if (r.classList.contains('left')) { openDetail(r.dataset.id); return; } S.focusLock = Date.now() + 25000; setFocus(r.dataset.id); paintStates(); };
 $('#roster').onkeydown = (e) => { const r = e.target.closest('.rr'); if (r && r.classList.contains('left') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openDetail(r.dataset.id); } else if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); S.focusLock = Date.now() + 25000; setFocus(r.dataset.id); paintStates(); } else if (r && e.key === 'i') openDetail(r.dataset.id); };
 $('#roster').ondblclick = (e) => { const r = e.target.closest('.rr'); if (r) openDetail(r.dataset.id); };
+// The test light: per agent, its last test run (a command the server says runs tests, tool.tr, or any command whose output has a test summary) and what it came to, read from the runner's own
+// output first (a pipe into tail or grep hides a failure from the exit code, not from the output), then from the exit code where the line leaves no doubt it is the runner's. A run still going
+// in the background is followed live through /api/taskout; read again, its end is on its answer (bgEnd). old: the agent edited files since. Nothing is asked of a model.
+function testLight(ev) {
+  if (ev.ts > (S.evTs || 0)) S.evTs = ev.ts;
+  const x = S.tl[ev.agent];
+  if (ev.kind === 'tools') for (const t of ev.tools) {
+    if (t.tr != null) { S.tl[ev.agent] = { tool: t, ts: ev.ts, res: null }; later('badges', renderBadges, 300); }
+    else if (x && x.res && !x.old && (t.step === 'edit' || t.step === 'write') && t.d && typeof t.d.file === 'string' && !/\.(md|txt|log)$/i.test(t.d.file)) { x.old = 1; later('badges', renderBadges, 300); }
+  }
+  else if (ev.kind === 'results') for (const it of ev.items) {
+    const y = S.tl[ev.agent]; if (y && y.tool.id === it.id) { y.res = it; later('badges', renderBadges, 300); }
+    else if (it.tests && !(y && !y.res)) { const c = S.callById && S.callById.get(it.id); S.tl[ev.agent] = { tool: c ? { id: it.id, ...c } : { id: it.id, name: 'Bash' }, ts: ev.ts, res: it }; later('badges', renderBadges, 300); }   /* a summary printed by a command that is not a test runner (a script that runs them) */
+  }
+}
+function testVerdict(x) {   // { st: pass | fail | ran | running, tests?, hid? } · a copy of testOutcome in steps.js: keep the two in step
+  const res = x.res; if (!res) return { st: 'running' };
+  const tr = x.tool.tr, lv = x.live, t = res.tests || (lv && (lv.tests || (tr != null && lv.tcount))) || (tr != null && res.tcount) || null;
+  if (t) return { st: t.fail ? 'fail' : 'pass', tests: t, ...(t.fail && !res.err && !res.bg ? { hid: 1 } : {}) };
+  let code; const pe = res.pexit != null ? res.pexit : lv && lv.pexit != null ? lv.pexit : null;
+  if (tr === 3 && pe != null) code = pe;
+  else if (res.bg) { const e = res.bgEnd && !(res.bgEnd.ts > (S.evTs || 0)) ? res.bgEnd : null, c = lv ? lv.code : e ? e.code : null; if (c == null) return { st: e || x.bgDone || (!S.live && !res.bgEnd) ? 'ran' : 'running' }; code = c; }   /* replayed: running until the time it said it ended */
+  else { const m = /^(?:Exit code|Process exited with code) (-?\d+)/.exec(String(res.out || '')); code = res.err ? (m ? +m[1] : null) : 0; if (code == null) return { st: 'ran' }; }
+  if (code !== 0) return tr === 2 || tr === 3 ? { st: 'fail' } : { st: 'ran' };
+  return tr >= 1 ? { st: 'pass' } : { st: 'ran' };
+}
+const testBadge = (v) => '🧪 ' + (v.st === 'running' ? '…' : v.st === 'ran' ? '?' : v.tests ? (v.st === 'fail' ? v.tests.fail + ' ✗' : v.tests.pass + ' ✓') : v.st === 'fail' ? '✗' : '✓');
 function renderBadges() {   // per tile: failed tool calls, a command that has been running a long time, an agent that went quiet
   const now = Date.now();
   for (const id in S.agents) {
     const t = $('#t-' + id); if (!t) continue; const b = t.querySelector('.tbadge'), parts = []; let slow = false, quiet = false;
+    const tl = S.tl[id]; if (tl) { const v = testVerdict(tl); parts.push(`<span class="t ${v.st}${tl.old ? ' old' : ''}" title="" data-tip="${v.st === 'pass' ? 't' : v.st === 'fail' ? 'tf' : 'tq'}">${testBadge(v)}</span>`);   /* its tip takes its colour: green, red, grey */ }
     if (S.errs[id]) parts.push(`<span class="e" title="" data-tip="e">✗ ${S.errs[id]}</span>`);
     const ws = S.wst.items && S.wst.items[id]; if (ws && ws.length) parts.push(`<span class="w" title="" data-tip="w">♻ ${ws.length}</span>`);
     if (S.loops[id]) parts.push(`<span class="l" title="" data-tip="l">🔁 ×${S.loops[id].n}</span>`);
@@ -1798,13 +1831,18 @@ setInterval(() => { if (!S.agents || !S.live) return; renderBadges(); updateTitl
 const base = (f) => String(f || '').split('/').pop();
 const fmtDur = (ms) => (ms < 950 ? `${Math.max(1, Math.round(ms))} ms` : ms < 60000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.floor(ms / 60000)} min ${Math.round((ms % 60000) / 1000)} s`);
 const quiet = (e) => e.kind === 'tools' || e.kind === 'results' || e.kind === 'usage' || e.kind === 'finish' || e.kind === 'compact' || e.kind === 'tasks';
+// The kind of step a command is (the server's step, see steps.js), said on its tile for the ones worth knowing at a glance: a test run, a check (a linter, a type checker), a build or an install, a deletion
+const INSTALL = /\b(?:npm|pnpm|yarn|bun|pip3?|uv|poetry|brew|apt(?:-get)?|gem|cargo|go|composer)\s+(?:install|i|add|ci|get|sync)\b/;
+const stepVerb = (t) => { const k = t.step, d = t.d || {}; return k === 'test' ? (t.tr != null ? L('Teste', 'Testing') : L('Vérifie', 'Checking')) : k === 'build' ? (INSTALL.test(d.text || '') ? L('Installe', 'Installing') : L('Compile', 'Building')) : k === 'delete' ? L('Supprime', 'Deleting') : ''; };
 function activityLabel(t) {   // the short "what is on their screen" tag
   const d = t.d || {}, f = base(d.file || t.arg);
   switch (d.kind) {
     case 'read': return L('Lit ', 'Reading ') + f;
     case 'edit': return L('Modifie ', 'Editing ') + f;
     case 'write': return L('Crée ', 'Writing ') + f;
-    case 'cmd': { const n = (d.note || '').trim(), w = d.text.trim().split(/\s+/); if (n) return n.length > 36 ? n.slice(0, 36).replace(/\s+\S*$/, '') + '…' : n; return L('Exécute ', 'Running ') + w.slice(0, 2).join(' ').slice(0, 26) + (w.length > 2 ? '…' : ''); }   /* cut at a word, and said to be cut */
+    case 'cmd': { const n = (d.note || '').trim(), w = d.text.trim().split(/\s+/), v = stepVerb(t), cut = (x, k) => (x.length > k ? x.slice(0, k).replace(/\s+\S*$/, '') + '…' : x);   /* cut at a word, and said to be cut */
+      if (v) return v + ' · ' + cut(n || w.slice(0, 3).join(' '), 28);   /* a test, a build, a deletion: said whatever the agent called the command */
+      if (n) return cut(n, 36); return L('Exécute ', 'Running ') + w.slice(0, 2).join(' ').slice(0, 26) + (w.length > 2 ? '…' : ''); }
     case 'grep': return L('Cherche « ', 'Searching “') + String(d.pattern || '').slice(0, 22) + L(' »', '”');
     case 'glob': return L('Liste ', 'Listing ') + String(d.pattern || '').slice(0, 24);
     case 'todo': case 'task': return L('Met à jour sa todo', 'Updating todo list');
@@ -2087,6 +2125,18 @@ setInterval(async () => {
     if (was !== e.bgOut.text + '|' + e.bgOut.done && S.present === who) { renderPresent(); if (!e.bgAt) e.bgAt = Date.now(); if (Date.now() - e.bgAt < 60000) armPresent(); }   // new lines keep the window up, for a minute at most
   } catch { e.bgFail = (e.bgFail || 0) + 1; if (e.bgFail >= 3) e.bgDone = true; } finally { taskPollBusy = false; }   /* three failures in a row: given up */
 }, 1000);
+// The test light of a run left in the background (live): its end and what its output says, every 3 seconds until it ends, from the file Claude Code writes it to (GET /api/taskout)
+let tlPollBusy = false;
+setInterval(async () => {
+  if (!S.live || S.demo || !S.cur || document.hidden || tlPollBusy) return;
+  const id = Object.keys(S.tl).find((k) => { const x = S.tl[k]; return x.res && x.res.bg && !x.bgDone && !x.res.bgEnd; }); if (!id) return;
+  const x = S.tl[id], cur = S.cur; tlPollBusy = true;
+  try {
+    const r = await fetch(`/api/taskout?proj=${encodeURIComponent(cur.proj)}&id=${encodeURIComponent(cur.id)}&task=${encodeURIComponent(x.res.bg)}`); if (S.cur !== cur || S.tl[id] !== x) return;
+    if (!r.ok) { x.bgDone = true; later('badges', renderBadges, 50); return; }   // no such output here: its outcome stays unknown
+    const j = await r.json(); if (j.done) { x.bgDone = true; x.live = { code: j.code == null ? null : +j.code, tests: j.tests || null, tcount: j.tcount || null, pexit: j.pexit == null ? null : +j.pexit }; later('badges', renderBadges, 50); }
+  } catch { x.bgFail = (x.bgFail || 0) + 1; if (x.bgFail >= 3) x.bgDone = true; } finally { tlPollBusy = false; }
+}, 3000);
 // ---------- artifacts: the pages the session published on claude.ai, shown the way a call shows a browser window someone shares ----------
 // When a publish succeeds its author shares the page for a moment; afterwards it is in the line of files, and a click there pins it: the window takes the room, stays until you close it (✕, Esc),
 // follows the next versions and steps through the other artifacts of the session (‹ ›). The page itself comes from the server, which puts it together from the session file (claude.ai lets nobody frame it):

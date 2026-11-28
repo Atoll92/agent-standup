@@ -64,6 +64,10 @@ const claudeLines = [
   ...call('toolu_ws1', 'WebSearch', { query: 'reduce' }, 'Web search results for query: "reduce"', { tur: { query: 'reduce', results: [{ tool_use_id: 'srv1', content: Array.from({ length: 10 }, (_, i) => ({ title: 'Result ' + i, url: 'https://example.com/' + i })) }, 'A summary the search wrote'], durationSeconds: 1.2 } }),
   ...call('toolu_wf1', 'WebFetch', { url: 'https://example.com/doc', prompt: 'what?' }, 'The page says hello', { tur: { url: 'https://example.com/doc', code: 200, codeText: 'OK', bytes: 12385, durationMs: 3552, result: 'The page says hello' } }),
   ...Object.entries(OUTS).flatMap(([k, out]) => call('toolu_t_' + k, 'Bash', { command: 'run ' + k }, out, { err: /fail|FAIL/.test(out) && k !== 'plain' })),
+  ...call('toolu_bgt', 'Bash', { command: 'npm test', run_in_background: true }, 'Command running in background with ID: bgtest001. Output is being written to: /private/tmp/claude-501/x/s/tasks/bgtest001.output', { tur: { stdout: '', stderr: '', backgroundTaskId: 'bgtest001' } }),
+  { type: 'user', uuid: 'u-note-bgt', timestamp: T(), message: { role: 'user', content: '<task-notification>\n<task-id>bgtest001</task-id>\n<tool-use-id>toolu_bgt</tool-use-id>\n<status>completed</status>\n<summary>Background command "npm test" completed (exit code 1)</summary>\n</task-notification>' } },   // how Claude Code says a background command ended
+  ...call('toolu_tpipe', 'Bash', { command: 'node --test 2>&1 | grep -E "^# (pass|fail)"' }, '# pass 3\n# fail 1'),   // a failure the exit code of grep hides, and a summary cut down to two lines
+  ...call('toolu_tpx', 'Bash', { command: 'npm test > log 2>&1; echo "exit $?"' }, 'exit 0'),
   ...call('toolu_an1', 'Bash', { command: 'ls --color' }, '\x1b[1;34mdir\x1b[0m  file\x1b]8;;http://x\x07link\x1b]8;;\x07'),
   ...call('toolu_tw1', 'Read', { file_path: '/x/a' }, 'a', { tur: { filePath: '/x/a' } }),
   { type: 'user', uuid: 'u-two', timestamp: T(), message: { content: [{ type: 'tool_result', tool_use_id: 'toolu_tw1', content: 'again' }, { type: 'tool_result', tool_use_id: 'toolu_tc1', content: 'twice' }] }, toolUseResult: { task: { id: '9', subject: 'not this one' } } },   // a record that answers two calls: its toolUseResult belongs to neither
@@ -116,6 +120,15 @@ test('Claude Code: task lists, plans, Claude Preview, Cowork tools, diffs, test 
     assert.deepEqual(res.toolu_ed1.diff, { files: [{ file: '/x/a.js', hunks: [{ o: 3, n: 3, lines: [' ctx', '-a', '+b'] }] }] }); assert.equal(res.toolu_wr1.diff, undefined, 'a new file has no diff: the call shows what it wrote');
     const d = res.toolu_bd1.diff; assert.deepEqual(d.files.map((f) => f.file), ['/x/a.json', '/x/b.json', '/x/c.json']); assert.equal(d.more, 4, '2 Claude Code left out, 2 left out here');
     assert.equal(d.files[0].hunks.length, 4); assert.equal(d.files[0].hunks[1].o, 11); assert.equal(d.files[0].hunks[0].lines.length, 40); assert.equal(d.files[0].hunks[0].lines[0].length, 200);
+
+    // the kind of step each call is, and test runs (steps.js)
+    assert.equal(tools.toolu_ed1.step, 'edit'); assert.equal(tools.toolu_tw1.step, 'read'); assert.equal(tools.toolu_bg1.step, 'run'); assert.equal(tools.toolu_bg1.tr, undefined, 'not a test run');
+    assert.equal(tools.toolu_cw2.step, 'test'); assert.equal(tools.toolu_cw2.tr, 2, 'a command of Cowork\'s terminal too'); assert.equal(tools.toolu_pv1.step, 'web');
+    assert.equal(tools.toolu_bgt.tr, 2); assert.equal(res.toolu_bgt.bg, 'bgtest001'); assert.equal(res.toolu_bgt.bgEnd.st, 'completed'); assert.equal(res.toolu_bgt.bgEnd.code, 1, 'its end, written on the answer it got when it started'); assert.ok(res.toolu_bgt.bgEnd.ts > 0);
+    assert.equal(res.toolu_bg1.bgEnd, undefined, 'a command that never said it ended');
+    assert.equal(tools.toolu_tpipe.tr, 0); assert.equal(res.toolu_tpipe.tests, undefined); assert.deepEqual([res.toolu_tpipe.tcount.pass, res.toolu_tpipe.tcount.fail], [3, 1]);
+    assert.equal(tools.toolu_tpx.tr, 3); assert.equal(res.toolu_tpx.pexit, 0);
+    assert.ok(!ev.some((e) => e.kind === 'user' && /task-notification/.test(e.text)), 'the notice is not a message of yours');
 
     // background commands
     assert.equal(res.toolu_bg1.bg, 'bqxyt1tyn'); assert.equal(res.toolu_mo1.bg, 'bmon00001'); assert.equal(res.toolu_to1.bg, 'bqxyt1tyn'); assert.equal(res.toolu_to2.bg, undefined, 'a sub-agent\'s output is its transcript');
@@ -209,6 +222,8 @@ test('the output of a background command: its last whole lines without terminal 
   const tasks = (key) => { const d = path.join(CTMP, 'claude-' + uid, key, SID, 'tasks'); fs.mkdirSync(d, { recursive: true }); return d; };
   fs.writeFileSync(path.join(tasks(PROJ), 'brun00001.output'), 'start\n\x1b[32mgreen\x1b[0m\n10%\r50%\r100%\n');
   fs.writeFileSync(path.join(tasks(PROJ), 'bdone0001.output'), 'built\n[exited with code 2]\n');
+  fs.writeFileSync(path.join(tasks(PROJ), 'btest0001.output'), 'TAP version 13\nnot ok 1 - totals\n1..1\n# tests 1\n# pass 0\n# fail 1\n[exited with code 1]\n');
+  fs.writeFileSync(path.join(tasks(PROJ), 'bpexit001.output'), '> log\nexit 0\n[exited with code 0]\n');
   const big = path.join(tasks(PROJ), 'bbig00001.output'); fs.writeFileSync(big, Array.from({ length: 3000 }, (_, i) => 'line ' + i).join('\n') + '\n');
   const quiet = path.join(tasks(PROJ), 'bquiet001.output'); fs.writeFileSync(quiet, 'waiting\n'); const t = new Date(Date.now() - 11 * 60e3); fs.utimesSync(quiet, t, t);
   fs.writeFileSync(path.join(tasks(PROJ + '--claude-worktrees-x'), 'bwork0001.output'), 'from the worktree\n');   // a session that moved to a worktree writes under that folder's name
@@ -216,7 +231,9 @@ test('the output of a background command: its last whole lines without terminal 
   const { port, stop } = await serve(), ask = (q) => get(port, '/api/taskout?' + q);
   try {
     let r = (await ask(`proj=${PROJ}&id=${SID}&task=brun00001`)).json(); assert.equal(r.text, 'start\ngreen\n100%\n'); assert.equal(r.done, false); assert.equal(r.code, null); assert.ok(r.size > 0 && r.mtime > 0);
-    r = (await ask(`proj=${PROJ}&id=${SID}&task=bdone0001`)).json(); assert.equal(r.done, true); assert.equal(r.code, 2);
+    r = (await ask(`proj=${PROJ}&id=${SID}&task=bdone0001`)).json(); assert.equal(r.done, true); assert.equal(r.code, 2); assert.equal(r.tests, undefined); assert.equal(r.pexit, undefined, 'its own end line is not a printed exit code');
+    r = (await ask(`proj=${PROJ}&id=${SID}&task=btest0001`)).json(); assert.equal(r.tests.fail, 1, 'a test run\'s summary, for its light'); assert.deepEqual(r.tests.failed, ['totals']);
+    r = (await ask(`proj=${PROJ}&id=${SID}&task=bpexit001`)).json(); assert.equal(r.pexit, 0);
     r = (await ask(`proj=${PROJ}&id=${SID}&task=bbig00001`)).json(); assert.ok(Buffer.byteLength(r.text) <= 12 * 1024); assert.match(r.text, /^line \d+\n/); assert.match(r.text, /line 2999\n$/); assert.equal(r.size, fs.statSync(big).size);
     r = (await ask(`proj=${PROJ}&id=${SID}&task=bquiet001`)).json(); assert.equal(r.done, true, 'silent for 10 minutes'); assert.equal(r.code, null);
     r = (await ask(`proj=${PROJ}&id=${SID}&task=bwork0001`)).json(); assert.equal(r.text, 'from the worktree\n');

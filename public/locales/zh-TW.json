@@ -478,5 +478,15 @@
  "Read at": "讀取於",
  "Two-ink print": "雙色印刷",
  "New · the same cast, redrawn": "新 · 同一班人馬，重新繪製",
- "The app’s characters, redrawn as a print in two inks. New, and still being refined.": "應用程式的角色，重新繪製成雙色印刷的樣子。這是新的，仍在打磨中。"
+ "The app’s characters, redrawn as a print in two inks. New, and still being refined.": "應用程式的角色，重新繪製成雙色印刷的樣子。這是新的，仍在打磨中。",
+ "Testing": "測試",
+ "Checking": "檢查",
+ "Installing": "安裝",
+ "Building": "建置",
+ "Deleting": "刪除",
+ "Last test run": "最近一次測試執行",
+ "Still running…": "仍在執行…",
+ "Files were edited since.": "此後有檔案被修改。",
+ "The command ended with exit code 0: only its output shows the failures.": "指令以結束代碼 0 結束：只有它的輸出顯示了失敗。",
+ "Outcome unknown: its output has no summary, and its exit code may be another command’s.": "結果未知：輸出裡沒有摘要，結束代碼也可能來自另一個指令。"
 }

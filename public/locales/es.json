@@ -478,5 +478,15 @@
  "Read at": "Leído a las",
  "Two-ink print": "Impresión a dos tintas",
  "New · the same cast, redrawn": "Nuevo · el mismo equipo, redibujado",
- "The app’s characters, redrawn as a print in two inks. New, and still being refined.": "Los personajes de la app, redibujados como una impresión a dos tintas. Es nuevo y aún se está puliendo."
+ "The app’s characters, redrawn as a print in two inks. New, and still being refined.": "Los personajes de la app, redibujados como una impresión a dos tintas. Es nuevo y aún se está puliendo.",
+ "Testing": "Probando",
+ "Checking": "Revisando",
+ "Installing": "Instalando",
+ "Building": "Compilando",
+ "Deleting": "Borrando",
+ "Last test run": "Última ejecución de pruebas",
+ "Still running…": "Aún en marcha…",
+ "Files were edited since.": "Desde entonces se editaron archivos.",
+ "The command ended with exit code 0: only its output shows the failures.": "El comando terminó con código de salida 0: solo su salida muestra los fallos.",
+ "Outcome unknown: its output has no summary, and its exit code may be another command’s.": "Resultado desconocido: su salida no tiene resumen y su código de salida puede ser de otro comando."
 }

@@ -478,5 +478,15 @@
  "Read at": "取得時刻",
  "Two-ink print": "2色刷り",
  "New · the same cast, redrawn": "新しい · 同じメンバーを描き直し",
- "The app’s characters, redrawn as a print in two inks. New, and still being refined.": "アプリのキャラクターを2色刷りの版画として描き直しました。新しく、まだ仕上げの途中です。"
+ "The app’s characters, redrawn as a print in two inks. New, and still being refined.": "アプリのキャラクターを2色刷りの版画として描き直しました。新しく、まだ仕上げの途中です。",
+ "Testing": "テスト中",
+ "Checking": "チェック中",
+ "Installing": "インストール中",
+ "Building": "ビルド中",
+ "Deleting": "削除中",
+ "Last test run": "最後のテスト実行",
+ "Still running…": "まだ実行中…",
+ "Files were edited since.": "その後、ファイルが編集されています。",
+ "The command ended with exit code 0: only its output shows the failures.": "コマンドは終了コード 0 で終わりました。失敗は出力にしか表れていません。",
+ "Outcome unknown: its output has no summary, and its exit code may be another command’s.": "結果は不明です。出力に集計がなく、終了コードは別のコマンドのものかもしれません。"
 }

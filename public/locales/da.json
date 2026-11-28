@@ -477,5 +477,15 @@
  "Read at": "Læst kl.",
  "Two-ink print": "Tofarvetryk",
  "New · the same cast, redrawn": "Nyt · samme hold, tegnet igen",
- "The app’s characters, redrawn as a print in two inks. New, and still being refined.": "Appens figurer, tegnet igen som et tryk i to farver. Nyt, og vi finpudser det stadig."
+ "The app’s characters, redrawn as a print in two inks. New, and still being refined.": "Appens figurer, tegnet igen som et tryk i to farver. Nyt, og vi finpudser det stadig.",
+ "Testing": "Tester",
+ "Checking": "Tjekker",
+ "Installing": "Installerer",
+ "Building": "Bygger",
+ "Deleting": "Sletter",
+ "Last test run": "Seneste testkørsel",
+ "Still running…": "Kører stadig…",
+ "Files were edited since.": "Filer er blevet redigeret siden.",
+ "The command ended with exit code 0: only its output shows the failures.": "Kommandoen sluttede med exitkode 0: kun dens output viser fejlene.",
+ "Outcome unknown: its output has no summary, and its exit code may be another command’s.": "Udfald ukendt: outputtet har intet resumé, og exitkoden kan stamme fra en anden kommando."
 }
