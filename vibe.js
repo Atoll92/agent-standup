@@ -193,7 +193,9 @@ const UNI_TOOLS = { 'file_system.bash': 'Bash', 'file_system.read_file': 'Read',
 const OPEN = /^(pending|queued|running|in_progress|awaiting|waiting|blocked|started)/;
 const usageMemo = new Map();   // session folder → { p, c, r, list }: the lines of usage already given out. A line never changes once the page has it, so the totals Vibe keeps are handed out as what was added since the last look
 let helpers = { toolLabel: (b, ts) => ({ id: b.id, ts, name: b.name, arg: '' }), clip: (t, n) => String(t).slice(0, n), resultMax: {} };   // set by parser(): the server's own way of describing a tool call
-const childStates = new Map();   // Vibe 3 sub-agent folder → { sig, cs (its state), waits }
+const childStates = new Map();   // Vibe 3 sub-agent folder → { sig, cs (its state), waits, n }, least recently used first; bounded by count and by the events it holds
+let childEvents = 0; const CHILD_MAX = 128, CHILD_EVENTS = 40000;
+const keepChild = (dir, v) => { const was = childStates.get(dir); if (was) { childEvents -= was.n; childStates.delete(dir); } childStates.set(dir, v); childEvents += v.n; while (childStates.size > 1 && (childStates.size > CHILD_MAX || childEvents > CHILD_EVENTS)) { const [k, old] = childStates.entries().next().value; childStates.delete(k); childEvents -= old.n; } };
 const childSig = (kids) => kids.map((k) => { const cr = k.cid && row(k.cid); return cr && cr.uni ? uniSig(cr) : ''; }).join('|');   // Vibe 3: a sub-agent writes in its own folder while its lead's may not move
 function uniState(r, depth = 0) {
   const u = uniLoad(r); if (u.state && u.state.csig === childSig(u.state.kids)) return u.state;
@@ -240,13 +242,13 @@ function uniState(r, depth = 0) {
   if (depth < 1) for (const k of kids.values()) {
     const cr = k.cid && row(k.cid); if (!cr || !cr.uni || cr.dir === r.dir) continue;
     const csg = uniSig(cr), was = childStates.get(cr.dir); let cs, cw;   // kept apart from uniCache: a lead with many sub-agents would push itself out of it and be read again at every poll
-    if (was && was.sig === csg) { cs = was.cs; cw = was.waits; } else { try { cs = uniState(cr, depth + 1); cw = uniLoad(cr).waits || 0; } catch { continue; } childStates.delete(cr.dir); if (childStates.size >= 64) childStates.delete(childStates.keys().next().value); childStates.set(cr.dir, { sig: csg, cs, waits: cw }); }
-    kidWaits += cw;
+    if (was && was.sig === csg) { cs = was.cs; cw = was.waits; keepChild(cr.dir, was); } else { try { cs = uniState(cr, depth + 1); cw = uniLoad(cr).waits || 0; } catch { continue; } keepChild(cr.dir, { sig: csg, cs, waits: cw, n: cs.main.raw.length }); }
     const ks = k.st;
     for (const ev of cs.main.raw) { if (ev.kind === 'user' || ev.kind === 'agentcall' || ev.kind === 'agentdone' || ev.kind === 'order' || ev.to) continue; const c = JSON.parse(JSON.stringify(ev)); c.agent = k.aid; c.k = k.aid + ':' + String(ev.k || '').replace(/^main:/, ''); ks.raw.push(c); if (c.ts > ks.lastTs) ks.lastTs = c.ts; if (c.kind === 'say') k.said = c.text; }
     Object.assign(ks.toolName, cs.main.toolName); for (const [key, v] of cs.main.msgUsage) ks.msgUsage.set(key, v);
     if (ks.lastTs > k.last) k.last = ks.lastTs;
     const cse = (cs.env && cs.env.session) || {}; if (!k.done && ks.raw.length && cse.status && (cse.status.type === 'idle' || cse.status.type === 'failed')) { k.done = true; push(st, { ts: ks.lastTs + 1, agent: 'main', kind: 'agentdone', toolId: k.spawn }, k.spawn + '/done'); }   // its own turn is over: it has handed back
+    if (!k.done) kidWaits += cw;   // a sub-agent that has handed back asks nothing any more, whatever its journal kept
   }
   const env = u.env || {}, se = env.session || {}, turn = env.latestTurn || {}, idle = se.status && (se.status.type === 'idle' || se.status.type === 'failed');
   for (const [tid, ev] of lastOf) if (ev.kind !== 'agentcall' && (tid !== turn.id || (turn.status && turn.status !== 'in_progress') || idle)) ev.end = 1;   // a turn that is over ends on the last thing the lead said or did in it
@@ -264,7 +266,9 @@ function uniState(r, depth = 0) {
     }
     for (const [k, v] of m.list) st.msgUsage.set(k, v);
   }
-  u.state = { main: st, kids: [...kids.values()], env, waiting, kidWaits }; u.state.csig = childSig(u.state.kids); return u.state;
+  u.state = { main: st, kids: [...kids.values()], env, waiting, kidWaits }; u.state.csig = childSig(u.state.kids);
+  if (!depth && u.sig) { uniCache.delete(r.dir); if (uniCache.size >= 4) uniCache.delete(uniCache.keys().next().value); uniCache.set(r.dir, u); }   // its sub-agents' folders, read just now, may have pushed the lead out: keep it, with the state just built
+  return u.state;
 }
 const uniLight = new Map();   // session folder → what the lists need of a session (title, state, how many sub-agents), kept after its history has been let go
 function uniSummary(r) {
