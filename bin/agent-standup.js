@@ -100,7 +100,7 @@ async function report(day, dir, titles) {
     if (r.mtime < from) continue;
     if (!r.source && r.proj !== '_demo') { try { const fs = require('fs'), fd = fs.openSync(server.transcriptFile(r.proj, r.id), 'r'), b = Buffer.alloc(32768), n = fs.readSync(fd, b, 0, b.length, 0); fs.closeSync(fd); const m = /"timestamp":"([^"]{10,40})"/.exec(b.toString('utf8', 0, n)), t0 = m ? Date.parse(m[1]) : NaN; if (t0 >= to) continue; } catch {} }   // a Claude Code session whose first record is after that day has nothing of it (its first record says when it began; a copied file's dates do not)
     const b = live.get(r.proj + '/' + r.id);
-    if (dir && !(fold(r.proj) === fold(projKey(dir)) || (b && b.dir && fold(b.dir) === fold(projKey(dir))))) continue;
+    if (dir && !(fold(r.proj) === fold(projKey(dir)) || (r.dir && fold(r.dir) === fold(projKey(dir))) || (b && b.dir && fold(b.dir) === fold(projKey(dir))))) continue;
     let tl; try { tl = server.timeline(r.proj, r.id); } catch { continue; }   // a session that cannot be read costs that session only
     const ev = tl.events.filter((e) => e.ts >= from && e.ts < to).sort((x, y) => x.ts - y.ts); if (!ev.length) continue;
     let work = 0, wait = 0, turns = 0, asked = '', said = ''; const calls = {}, files = new Set(), subs = new Set(), arts = new Map();
