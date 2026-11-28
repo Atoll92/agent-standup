@@ -155,3 +155,39 @@ test('the French voices are listed once the phonemizer is installed, and reach t
     assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'stub.log.espeak'), 'utf8').trim()).lang, 'fr-fr');
   } finally { kokoro.shutdown(); }
 });
+
+test('on Linux, the voice folder follows XDG_CACHE_HOME unless the legacy ~/.cache folder already exists, and AGENT_STANDUP_KOKORO_DIR wins over both', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'as-kokoro-dir-')), home = path.join(tmp, 'home'), xdg = path.join(tmp, 'xdg'), override = path.join(tmp, 'custom'), localApp = path.join(tmp, 'local');
+  const legacy = path.join(home, '.cache', 'agent-standup', 'kokoro'), xdgDir = path.join(xdg, 'agent-standup', 'kokoro');
+  const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform'), keys = ['HOME', 'USERPROFILE', 'XDG_CACHE_HOME', 'AGENT_STANDUP_KOKORO_DIR', 'LOCALAPPDATA'], saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+  const load = (platform, env) => {
+    Object.defineProperty(process, 'platform', { ...realPlatform, value: platform });
+    for (const k of keys) { if (env[k] === undefined) delete process.env[k]; else process.env[k] = env[k]; }
+    delete require.cache[require.resolve('../kokoro.js')];
+    return require('../kokoro.js');
+  };
+  try {
+    let k = load('linux', { HOME: home, USERPROFILE: home, XDG_CACHE_HOME: xdg });
+    assert.equal(k.DIR, xdgDir, 'Linux with XDG_CACHE_HOME and no legacy folder uses XDG_CACHE_HOME');
+    assert.equal(k.status().dir, xdgDir);
+    k = load('linux', { HOME: home, USERPROFILE: home });
+    assert.equal(k.DIR, legacy, 'Linux without XDG_CACHE_HOME uses ~/.cache/agent-standup/kokoro');
+    k = load('linux', { HOME: home, USERPROFILE: home, XDG_CACHE_HOME: xdg, AGENT_STANDUP_KOKORO_DIR: override });
+    assert.equal(k.DIR, override, 'AGENT_STANDUP_KOKORO_DIR overrides XDG_CACHE_HOME');
+    k = load('darwin', { HOME: home, USERPROFILE: home, XDG_CACHE_HOME: xdg });
+    assert.equal(k.DIR, legacy, 'macOS ignores XDG_CACHE_HOME');
+    k = load('win32', { HOME: home, USERPROFILE: home, XDG_CACHE_HOME: xdg, LOCALAPPDATA: localApp });
+    assert.equal(k.DIR, path.join(localApp, 'agent-standup', 'kokoro'), 'Windows uses LOCALAPPDATA and ignores XDG_CACHE_HOME');
+    fs.mkdirSync(legacy, { recursive: true });
+    k = load('linux', { HOME: home, USERPROFILE: home, XDG_CACHE_HOME: xdg });
+    assert.equal(k.DIR, legacy, 'Linux keeps the legacy folder when it already exists');
+    assert.equal(k.status().dir, legacy);
+    k = load('linux', { HOME: home, USERPROFILE: home, XDG_CACHE_HOME: xdg, AGENT_STANDUP_KOKORO_DIR: override });
+    assert.equal(k.DIR, override, 'AGENT_STANDUP_KOKORO_DIR still wins when the legacy folder exists');
+  } finally {
+    Object.defineProperty(process, 'platform', realPlatform);
+    for (const k of keys) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
+    delete require.cache[require.resolve('../kokoro.js')];
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
