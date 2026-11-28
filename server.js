@@ -501,7 +501,7 @@ function listSessions0(since) {   // since: every session written since then, ho
   rows.sort((a, b) => b.mtime - a.mtime);
   const own = (r) => !r.cx && r.proj !== COWORK, top = since != null ? rows.filter((r) => r.mtime >= since) : rows.filter(own).slice(0, 60).concat(rows.filter((r) => r.cx), rows.filter((r) => r.proj === COWORK).slice(0, 30)).sort((a, b) => b.mtime - a.mtime);   // the 60 most recent Claude Code sessions as always, and up to 30 of each other tool beside them, Cowork included: none pushes another out
   for (const r of top) {
-    if (r.cx) { const c = r.cx, m = r.src; delete r.cx; delete r.src; r.title = guard(() => m.title(c), '') || r.id; r.project = guard(() => m.projectLabel(c.cwd), '') || m.SOURCE; r.source = m.SOURCE; continue; }
+    if (r.cx) { const c = r.cx, m = r.src, dir = String(('key' in c ? c.key : c.dir) || ''); delete r.cx; delete r.src; if (dir) r.dir = dir; r.title = guard(() => m.title(c), '') || r.id; r.project = guard(() => m.projectLabel(c.cwd), '') || m.SOURCE; r.source = m.SOURCE; continue; }
     // titles come from the cached tail read (custom title, then AI title, then first prompt): no whole-file reads
     let t = null; try { const f = path.join(projDir(r.proj, r.id), r.id + '.jsonl'); t = parseTail(f, fs.statSync(f)).title; } catch {}
     r.title = coworkTitle(r.proj, r.id) || t || r.id; r.project = r.proj === COWORK ? 'Cowork' : r.proj.replace(/^-Users-[^-]+-/, '').replace(/-/g, '/');
