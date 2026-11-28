@@ -1767,7 +1767,7 @@ function testVerdict(x) {   // { st: pass | fail | ran | running, tests?, hid? }
   const tr = x.tool.tr, lv = x.live, t = res.tests || (lv && (lv.tests || (tr != null && lv.tcount))) || (tr != null && res.tcount) || null;
   if (t) return { st: t.fail ? 'fail' : 'pass', tests: t, ...(t.fail && !res.err && !res.bg ? { hid: 1 } : {}) };
   let code; const pe = res.pexit != null ? res.pexit : lv && lv.pexit != null ? lv.pexit : null;
-  if (tr === 3 && pe != null) code = pe;
+  if (tr === 3) { if (pe != null) code = pe; else { const e = res.bgEnd && !(res.bgEnd.ts > (S.evTs || 0)) ? res.bgEnd : null; return { st: !res.bg || e || x.bgDone || (lv && lv.code != null) || (!S.live && !res.bgEnd) ? 'ran' : 'running' }; } }   /* the line's exit code is the last command's (echo, grep): only the printed one is the runner's */
   else if (res.bg) { const e = res.bgEnd && !(res.bgEnd.ts > (S.evTs || 0)) ? res.bgEnd : null, c = lv ? lv.code : e ? e.code : null; if (c == null) return { st: e || x.bgDone || (!S.live && !res.bgEnd) ? 'ran' : 'running' }; code = c; }   /* replayed: running until the time it said it ended */
   else { const m = /^(?:Exit code|Process exited with code) (-?\d+)/.exec(String(res.out || '')); code = res.err ? (m ? +m[1] : null) : 0; if (code == null) return { st: 'ran' }; }
   if (code !== 0) return tr === 2 || tr === 3 ? { st: 'fail' } : { st: 'ran' };
@@ -2989,7 +2989,7 @@ async function syncX(g, token) {   // every few minutes of the session: the lead
   const now = Date.now(), busy = Object.keys(S.agents).filter((id) => id !== 'user' && id !== 'main' && exVisible(id) && agentState(id, now).k === 'working').slice(0, 3); if (busy.length < 2) return false;
   S.syncTs = g.ts; const E = EXCH[TLANG()], seed = hash('s' + g.ts); exLog('sync');
   if (!(await exSay('main', exPick(E.sync, seed), token))) return false;
-  for (const [n, id] of busy.entries()) { const act = (S.act[id] || '').replace(/^\S+\s/, '') || L('au travail', 'working'); if (!(await exSay(id, exPick(E.syncAns, seed >>> (n + 1), act.charAt(0).toLowerCase() + act.slice(1)), token))) return false; }
+  for (const [n, id] of busy.entries()) { const a0 = S.act[id] || '', act = (a0.includes(' · ') ? a0.slice(a0.indexOf(' · ') + 3) : a0.replace(/^\S+\s/, '')) || L('au travail', 'working'); if (!(await exSay(id, exPick(E.syncAns, seed >>> (n + 1), act.charAt(0).toLowerCase() + act.slice(1)), token))) return false; }
   return true;
 }
 async function converse(g, token) {   // after a line has been said: an exchange when it suits, else the usual one-liners

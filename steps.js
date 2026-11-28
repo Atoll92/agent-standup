@@ -191,8 +191,10 @@ function shellResult(command) {
 const RUNNER = /\b(?:npm (?:run )?test|yarn test|pnpm test|bun test|deno test|node (?:--\S+ )*--test|pytest|py\.test|jest|vitest|mocha|cargo test|go test|rspec|phpunit|playwright test|make test|tox)\b|\b(?:node|python[\d.]*|tsx|bun|php)\s+(?:-\S+\s+)*\S*(?:tests?\/|test_|[._-]test\.|_test\.|\.spec\.)\S*/;
 /** How sure the exit code of a command line is the test runner's own: 2 when nothing follows the runner, 1 when only `&&` does (a success is everyone's, a failure may be a later part's),
  *  3 when the line prints it right after (`npm test > log; echo "exit $?"`), 0 otherwise; -1: no test runner. */
+const RUNS = new RegExp('^(?:[A-Za-z_]\\w*=\\S*\\s+)*(?:(?:npx|pnpx|bunx|time|exec|env|nice|(?:uv|poetry|pipenv|pdm|hatch) run|timeout\\s+\\S+|python[\\d.]*\\s+-m)\\s+(?:-\\S+\\s+)*)*(?:' + RUNNER.source + ')');   // the part starts with the runner, after a few launchers and VAR=value
 function runnerExit(command) {
-  const raw = withoutHeredocs(command), m0 = raw.match(RUNNER); if (!m0) return -1;
+  const raw = withoutHeredocs(command); if (!partsOf(raw).some((p) => RUNS.test(p))) return -1;
+  const m0 = raw.match(RUNNER); if (!m0) return -1;
   const after = raw.slice(m0.index + m0[0].length).replace(/\d?>&\d|&>/g, ' ').replace(/^[^;&|\n]*/, '');   // what follows the runner's own part (its arguments and redirects: the & of 2>&1 is not a separator)
   if (/^\s*(?:;|\n|&&)\s*echo\b[^;&|\n>]*\$\?[^;&|\n>]*(?:$|[;&|\n])/.test(after)) return 3;   // printed to the output, not into a file
   const c = raw.replace(/\d?>&\d|&>\s*\S*|\d?>>?\s*\S+/g, ' '), m = c.match(RUNNER);
@@ -241,7 +243,7 @@ function testOutcome(call, res) {
   const tr = call && call.tr, t = res.tests || (tr >= 0 && res.tcount) || null;
   if (t) return { st: t.fail ? 'fail' : 'pass', tests: t, ...(t.fail && !res.err && !res.bg ? { hid: 1 } : {}) };
   let code;
-  if (tr === 3 && res.pexit != null) code = res.pexit;
+  if (tr === 3) { if (res.pexit == null) return { st: 'ran' }; code = res.pexit; }   // `npm test > log; echo $?; grep … log`: the line's exit code is the last command's, not the runner's
   else if (res.bg) { if (!res.bgEnd || res.bgEnd.code == null) return { st: 'ran' }; code = res.bgEnd.code; }
   else { const m = /^(?:Exit code|Process exited with code) (-?\d+)/.exec(String(res.out || '')); code = res.err ? (m ? +m[1] : null) : 0; if (code == null) return { st: 'ran' }; }
   if (code !== 0) return tr === 2 || tr === 3 ? { st: 'fail' } : { st: 'ran' };

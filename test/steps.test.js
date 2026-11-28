@@ -49,3 +49,17 @@ test('what a test run came to: its output first, then an exit code that is surel
   assert.equal(testOutcome(run('npm test'), { err: false, out: '', bg: 'b1', bgEnd: { st: 'completed', code: 0 } }).st, 'pass');
   assert.equal(testOutcome(run('npm test'), { err: false, out: '', bg: 'b1', bgEnd: { st: 'killed' } }).st, 'ran');
 });
+
+test('a test runner is the program a part of the line runs, not a word in it; a line that prints its exit code is judged by that code only', () => {
+  const steps = require('../steps.js');
+  for (const c of ['grep -rn "pytest" .', 'grep -q jest package.json', 'which pytest', 'npm install --save-dev vitest', 'pip install pytest', 'git commit -m "Run mocha in CI"', 'rm -rf node_modules/.cache/jest', 'cat jest.config.js'])
+    assert.equal(steps.shellStep(c).tr, undefined, c + ' runs no tests');
+  for (const c of ['npm test', 'cd app && npm test', 'CI=1 npx vitest run', 'python -m pytest -q', 'uv run pytest', 'timeout 120 npm test', 'python3 tests/test_cart.py'])
+    assert.equal(steps.shellStep(c).tr, 2, c + ' runs tests');
+  const out = (res) => steps.testOutcome({ tr: 3 }, res).st;
+  assert.equal(out({ bg: 1, bgEnd: { code: 1 } }), 'ran', 'npm test > log; echo "exit=$?"; grep … log: the line ended 1 because of grep, the runner is unknown');
+  assert.equal(out({ bg: 1, bgEnd: { code: 0 } }), 'ran', 'nor a pass from grep finding lines');
+  assert.equal(out({ err: false, out: '1' }), 'ran', 'echo $? printed 1 without the word exit: not a pass');
+  assert.equal(out({ err: false, out: 'exit=0', pexit: 0 }), 'pass');
+  assert.equal(out({ err: false, out: 'EXIT=1', pexit: 1 }), 'fail');
+});
