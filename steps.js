@@ -191,15 +191,26 @@ function shellResult(command) {
 const RUNNER = /\b(?:npm (?:run )?test|yarn test|pnpm test|bun test|deno test|node (?:--\S+ )*--test|pytest|py\.test|jest|vitest|mocha|cargo test|go test|rspec|phpunit|playwright test|make test|tox)\b|\b(?:node|python[\d.]*|tsx|bun|php)\s+(?:-\S+\s+)*\S*(?:tests?\/|test_|[._-]test\.|_test\.|\.spec\.)\S*/;
 /** How sure the exit code of a command line is the test runner's own: 2 when nothing follows the runner, 1 when only `&&` does (a success is everyone's, a failure may be a later part's),
  *  3 when the line prints it right after (`npm test > log; echo "exit $?"`), 0 otherwise; -1: no test runner. */
-const RUNS = new RegExp('^(?:[A-Za-z_]\\w*=\\S*\\s+)*(?:(?:npx|pnpx|bunx|time|exec|env|nice|(?:uv|poetry|pipenv|pdm|hatch) run|timeout\\s+\\S+|python[\\d.]*\\s+-m)\\s+(?:-\\S+\\s+)*)*(?:' + RUNNER.source + ')');   // the part starts with the runner, after a few launchers and VAR=value
+// Programs that only name a test runner (grep "pytest", cat jest.config.js, git add test/x.test.js, which pytest), and package managers when they install one: never a test run.
+// Anything else that runs a runner counts, however it is started: a path (.venv/bin/pytest), a launcher (npx, yarn, bundle exec, docker compose run, xargs, env, timeout), a subshell or a loop.
+const MENTION = new Set(['grep', 'egrep', 'fgrep', 'rg', 'ag', 'ack', 'cat', 'bat', 'head', 'tail', 'less', 'more', 'ls', 'tree', 'which', 'whereis', 'type', 'echo', 'printf', 'cp', 'mv', 'rm', 'mkdir', 'touch', 'ln', 'chmod', 'chown', 'stat', 'file', 'du', 'wc', 'diff', 'cmp', 'sed', 'awk', 'find', 'fd', 'git', 'gh', 'code', 'cursor', 'open', 'vim', 'vi', 'nano', 'emacs', 'tee', 'basename', 'dirname', 'realpath', 'readlink', 'brew', 'apt', 'apt-get', 'pip', 'pip3', 'pipx', 'gem']);
+const INSTALLS = /^(?:install|i|add|ci|remove|rm|uninstall|un|update|up|upgrade|outdated|ls|list|info|view|why|link|pip)$/;
+function runnerAt(raw) {   // where the test runner of a line is: { index, len } in raw, or null
+  let from = 0;
+  for (const p of partsOf(raw)) {
+    const at = raw.indexOf(p, from); if (at >= 0) from = at + p.length;
+    const words = shellWords(withoutRedirects(p)).filter((w) => !/^[A-Za-z_]\w*=/.test(w)), prog = String(words[0] || '').replace(/^[({!]+/, '').split('/').pop();
+    if (MENTION.has(prog) || (/^(?:npm|yarn|pnpm|bun|uv|poetry)$/.test(prog) && INSTALLS.test(words[1] || ''))) continue;
+    if (!RUNNER.test(withoutRedirects(p))) continue;   // a runner's name only in a redirect target (> jest.log) runs nothing
+    const m = p.match(RUNNER); if (m) return { index: (at >= 0 ? at : 0) + m.index, len: m[0].length };
+  }
+  return null;
+}
 function runnerExit(command) {
-  const raw = withoutHeredocs(command); if (!partsOf(raw).some((p) => RUNS.test(p))) return -1;
-  const m0 = raw.match(RUNNER); if (!m0) return -1;
-  const after = raw.slice(m0.index + m0[0].length).replace(/\d?>&\d|&>/g, ' ').replace(/^[^;&|\n]*/, '');   // what follows the runner's own part (its arguments and redirects: the & of 2>&1 is not a separator)
+  const raw = withoutHeredocs(command), r = runnerAt(raw); if (!r) return -1;
+  const tail = raw.slice(r.index + r.len), after = tail.replace(/\d?>&\d|&>/g, ' ').replace(/^[^;&|\n]*/, '');   // what follows the runner's own part (its arguments and redirects: the & of 2>&1 is not a separator)
   if (/^\s*(?:;|\n|&&)\s*echo\b[^;&|\n>]*\$\?[^;&|\n>]*(?:$|[;&|\n])/.test(after)) return 3;   // printed to the output, not into a file
-  const c = raw.replace(/\d?>&\d|&>\s*\S*|\d?>>?\s*\S+/g, ' '), m = c.match(RUNNER);
-  if (!m) return 0;
-  const rest = maskQuotes(c.slice(m.index + m[0].length));
+  const rest = maskQuotes(tail.replace(/\d?>&\d|&>\s*\S*|\d?>>?\s*\S+/g, ' '));
   if (!/[|;&\n]/.test(rest)) return 2;
   return /\|(?!\|)|;|\n|\|\||(?<!&)&(?!&)/.test(rest) ? 0 : 1;
 }

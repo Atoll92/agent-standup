@@ -56,6 +56,10 @@ test('a test runner is the program a part of the line runs, not a word in it; a 
     assert.equal(steps.shellStep(c).tr, undefined, c + ' runs no tests');
   for (const c of ['npm test', 'cd app && npm test', 'CI=1 npx vitest run', 'python -m pytest -q', 'uv run pytest', 'timeout 120 npm test', 'python3 tests/test_cart.py'])
     assert.equal(steps.shellStep(c).tr, 2, c + ' runs tests');
+  for (const c of ['/opt/homebrew/bin/node --test test/a.test.js', '.venv/bin/pytest', './node_modules/.bin/jest', 'yarn jest', 'pnpm vitest', 'bundle exec rspec', 'docker compose run app npm test', 'bash -c "npm test"', '(npm test)', 'ls test/*.test.js | xargs node --test', 'env -u ELECTRON_RUN_AS_NODE npm test', 'nice -n 10 npm test', 'sudo npm test', 'for f in t/*.js; do node --test $f; done'])
+    assert.notEqual(steps.shellStep(c).tr, undefined, c + ' runs tests, whatever starts it');
+  assert.equal(steps.shellStep('grep -q jest package.json && npm test').tr, 2, 'judged by the runner, not by an earlier mention of its name');
+  for (const c of ['git add test/x.test.js', 'uv pip install pytest', 'make build > jest.log', 'cp test/a.test.js b/']) assert.equal(steps.shellStep(c).tr, undefined, c + ' runs no tests');
   const out = (res) => steps.testOutcome({ tr: 3 }, res).st;
   assert.equal(out({ bg: 1, bgEnd: { code: 1 } }), 'ran', 'npm test > log; echo "exit=$?"; grep … log: the line ended 1 because of grep, the runner is unknown');
   assert.equal(out({ bg: 1, bgEnd: { code: 0 } }), 'ran', 'nor a pass from grep finding lines');
