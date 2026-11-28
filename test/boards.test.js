@@ -141,6 +141,18 @@ test('a Sheet drawn again: a delete takes away the rows and columns it names, th
   assert.match(insertedWidths, /<th style="width:104px">B<\/th><th style="width:250px">C<\/th>/);
   const deletedWidths = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['a', 'b', 'c']] }, { kind: 'setColumnWidths', sheet: 'Sheet1', columns: 'B:B', widthInPixels: 250 }, { kind: 'setColumnWidths', sheet: 'Sheet1', columns: 'C:C', widthInPixels: 300 }, { kind: 'deleteColumns', sheet: 'Sheet1', columns: 'B:B' }])]);
   assert.match(deletedWidths, /<th style="width:300px">B<\/th><th style="width:104px">C<\/th>/);
+  const trimmedRows = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: Array.from({ length: 15 }, (_, n) => ['r' + (n + 1)]) }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '14:15' }])]);
+  assert.match(trimmedRows, /<th>13<\/th>/); assert.doesNotMatch(trimmedRows, /<th>14<\/th>/);
+  const trimmedColumns = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [Array.from({ length: 10 }, (_, n) => 'c' + (n + 1))] }, { kind: 'deleteColumns', sheet: 'Sheet1', columns: 'I:J' }])]);
+  assert.match(trimmedColumns, /<th style="width:104px">H<\/th><\/tr>/); assert.doesNotMatch(trimmedColumns, /<th style="width:104px">[IJ]<\/th>/);
+  const throughEndRows = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: Array.from({ length: 15 }, (_, n) => ['r' + (n + 1)]) }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '14:30' }])]);
+  assert.match(throughEndRows, /<th>13<\/th>/); assert.doesNotMatch(throughEndRows, /<th>14<\/th>/);
+  const throughEndColumns = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [Array.from({ length: 10 }, (_, n) => 'c' + (n + 1))] }, { kind: 'deleteColumns', sheet: 'Sheet1', columns: 'I:Z' }])]);
+  assert.match(throughEndColumns, /<th style="width:104px">H<\/th><\/tr>/); assert.doesNotMatch(throughEndColumns, /<th style="width:104px">[IJ]<\/th>/);
+  const middleRows = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: Array.from({ length: 15 }, (_, n) => ['r' + (n + 1)]) }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '3:4' }])]);
+  assert.match(middleRows, /<th>13<\/th>/); assert.doesNotMatch(middleRows, /<th>14<\/th>/);
+  const pastRows = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: Array.from({ length: 15 }, (_, n) => ['r' + (n + 1)]) }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '30:31' }])]);
+  assert.match(pastRows, /<th>15<\/th>/); assert.doesNotMatch(pastRows, /<th>16<\/th>/);
   const t0 = Date.now(), many = _draw.sheet([w(Array.from({ length: 64 }, (_, n) => ({ kind: 'addSheet', name: 'S' + n })))].concat(Array.from({ length: 50 }, (_, k) => w(Array.from({ length: 64 }, (_, n) => ({ kind: 'addSheet', name: `T${k}-${n}` }))))));
   assert.equal((many.match(/<span /g) || []).length, 30, 'the picture shows 30 tabs'); assert.ok(Date.now() - t0 < 1000, '3,264 new sheets asked: ' + (Date.now() - t0) + ' ms');
 });
