@@ -144,3 +144,32 @@ test('a Sheet drawn again: a delete takes away the rows and columns it names, th
   const t0 = Date.now(), many = _draw.sheet([w(Array.from({ length: 64 }, (_, n) => ({ kind: 'addSheet', name: 'S' + n })))].concat(Array.from({ length: 50 }, (_, k) => w(Array.from({ length: 64 }, (_, n) => ({ kind: 'addSheet', name: `T${k}-${n}` }))))));
   assert.equal((many.match(/<span /g) || []).length, 30, 'the picture shows 30 tabs'); assert.ok(Date.now() - t0 < 1000, '3,264 new sheets asked: ' + (Date.now() - t0) + ' ms');
 });
+
+test('a Sheet drawn again: the table header row stays on its row when rows are inserted or deleted above it', () => {
+  const { _draw } = require('../boards.js'), w = (edits) => ({ op: 'write', i: { payload: { edits } } });
+  const inserted = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['Item', 'Cost'], ['Rent', 1200]] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '1:1' } }, { kind: 'insertRows', sheet: 'Sheet1', besideRow: 1, side: 'above', count: 1 }])]);
+  assert.match(inserted, /<th>2<\/th><td class="h">Item<\/td>/); assert.doesNotMatch(inserted, /<th>1<\/th><td class="h">/);
+  const deletedAbove = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['note'], ['Item'], ['Rent']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '2:2' } }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '1:1' }])]);
+  assert.match(deletedAbove, /<th>1<\/th><td class="h">Item<\/td>/); assert.doesNotMatch(deletedAbove, /<th>2<\/th><td class="h">Rent<\/td>/);
+  const deletedHeader = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['note'], ['Item'], ['Rent']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '2:2' } }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '2:2' }])]);
+  assert.doesNotMatch(deletedHeader, /<td class="h">/);
+  const insertedBelow = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['Item'], ['Rent']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '1:1' } }, { kind: 'insertRows', sheet: 'Sheet1', besideRow: 1, side: 'below', count: 2 }])]);
+  assert.match(insertedBelow, /<th>1<\/th><td class="h">Item<\/td>/);
+  const deletedBelow = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['Item'], ['Rent'], ['Other']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '1:1' } }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '3:3' }])]);
+  assert.match(deletedBelow, /<th>1<\/th><td class="h">Item<\/td>/);
+  const insertedColumn = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['Item']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '1:1' } }, { kind: 'insertColumns', sheet: 'Sheet1', besideColumn: 'A', side: 'left', count: 1 }])]);
+  assert.match(insertedColumn, /<th>1<\/th><td class="h"><\/td><td class="h">Item<\/td>/);
+  const deletedColumn = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['x', 'Item']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '1:1' } }, { kind: 'deleteColumns', sheet: 'Sheet1', columns: 'A:A' }])]);
+  assert.match(deletedColumn, /<th>1<\/th><td class="h">Item<\/td>/);
+  const budgetStarted = Date.now(), budgetRows = Array.from({ length: 1999 }, () => Array(200).fill('x'));
+  const budgetStoppedShift = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['Item']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '1:1' } }, { kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A2', rows: budgetRows }, { kind: 'insertRows', sheet: 'Sheet1', besideRow: 1, side: 'above', count: 1 }])]), budgetElapsed = Date.now() - budgetStarted;
+  assert.match(budgetStoppedShift, /<th>1<\/th><td class="h">Item<\/td>/); assert.ok(budgetElapsed < 2000, 'the 400,000-cell replay budget case: ' + budgetElapsed + ' ms');
+  const deletedLastHeader = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['T1'], ['T2'], ['T3'], ['d']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '1:3' } }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '3:3' }])]);
+  assert.match(deletedLastHeader, /<th>2<\/th><td class="h">T2/); assert.equal((deletedLastHeader.match(/<th>\d+<\/th><td class="h">/g) || []).length, 1);
+  const deletedThroughLastHeader = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['T1'], ['T2'], ['T3'], ['d']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '2:3' } }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '3:5' }])]);
+  assert.match(deletedThroughLastHeader, /<th>2<\/th><td class="h">T2/); assert.equal((deletedThroughLastHeader.match(/<th>\d+<\/th><td class="h">/g) || []).length, 1);
+  const deletedWholeHeader = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['T1'], ['T2'], ['T3'], ['d']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '2:3' } }, { kind: 'deleteRows', sheet: 'Sheet1', rows: '1:3' }])]);
+  assert.doesNotMatch(deletedWholeHeader, /<td class="h">/);
+  const insertedInsideHeader = _draw.sheet([w([{ kind: 'writeCells', sheet: 'Sheet1', topLeft: 'A1', rows: [['T1'], ['T2'], ['T3'], ['d']] }, { kind: 'setCellTable', sheet: 'Sheet1', cellTable: { headerRows: '1:3' } }, { kind: 'insertRows', sheet: 'Sheet1', besideRow: 2, side: 'above', count: 1 }])]);
+  assert.match(insertedInsideHeader, /<th>4<\/th><td class="h">T3/); assert.equal((insertedInsideHeader.match(/<th>\d+<\/th><td class="h">/g) || []).length, 1);
+});
