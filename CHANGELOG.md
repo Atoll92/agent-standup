@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.50.1
+- **Each tile says what kind of step a command is** (testing, checking, building, installing, deleting), named for what it does rather than the tool that runs it, and **a light shows the agent's last test run**: green, red, or unknown. It turns red even when a pipe or a following command hid the failure from the exit code, and its tooltip says why. `agent-standup report` also counts the day's test runs and the kinds of steps.
+- **An edit made by Mistral Vibe 3 shows on the shared screen as a diff**, like Claude Code's.
+- **A redrawn Claude Sheet stops drawing deleted rows and columns as empty ones** after its last rows or columns are deleted. By leninworld (#31).
+
 ## 1.50.0
 - **Mistral Vibe 3 sessions, fully in the call.** Vibe 3 gives each sub-agent a history of its own: its commands with their output, the files it reads and writes, its answer and its tokens now appear in the call under its name, while the lead shows “waiting on” it. Before, each Vibe 3 sub-agent was listed as a session of its own and its lead counted none. Checked against real sessions of Vibe 3.1.5; Vibe 2.26 sessions read as before.
 - **A Vibe 3 session that waits for your approval or your answer needs you again**, whether the lead or one of its sub-agents asks. Vibe 3 no longer marks such a session as blocked; the app now reads the wait from its journal, so the board, the status bar and the call show “needs you” until you answer, and “idle” once that Vibe is closed.
