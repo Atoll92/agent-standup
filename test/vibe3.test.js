@@ -32,6 +32,7 @@ store(LEAD, [
   eff(LEAD, TURN, 'effect-bash', 'file_system.bash', { command: 'node test.js' }, done({ command: 'node test.js', returncode: 0, stdout: 'All tests passed', stderr: '' }), 2000, 2100),
   eff(LEAD, TURN, 'effect-spawn', 'agents.spawn', { agent: 'generic', task: TASK }, done({ type: 'success' }, { _meta: { 'mistral.vibe.subagent': { agentName: 'calc-reviewer', agentType: null, childSessionId: CHILD, generation: 1 } } }), 3000, 3100, { kind: 'subagent', agentName: 'calc-reviewer', childSessionId: CHILD }),
   eff(LEAD, TURN, 'effect-wait', 'self.wait', { deadline_unix_ms: T0 + 123000, timeout_ms: 120000 }, done({ reason: 'input_available' }), 3200, 6000),
+  eff(LEAD, TURN, 'effect-edit', 'file_system.edit', { file_path: 'calc.js', old_string: 'return a - b + 1;', new_string: 'return a - b;' }, done({ file: path.join(WORK, 'calc.js'), lines_changed: 1, warnings: [] }), 6500, 6600),
   msg(LEAD, TURN, 'assistant-1', 'assistant', 'Done: the reviewer approves calc.js.', 7000),
 ], envelope(LEAD, null, TURN, 7000), { session_id: LEAD, parent_session_id: null, start_time: new Date(T0).toISOString(), environment: { working_directory: WORK }, child_sessions: [], title: null });
 const CDIR = store(CHILD, [
@@ -96,4 +97,10 @@ test('what the sub-agent writes next reaches the call while its lead sits still'
   fs.appendFileSync(path.join(CDIR, 'journal', '0000000000000010.jsonl'), JSON.stringify({ type: 'projection_delta', sequence: 10, payload: { delta: [{ op: 'append_entry', entry: msg(CHILD, CT, 'c-assistant-2', 'assistant', 'One more note: sub could guard against strings.', 5500) }] } }) + '\n');
   const after = vibe.subFiles(LEAD)[0].st.raw;
   assert.equal(after.length, before + 1); assert.equal(after[after.length - 1].text, 'One more note: sub could guard against strings.');
+});
+
+test('Vibe 3 file_system.edit is an edit, with what it replaced and by what', () => {
+  const edit = vibe.state(LEAD).raw.find((e) => e.kind === 'tool' && e.tool && e.tool.id === 'effect-edit');
+  assert.ok(edit, 'the edit is in the call'); assert.equal(edit.tool.name, 'Edit');
+  const res = vibe.state(LEAD).raw.find((e) => e.kind === 'results' && e.items[0].id === 'effect-edit'); assert.equal(res.items[0].out, '1 lines changed');
 });
